@@ -10,6 +10,7 @@ namespace SOPServer.Repository.UnitOfWork
     public interface IUnitOfWork : IDisposable
     {
         IItemRepository ItemRepository { get; }
+        IUserRepository UserRepository { get; }
         int Save();
         void Commit();
         void Rollback();

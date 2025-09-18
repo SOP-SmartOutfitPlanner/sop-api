@@ -16,6 +16,7 @@ namespace SOPServer.Repository.UnitOfWork
         private readonly SOPServerContext _context;
         private IDbContextTransaction _transaction;
         private IItemRepository _itemRepository;
+        private IUserRepository _userRepository;
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -27,6 +28,14 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _itemRepository ??= new ItemRepository(_context);
+            }
+        }
+
+        public IUserRepository UserRepository
+        {
+            get
+            {
+                return _userRepository ??= new UserRepository(_context);
             }
         }
 

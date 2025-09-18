@@ -12,19 +12,17 @@ namespace SOPServer.API.Controllers
     public class ItemController : BaseController
     {
         private readonly IItemService _itemService;
-        private readonly IGeminiService _geminiService;
-        public ItemController(IItemService itemService, IGeminiService geminiService)
+        public ItemController(IItemService itemService)
         {
             _itemService = itemService;
-            _geminiService = geminiService;
         }
 
-        //[HttpPost("validation")]
-        //public Task<IActionResult> ValidationImage([FromForm] ItemModelRequestAI request)
-        //{
-        //    //return ValidateAndExecute(async () => await _paymentService.GetPaymentInfoByOrderCode(orderCode));
-        //    throw new NotImplementedException();
-        //}
+        [HttpPost("summary")]
+        public Task<IActionResult> ValidationImage(IFormFile file)
+        {
+            return ValidateAndExecute(async () => await _itemService.GetSummaryItem(file));
+            throw new NotImplementedException();
+        }
 
         [HttpDelete("{id}")]
         public Task<IActionResult> DeleteItem(long id)

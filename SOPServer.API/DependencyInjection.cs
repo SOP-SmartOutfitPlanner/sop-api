@@ -10,6 +10,7 @@ namespace SOPServer.API
         {
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IGeminiService, GeminiService>();
+            services.AddScoped<IItemService, ItemService>();
             return services;
         }
     }

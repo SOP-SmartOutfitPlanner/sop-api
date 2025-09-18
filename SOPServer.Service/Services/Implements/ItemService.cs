@@ -6,6 +6,7 @@ using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
+using SOPServer.Service.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -46,16 +47,31 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        //public async Task<BaseResponseModel> ValidationItem(IFormFile file)
-        //{
-        //    bool isValid = await _geminiService.ImageValidation(file);
+        public async Task<BaseResponseModel> GetSummaryItem(IFormFile file)
+        {
 
-        //    if (!isValid)
-        //    {
-        //        throw new BadRequestException(MessageConstants.IMAGE_IS_NOT_VALID);
-        //    }
+            if (file == null || file.Length == 0)
+            {
+                throw new BadRequestException(MessageConstants.IMAGE_IS_NOT_VALID);
+            }
 
-        //    return new NotImplementedException();
-        //}
+            var base64Image = await AIUtils.ConvertToBase64Async(file);
+
+            bool isValid = await _geminiService.ImageValidation(base64Image, file.ContentType);
+
+            if (!isValid)
+            {
+                throw new BadRequestException(MessageConstants.IMAGE_IS_NOT_VALID);
+            }
+
+            var response = await _geminiService.ImageGenerateContent(base64Image, file.ContentType);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.IMAGE_IS_VALID,
+                Data = response
+            };
+        }
     }
 }

@@ -42,5 +42,8 @@ namespace SOPServer.Service.BusinessModels.ItemModels
         public string Color { get; set; }
         public string AiDescription { get; set; }
         public string WeatherSuitable { get; set; }
+        public string Condition { get; set; }
+        public string Pattern { get; set; }
+        public string Fabric { get; set; }
     }
 }

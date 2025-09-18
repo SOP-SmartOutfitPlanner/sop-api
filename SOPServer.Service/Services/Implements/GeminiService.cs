@@ -3,6 +3,7 @@ using GenerativeAI.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using SOPServer.Repository.Enums;
+using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
@@ -19,7 +20,7 @@ namespace SOPServer.Service.Services.Implements
     public class GeminiService : IGeminiService
     {
         private readonly GenerativeModel _generativeModel;
-        private const int MaxBytes = 10 * 1024 * 1024;
+
         private readonly HashSet<string> _allowedMime = new(StringComparer.OrdinalIgnoreCase)
     {
         "image/jpeg", "image/png", "image/webp", "image/gif"
@@ -41,19 +42,39 @@ You are a strict validator. Analyze the image and return ONLY a single character
 Output must be exactly 1 or 0. No explanations, no punctuation, no code blocks.
 ";
 
+        private readonly string _promptDescription = @"
+Bạn là một chuyên gia thời trang. Hãy phân tích hình ảnh món đồ trong input và trả về một JSON đúng với cấu trúc sau:
+
+{
+  ""Color"": ""Màu sắc chủ đạo của món đồ (ví dụ: Đen, Trắng, Xanh navy...)"",
+  ""AiDescription"": ""Mô tả ngắn gọn món đồ bằng tiếng Việt, dễ hiểu, tối đa 2 câu."",
+  ""WeatherSuitable"": ""Thời tiết phù hợp để mặc món đồ (ví dụ: Mùa hè, Trời lạnh, Mưa, Thời tiết mát mẻ...)"",
+  ""Condition"": ""Tình trạng món đồ (ví dụ: Mới, Đã qua sử dụng, Hơi cũ...)"",
+  ""Pattern"": ""Họa tiết nếu có (ví dụ: Trơn, Kẻ sọc, Caro, Hoa văn, Logo...)"",
+  ""Fabric"": ""Chất liệu chính (ví dụ: Cotton, Lụa, Denim, Len, Da, Polyester...)""
+}
+
+Chỉ trả về JSON hợp lệ, không thêm giải thích, không thêm chữ nào khác.
+";
+
         public GeminiService(IOptions<GeminiSettings> geminiSettings)
         {
             var googleAi = new GoogleAi(geminiSettings.Value.APIKey);
-            _generativeModel = googleAi.CreateGenerativeModel("models/gemini-1.5-flash");
+            _generativeModel = googleAi.CreateGenerativeModel("models/gemini-2.5-flash");
         }
 
-
-        public async Task<bool> ImageValidation(IFormFile file)
+        public async Task<ItemModelAI?> ImageGenerateContent(string base64Image, string mimeType)
         {
-            if (file == null || file.Length == 0)
-                throw new NotFoundException(MessageConstants.IMAGE_IS_NOT_VALID);
+            var request = new GenerateContentRequest();
+            request.AddInlineData(base64Image, mimeType);
+            request.UseJsonMode<ItemModelAI>();
+            request.AddText(_promptDescription);
 
-            var mimeType = file.ContentType;
+            return await _generativeModel.GenerateObjectAsync<ItemModelAI>(request);
+        }
+
+        public async Task<bool> ImageValidation(string base64Image, string mimeType)
+        {
             if (string.IsNullOrWhiteSpace(mimeType) || !_allowedMime.Contains(mimeType))
             {
                 throw new NotFoundException(MessageConstants.MIMETYPE_NOT_VALID);
@@ -61,38 +82,17 @@ Output must be exactly 1 or 0. No explanations, no punctuation, no code blocks.
 
             string? rawMessage = string.Empty;
 
-            // Đọc bytes từ IFormFile và chuyển đổi thành Base64
-            await using (var stream = file.OpenReadStream())
-            {
-                var bytes = await ReadAllWithLimitAsync(stream, MaxBytes);
-                if (bytes is null) throw new NotFoundException(MessageConstants.IMAGE_IS_LARGE);
-                var base64Image = Convert.ToBase64String(bytes);
+            var request = new GenerateContentRequest();
+            request.AddText(_promptValidation.Trim());
+            request.AddInlineData(base64Image, mimeType);
 
-                var request = new GenerateContentRequest();
-                request.AddText(_promptValidation.Trim());
-                request.AddInlineData(base64Image, mimeType);
+            var response = await _generativeModel.GenerateContentAsync(request);
 
-                var response = await _generativeModel.GenerateContentAsync(request);
+            rawMessage = response.Text ?? string.Empty;
 
-                rawMessage = response.Text ?? string.Empty;
-            }
-            
             var cleaned = CleanOneChar(rawMessage);
 
             return cleaned == "1";
-        }
-
-        private async Task<byte[]?> ReadAllWithLimitAsync(Stream s, int limit)
-        {
-            using var ms = new MemoryStream();
-            var buf = new byte[81920];
-            int read;
-            while ((read = await s.ReadAsync(buf, 0, buf.Length)) > 0)
-            {
-                if (ms.Length + read > limit) return null;
-                ms.Write(buf, 0, read);
-            }
-            return ms.ToArray();
         }
 
         private string CleanOneChar(string x)

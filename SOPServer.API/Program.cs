@@ -8,6 +8,7 @@ using SOPServer.API.Middlewares;
 using SOPServer.Repository.DBContext;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Mappers;
+using SOPServer.Service.SettingModels;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -114,6 +115,8 @@ builder.Services.AddAutoMapper(typeof(MapperConfigProfile).Assembly);
 
 builder.Services.AddInfractstructure(builder.Configuration);
 
+builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
+
 // ===================== CONFIG DATABASE CONNECTION =======================
 
 builder.Services.AddDbContext<SOPServerContext>(options =>
@@ -122,6 +125,12 @@ builder.Services.AddDbContext<SOPServerContext>(options =>
 });
 
 // ==========================================================
+
+builder.Services.AddHttpClient("FileDownloader", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 
 var app = builder.Build();
 

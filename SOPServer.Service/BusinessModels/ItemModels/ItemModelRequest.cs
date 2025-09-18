@@ -6,10 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SOPServer.Service.Services.Interfaces
+namespace SOPServer.Service.BusinessModels.ItemModels
 {
-    public interface IGeminiService
+    public class ItemModelRequest
     {
-        Task<bool> ImageValidation(IFormFile file);
     }
 }

@@ -36,4 +36,11 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public string Tag { get; set; }
     }
+
+    public class ItemModelAI
+    {
+        public string Color { get; set; }
+        public string AiDescription { get; set; }
+        public string WeatherSuitable { get; set; }
+    }
 }

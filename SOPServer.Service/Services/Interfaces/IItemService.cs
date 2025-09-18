@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SOPServer.Service.BusinessModels.ResultModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,5 +9,6 @@ namespace SOPServer.Service.Services.Interfaces
 {
     public interface IItemService
     {
+        Task<BaseResponseModel> DeleteItemByIdAsync(long id);
     }
 }

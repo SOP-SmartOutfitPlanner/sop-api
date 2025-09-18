@@ -19,12 +19,11 @@ namespace SOPServer.Service.Services.Implements
     public class GeminiService : IGeminiService
     {
         private readonly GenerativeModel _generativeModel;
-        private readonly HttpClient _httpClient;
         private const int MaxBytes = 10 * 1024 * 1024;
         private readonly HashSet<string> _allowedMime = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "image/jpeg", "image/png", "image/webp", "image/gif"
-        };
+    {
+        "image/jpeg", "image/png", "image/webp", "image/gif"
+    };
         private readonly string _promptValidation = @"
 You are a strict validator. Analyze the image and return ONLY a single character:
 
@@ -42,52 +41,43 @@ You are a strict validator. Analyze the image and return ONLY a single character
 Output must be exactly 1 or 0. No explanations, no punctuation, no code blocks.
 ";
 
-        public GeminiService(IOptions<GeminiSettings> geminiSettings, IHttpClientFactory httpClientFactory)
+        public GeminiService(IOptions<GeminiSettings> geminiSettings)
         {
             var googleAi = new GoogleAi(geminiSettings.Value.APIKey);
-
             _generativeModel = googleAi.CreateGenerativeModel("models/gemini-1.5-flash");
-
-            _httpClient = httpClientFactory.CreateClient("FileDownloader");
         }
 
-        public async Task<bool> ImageValidation(string? mimeType, string image, ImageType type)
+
+        public async Task<bool> ImageValidation(IFormFile file)
         {
-            //check image is url or base64
-            if (type == ImageType.URL)
+            if (file == null || file.Length == 0)
+                throw new NotFoundException(MessageConstants.IMAGE_IS_NOT_VALID);
+
+            var mimeType = file.ContentType;
+            if (string.IsNullOrWhiteSpace(mimeType) || !_allowedMime.Contains(mimeType))
             {
-                if (!Uri.TryCreate(image, UriKind.Absolute, out var uri) ||
-                    (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-                {
-                    throw new NotFoundException("Image URL is invalid.");
-                }
-
-                using var resp = await _httpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
-                resp.EnsureSuccessStatusCode();
-
-                mimeType = resp.Content.Headers.ContentType?.MediaType;
-                if (string.IsNullOrWhiteSpace(mimeType) || !_allowedMime.Contains(mimeType))
-                    throw new NotFoundException(MessageConstants.MIMETYPE_NOT_VALID);
-
-                await using var stream = await resp.Content.ReadAsStreamAsync();
-                var bytes = await ReadAllWithLimitAsync(stream, MaxBytes);
-                if (bytes is null) throw new NotFoundException(MessageConstants.IMAGE_IS_LARGE);
-
-                image = Convert.ToBase64String(bytes);
+                throw new NotFoundException(MessageConstants.MIMETYPE_NOT_VALID);
             }
 
-            //check mime type
-            if (string.IsNullOrWhiteSpace(mimeType) || !_allowedMime.Contains(mimeType))
-                throw new NotFoundException(MessageConstants.MIMETYPE_NOT_VALID);
+            string? rawMessage = string.Empty;
 
-            var request = new GenerateContentRequest();
-            request.AddText(_promptValidation.Trim());
-            request.AddInlineData(image, mimeType);
+            // Đọc bytes từ IFormFile và chuyển đổi thành Base64
+            await using (var stream = file.OpenReadStream())
+            {
+                var bytes = await ReadAllWithLimitAsync(stream, MaxBytes);
+                if (bytes is null) throw new NotFoundException(MessageConstants.IMAGE_IS_LARGE);
+                var base64Image = Convert.ToBase64String(bytes);
 
-            var response = await _generativeModel.GenerateContentAsync(request);
+                var request = new GenerateContentRequest();
+                request.AddText(_promptValidation.Trim());
+                request.AddInlineData(base64Image, mimeType);
 
-            var raw = response.Text ?? string.Empty;
-            var cleaned = CleanOneChar(raw);
+                var response = await _generativeModel.GenerateContentAsync(request);
+
+                rawMessage = response.Text ?? string.Empty;
+            }
+            
+            var cleaned = CleanOneChar(rawMessage);
 
             return cleaned == "1";
         }
@@ -107,7 +97,6 @@ Output must be exactly 1 or 0. No explanations, no punctuation, no code blocks.
 
         private string CleanOneChar(string x)
         {
-            // Loại bỏ ```, dấu nháy, whitespace; chỉ giữ ký tự 0/1 đầu tiên
             var span = x.Trim()
                         .Replace("```", "")
                         .Replace("\n", "")
@@ -115,11 +104,11 @@ Output must be exactly 1 or 0. No explanations, no punctuation, no code blocks.
                         .Replace("\"", "")
                         .Trim();
 
-            // Nếu model trả kiểu "1." hoặc "1)" -> lấy ký tự số đầu
             foreach (var ch in span)
                 if (ch == '0' || ch == '1') return ch.ToString();
 
-            return "0"; // mặc định an toàn
+            return "0";
         }
     }
+
 }

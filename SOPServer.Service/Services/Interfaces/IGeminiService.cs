@@ -1,4 +1,5 @@
-﻿using SOPServer.Service.BusinessModels.ResultModels;
+﻿using Microsoft.AspNetCore.Http;
+using SOPServer.Repository.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,8 +8,8 @@ using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Interfaces
 {
-    public interface IItemService
+    public interface IGeminiService
     {
-        Task<BaseResponseModel> DeleteItemByIdAsync(long id);
+        Task<bool> ImageValidation(IFormFile file);
     }
 }

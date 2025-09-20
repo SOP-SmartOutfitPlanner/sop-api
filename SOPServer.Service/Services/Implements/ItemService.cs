@@ -4,7 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
+using SOPServer.Service.BusinessModels.FirebaseModels;
 using SOPServer.Service.BusinessModels.ItemModels;
+using SOPServer.Service.BusinessModels.RemBgModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
@@ -13,6 +15,7 @@ using SOPServer.Service.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -23,12 +26,16 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IGeminiService _geminiService;
+        private readonly IFirebaseStorageService _firebaseStorageService;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public ItemService(IUnitOfWork unitOfWork, IMapper mapper, IGeminiService geminiService)
+        public ItemService(IUnitOfWork unitOfWork, IMapper mapper, IGeminiService geminiService, IFirebaseStorageService firebaseStorageService, IHttpClientFactory httpClientFactory)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _geminiService = geminiService;
+            _firebaseStorageService = firebaseStorageService;
+            _httpClientFactory = httpClientFactory;
         }
 
         public async Task<BaseResponseModel> AddNewItem(ItemCreateModel model)
@@ -126,9 +133,9 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> GetItemPaginationAsync(PaginationParameter paginationParameter)
         {
-            var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter, 
-                include: query => query.Include(x => x.Category).Include(x => x.User), 
-                orderBy: x=> x.OrderByDescending(x => x.CreatedDate));
+            var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter,
+                include: query => query.Include(x => x.Category).Include(x => x.User),
+                orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
             var itemModels = _mapper.Map<Pagination<ItemModel>>(items);
 
@@ -161,8 +168,10 @@ namespace SOPServer.Service.Services.Implements
                 throw new BadRequestException(MessageConstants.IMAGE_IS_NOT_VALID);
             }
 
-            var base64Image = await AIUtils.ConvertToBase64Async(file);
+            //convert image to base64
+            var base64Image = await ImageUtils.ConvertToBase64Async(file);
 
+            //validation image
             bool isValid = await _geminiService.ImageValidation(base64Image, file.ContentType);
 
             if (!isValid)
@@ -170,13 +179,67 @@ namespace SOPServer.Service.Services.Implements
                 throw new BadRequestException(MessageConstants.IMAGE_IS_NOT_VALID);
             }
 
-            var response = await _geminiService.ImageGenerateContent(base64Image, file.ContentType);
+            //upload image to firebase storage
+            var uploadToRemoveBg = await _firebaseStorageService.UploadImageAsync(file);
+
+            if (uploadToRemoveBg?.Data is not ImageUploadResult uploadData || string.IsNullOrEmpty(uploadData.DownloadUrl))
+            {
+                throw new BadRequestException(MessageConstants.FILE_NOT_FOUND);
+            }
+
+            var imageDownloadUrl = uploadData.DownloadUrl;
+
+            //call rembg service to remove background and convert to formfile
+            IFormFile fileRemoveBackground;
+            using (var client = _httpClientFactory.CreateClient("RembgClient"))
+            {
+                var requestBody = new RembgRequest
+                {
+                    Input = new RembgInput { Image = imageDownloadUrl }
+                };
+
+                //call rembg service
+                var responseRemBg = await client.PostAsJsonAsync("predictions", requestBody);
+
+                //delete image after call rembg service
+                await _firebaseStorageService.DeleteImageAsync(uploadData.FullPath);
+
+                if (!responseRemBg.IsSuccessStatusCode)
+                {
+                    throw new BadRequestException(MessageConstants.CALL_REM_BACKGROUND_FAIL);
+                }
+
+                //cast response to object
+                var result = await responseRemBg.Content.ReadFromJsonAsync<RembgResponse>();
+
+                if(!string.Equals(result.Status, "succeeded", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new BadRequestException(MessageConstants.REM_BACKGROUND_IMAGE_FAIL);
+                }
+
+                //convert base64 to formfile
+                fileRemoveBackground = ImageUtils.Base64ToFormFile(result.Output, file.FileName);
+            }
+
+            //call gemini service to get summary
+            var summaryFromGemini = await _geminiService.ImageGenerateContent(await ImageUtils.ConvertToBase64Async(fileRemoveBackground), fileRemoveBackground.ContentType);
+            //upload image remove background to firebase storage
+            var imageRemBgResponse = await _firebaseStorageService.UploadImageAsync(fileRemoveBackground);
+
+            if (imageRemBgResponse?.Data is not ImageUploadResult imageRemBg || string.IsNullOrEmpty(imageRemBg.DownloadUrl))
+            {
+                throw new BadRequestException(MessageConstants.FILE_NOT_FOUND);
+            }
+
+            var itemSummary = _mapper.Map<ItemSummaryModel>(summaryFromGemini);
+
+            itemSummary.ImageRemBgURL = imageRemBg.DownloadUrl;
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.IMAGE_IS_VALID,
-                Data = response
+                Message = MessageConstants.GET_SUMMARY_IMAGE_SUCCESS,
+                Data = itemSummary
             };
         }
     }

@@ -22,6 +22,9 @@ namespace SOPServer.Service.Mappers
             CreateMap<ItemCreateModel, Item>();
 
             CreateMap<Pagination<Item>, Pagination<ItemModel>>().ConvertUsing<PaginationConverter<Item, ItemModel>>();
+
+
+            CreateMap<ItemModelAI, ItemSummaryModel>();
         }
 
         public class PaginationConverter<TSource, TDestination> : ITypeConverter<Pagination<TSource>, Pagination<TDestination>>

@@ -14,6 +14,8 @@ namespace SOPServer.Service.Constants
         public const string IMAGE_IS_LARGE = "Image is very large";
         public const string IMAGE_IS_NOT_VALID = "Image is not valid";
         public const string IMAGE_IS_VALID = "Image is valid";
+        public const string GET_SUMMARY_IMAGE_SUCCESS = "Get summary image successfully";
+        public const string DELETE_FILE_SUCCESS = "Delete file successfully";
 
         public const string ITEM_NOT_EXISTED = "Item is not existed";
         public const string ITEM_CREATE_SUCCESS = "Item created successfully";
@@ -38,6 +40,8 @@ namespace SOPServer.Service.Constants
 
         public const string CATEGORY_NOT_EXIST = "Category is not existed";
 
-        
+        public const string CALL_REM_BACKGROUND_FAIL = "Call remove background service fail";
+
+        public const string REM_BACKGROUND_IMAGE_FAIL = "Remove background image fail";
     }
 }

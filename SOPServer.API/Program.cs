@@ -127,8 +127,10 @@ builder.Services.AddDbContext<SOPServerContext>(options =>
 
 // ==========================================================
 
-builder.Services.AddHttpClient("FileDownloader", client =>
+builder.Services.AddHttpClient("RembgClient", client =>
 {
+    client.BaseAddress = new Uri("https://rembg.wizlab.io.vn/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 

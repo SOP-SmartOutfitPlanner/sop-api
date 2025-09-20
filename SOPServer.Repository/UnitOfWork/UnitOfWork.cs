@@ -21,6 +21,7 @@ namespace SOPServer.Repository.UnitOfWork
         private IItemOccasionRepository _itemOccasionRepository;
         private IItemSeasonRepository _itemSeasonRepository;
         private IItemStyleRepository _itemStyleRepository;
+        private IUserRepository _userRepository;
 
         public UnitOfWork(SOPServerContext context)
         {

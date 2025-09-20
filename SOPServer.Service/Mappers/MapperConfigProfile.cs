@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
 using SOPServer.Repository.Commons;
+using SOPServer.Repository.Entities;
+using SOPServer.Service.BusinessModels.ItemModels;
 
 namespace SOPServer.Service.Mappers
 {
@@ -7,8 +9,7 @@ namespace SOPServer.Service.Mappers
     {
         public MapperConfigProfile()
         {
-            
-
+            CreateMap<ItemModel, Item>().ReverseMap();
         }
 
         public class PaginationConverter<TSource, TDestination> : ITypeConverter<Pagination<TSource>, Pagination<TDestination>>

@@ -28,6 +28,11 @@ namespace SOPServer.Service.Services.Implements
             _geminiService = geminiService;
         }
 
+        public Task<BaseResponseModel> AddNewItem(ItemCreateModel model)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<BaseResponseModel> DeleteItemByIdAsync(long id)
         {
             var item = await _unitOfWork.ItemRepository.GetByIdAsync(id);

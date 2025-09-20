@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using System;
 using System.Collections.Generic;
@@ -12,5 +13,6 @@ namespace SOPServer.Service.Services.Interfaces
     {
         Task<BaseResponseModel> DeleteItemByIdAsync(long id);
         Task<BaseResponseModel> GetSummaryItem(IFormFile file);
+        Task<BaseResponseModel> AddNewItem(ItemCreateModel model);
     }
 }

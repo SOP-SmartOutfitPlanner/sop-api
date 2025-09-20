@@ -9,9 +9,9 @@ public partial class Item : BaseEntity
 {
     public string Name { get; set; }
 
-    public string Image { get; set; }
-
     public long? UserId { get; set; }
+
+    public long? CategoryId { get; set; }
 
     public string Color { get; set; }
 
@@ -21,7 +21,7 @@ public partial class Item : BaseEntity
 
     public string FrequencyWorn { get; set; }
 
-    public string LastWornAt { get; set; }
+    public DateTime LastWornAt { get; set; }
 
     public string ImgUrl { get; set; }
 
@@ -44,4 +44,6 @@ public partial class Item : BaseEntity
     public virtual ICollection<ItemStyle> ItemStyles { get; set; } = new List<ItemStyle>();
 
     public virtual User User { get; set; }
+
+    public virtual Category Category { get; set; }
 }

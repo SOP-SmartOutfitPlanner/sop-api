@@ -97,15 +97,11 @@ public partial class SOPServerContext : DbContext
             entity.Property(e => e.FrequencyWorn)
                 .HasMaxLength(255)
                 .IsUnicode(true);
-            entity.Property(e => e.Image)
-                .HasMaxLength(255)
-                .IsUnicode(true);
             entity.Property(e => e.ImgUrl)
                 .HasMaxLength(255)
                 .IsUnicode(true);
             entity.Property(e => e.LastWornAt)
-                .HasMaxLength(255)
-                .IsUnicode(true);
+                .HasColumnType("datetime2"); 
             entity.Property(e => e.Name)
                 .HasMaxLength(255)
                 .IsUnicode(true);
@@ -122,6 +118,10 @@ public partial class SOPServerContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.Items)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK_Item_User");
+
+            entity.HasOne(d => d.Category).WithMany(p => p.Items)
+                .HasForeignKey(d => d.CategoryId)
+                .HasConstraintName("FK_Item_Category");
         });
 
         modelBuilder.Entity<ItemGoal>(entity =>

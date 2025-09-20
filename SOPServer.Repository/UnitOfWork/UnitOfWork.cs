@@ -21,6 +21,7 @@ namespace SOPServer.Repository.UnitOfWork
         private IItemOccasionRepository _itemOccasionRepository;
         private IItemSeasonRepository _itemSeasonRepository;
         private IItemStyleRepository _itemStyleRepository;
+        private IUserRepository _userRepository;
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -32,6 +33,14 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _itemRepository ??= new ItemRepository(_context);
+            }
+        }
+
+        public IUserRepository UserRepository
+        {
+            get
+            {
+                return _userRepository ??= new UserRepository(_context);
             }
         }
 

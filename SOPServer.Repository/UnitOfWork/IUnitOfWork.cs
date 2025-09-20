@@ -15,6 +15,7 @@ namespace SOPServer.Repository.UnitOfWork
         IItemOccasionRepository ItemOccasionRepository { get; }
         IItemSeasonRepository ItemSeasonRepository { get; }
         IItemStyleRepository ItemStyleRepository { get; }
+        IUserRepository UserRepository { get; }
 
         int Save();
         void Commit();

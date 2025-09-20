@@ -116,6 +116,7 @@ builder.Services.AddAutoMapper(typeof(MapperConfigProfile).Assembly);
 builder.Services.AddInfractstructure(builder.Configuration);
 
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
+builder.Services.Configure<FirebaseStorageSettings>(builder.Configuration.GetSection("FirebaseStorage"));
 
 // ===================== CONFIG DATABASE CONNECTION =======================
 

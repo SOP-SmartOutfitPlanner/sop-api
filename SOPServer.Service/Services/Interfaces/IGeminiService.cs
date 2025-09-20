@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using SOPServer.Repository.Enums;
+using SOPServer.Service.BusinessModels.ItemModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,7 @@ namespace SOPServer.Service.Services.Interfaces
 {
     public interface IGeminiService
     {
-        Task<bool> ImageValidation(IFormFile file);
+        Task<bool> ImageValidation(string base64Image, string mimeType);
+        Task<ItemModelAI?> ImageGenerateContent(string base64Image, string mimeType);
     }
 }

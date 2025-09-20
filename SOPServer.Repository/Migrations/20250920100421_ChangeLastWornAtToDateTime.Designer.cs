@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SOPServer.Repository.DBContext;
 
@@ -11,9 +12,11 @@ using SOPServer.Repository.DBContext;
 namespace SOPServer.Repository.Migrations
 {
     [DbContext(typeof(SOPServerContext))]
-    partial class SOPServerContextModelSnapshot : ModelSnapshot
+    [Migration("20250920100421_ChangeLastWornAtToDateTime")]
+    partial class ChangeLastWornAtToDateTime
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -100,9 +103,6 @@ namespace SOPServer.Repository.Migrations
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<long?>("CategoryId")
-                        .HasColumnType("bigint");
-
                     b.Property<string>("Color")
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(max)");
@@ -163,8 +163,6 @@ namespace SOPServer.Repository.Migrations
 
                     b.HasKey("Id")
                         .HasName("PK__Item__3214EC0747906DDA");
-
-                    b.HasIndex("CategoryId");
 
                     b.HasIndex("UserId");
 
@@ -567,17 +565,10 @@ namespace SOPServer.Repository.Migrations
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Item", b =>
                 {
-                    b.HasOne("SOPServer.Repository.Entities.Category", "Category")
-                        .WithMany("Items")
-                        .HasForeignKey("CategoryId")
-                        .HasConstraintName("FK_Item_Category");
-
                     b.HasOne("SOPServer.Repository.Entities.User", "User")
                         .WithMany("Items")
                         .HasForeignKey("UserId")
                         .HasConstraintName("FK_Item_User");
-
-                    b.Navigation("Category");
 
                     b.Navigation("User");
                 });
@@ -680,8 +671,6 @@ namespace SOPServer.Repository.Migrations
             modelBuilder.Entity("SOPServer.Repository.Entities.Category", b =>
                 {
                     b.Navigation("InverseParent");
-
-                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Goal", b =>

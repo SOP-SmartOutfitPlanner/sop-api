@@ -16,7 +16,11 @@ namespace SOPServer.Repository.UnitOfWork
         private readonly SOPServerContext _context;
         private IDbContextTransaction _transaction;
         private IItemRepository _itemRepository;
-        private IUserRepository _userRepository;
+        private ICategoryRepository _categoryRepository;
+        private IItemGoalRepository _itemGoalRepository;
+        private IItemOccasionRepository _itemOccasionRepository;
+        private IItemSeasonRepository _itemSeasonRepository;
+        private IItemStyleRepository _itemStyleRepository;
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -36,6 +40,46 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _userRepository ??= new UserRepository(_context);
+            }
+        }
+
+        public ICategoryRepository CategoryRepository
+        {
+            get
+            {
+                return _categoryRepository ??= new CategoryRepository(_context);
+            }
+        }
+
+        public IItemGoalRepository ItemGoalRepository
+        {
+            get
+            {
+                return _itemGoalRepository ??= new ItemGoalRepository(_context);
+            }
+        }
+
+        public IItemOccasionRepository ItemOccasionRepository
+        {
+            get
+            {
+                return _itemOccasionRepository ??= new ItemOccasionRepository(_context);
+            }
+        }
+
+        public IItemSeasonRepository ItemSeasonRepository
+        {
+            get
+            {
+                return _itemSeasonRepository ??= new ItemSeasonRepository(_context);
+            }
+        }
+
+        public IItemStyleRepository ItemStyleRepository
+        {
+            get
+            {
+                return _itemStyleRepository ??= new ItemStyleRepository(_context);
             }
         }
 

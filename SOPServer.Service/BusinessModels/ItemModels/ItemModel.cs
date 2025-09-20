@@ -9,6 +9,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
     public class ItemModel
     {
         public long UserId { get; set; }
+        public string UserDisplayName { get; set; }
         public string Name { get; set; }
 
         public long CategoryId { get; set; }

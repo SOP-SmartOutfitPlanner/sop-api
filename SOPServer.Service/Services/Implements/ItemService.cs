@@ -1,5 +1,8 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using SOPServer.Repository.Commons;
+using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.ResultModels;
@@ -28,9 +31,33 @@ namespace SOPServer.Service.Services.Implements
             _geminiService = geminiService;
         }
 
-        public Task<BaseResponseModel> AddNewItem(ItemCreateModel model)
+        public async Task<BaseResponseModel> AddNewItem(ItemCreateModel model)
         {
-            throw new NotImplementedException();
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(model.UserId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            var category = await _unitOfWork.CategoryRepository.GetByIdAsync(model.CategoryId);
+            if (category == null)
+            {
+                throw new NotFoundException(MessageConstants.CATEGORY_NOT_EXIST);
+            }
+
+            var newItem = _mapper.Map<Item>(model);
+
+            await _unitOfWork.ItemRepository.AddAsync(newItem);
+            _unitOfWork.Save();
+
+            var newItemInclude = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(newItem.Id, include: query => query.Include(x => x.Category).Include(x => x.UserId));
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.ITEM_CREATE_SUCCESS,
+                Data = _mapper.Map<ItemModel>(newItemInclude)
+            };
         }
 
         public async Task<BaseResponseModel> DeleteItemByIdAsync(long id)
@@ -49,6 +76,80 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.DELETE_ITEM_SUCCESS
+            };
+        }
+
+        public async Task<BaseResponseModel> GetItemById(long id)
+        {
+            var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(id, include: query => query.Include(x => x.Category).Include(x => x.User));
+            if (item == null)
+            {
+                throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+            }
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.ITEM_NOT_EXISTED,
+                Data = _mapper.Map<ItemModel>(item)
+            };
+        }
+
+        public async Task<BaseResponseModel> GetItemByUserPaginationAsync(PaginationParameter paginationParameter, long userId)
+        {
+            var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter,
+                include: query => query.Include(x => x.Category).Include(x => x.User),
+                filter: x => x.UserId == userId,
+                orderBy: x => x.OrderByDescending(x => x.CreatedDate));
+
+            var itemModels = _mapper.Map<Pagination<ItemModel>>(items);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_ITEM_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = itemModels,
+                    MetaData = new
+                    {
+                        itemModels.TotalCount,
+                        itemModels.PageSize,
+                        itemModels.CurrentPage,
+                        itemModels.TotalPages,
+                        itemModels.HasNext,
+                        itemModels.HasPrevious
+                    }
+                }
+            };
+        }
+
+        public async Task<BaseResponseModel> GetItemPaginationAsync(PaginationParameter paginationParameter)
+        {
+            var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter, 
+                include: query => query.Include(x => x.Category).Include(x => x.User), 
+                orderBy: x=> x.OrderByDescending(x => x.CreatedDate));
+
+            var itemModels = _mapper.Map<Pagination<ItemModel>>(items);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_ITEM_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = itemModels,
+                    MetaData = new
+                    {
+                        itemModels.TotalCount,
+                        itemModels.PageSize,
+                        itemModels.CurrentPage,
+                        itemModels.TotalPages,
+                        itemModels.HasNext,
+                        itemModels.HasPrevious
+                    }
+                }
+
             };
         }
 

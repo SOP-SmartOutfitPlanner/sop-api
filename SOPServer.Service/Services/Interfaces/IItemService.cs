@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using System;
@@ -14,5 +15,8 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> DeleteItemByIdAsync(long id);
         Task<BaseResponseModel> GetSummaryItem(IFormFile file);
         Task<BaseResponseModel> AddNewItem(ItemCreateModel model);
+        Task<BaseResponseModel> GetItemById(long id);
+        Task<BaseResponseModel> GetItemPaginationAsync(PaginationParameter paginationParameter);
+        Task<BaseResponseModel> GetItemByUserPaginationAsync(PaginationParameter paginationParameter, long userId);
     }
 }

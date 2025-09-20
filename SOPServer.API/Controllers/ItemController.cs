@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.Services.Interfaces;
 using System.Diagnostics;
@@ -17,11 +18,34 @@ namespace SOPServer.API.Controllers
             _itemService = itemService;
         }
 
+        [HttpGet]
+        public Task<IActionResult> GetListItem([FromQuery] PaginationParameter paginationParameter)
+        {
+            return ValidateAndExecute(async () => await _itemService.GetItemPaginationAsync(paginationParameter));
+        }
+
+        [HttpGet("user/{userId}")]
+        public Task<IActionResult> GetListItem([FromQuery] PaginationParameter paginationParameter, long userId)
+        {
+            return ValidateAndExecute(async () => await _itemService.GetItemByUserPaginationAsync(paginationParameter, userId));
+        }
+
+        [HttpGet("{id}")]
+        public Task<IActionResult> GetItemById(long id)
+        {
+            return ValidateAndExecute(async () => await _itemService.GetItemById(id));
+        }
+
         [HttpPost("summary")]
         public Task<IActionResult> ValidationImage(IFormFile file)
         {
             return ValidateAndExecute(async () => await _itemService.GetSummaryItem(file));
-            throw new NotImplementedException();
+        }
+
+        [HttpPost]
+        public Task<IActionResult> CreateNewItem(ItemCreateModel model)
+        {
+            return ValidateAndExecute(async () => await _itemService.AddNewItem(model));
         }
 
         [HttpDelete("{id}")]
@@ -29,13 +53,6 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _itemService.DeleteItemByIdAsync(id));
         }
-        //Sample CODE
-
-        //[Authorize(Roles = "1,3,4")]
-        //[HttpGet("order/{orderCode}")]
-        //public Task<IActionResult> GetPaymentByOrderCode(int orderCode)
-        //{
-        //    return ValidateAndExecute(async () => await _paymentService.GetPaymentInfoByOrderCode(orderCode));
-        //}
+        
     }
 }

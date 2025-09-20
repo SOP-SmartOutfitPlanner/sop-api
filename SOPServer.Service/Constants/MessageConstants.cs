@@ -17,6 +17,12 @@ namespace SOPServer.Service.Constants
 
         public const string ITEM_NOT_EXISTED = "Item is not existed";
         public const string DELETE_ITEM_SUCCESS = "Item deleted successfully";
+        public const string ITEM_ALREADY_EXISTS = "Item already exists";
+        public const string ITEM_CREATE_SUCCESS = "Item created successfully";
+        public const string ITEM_UPDATE_SUCCESS = "Item updated successfully";
+        public const string ITEM_GET_SUCCESS = "Get item successfully";
+
+
 
         public const string GET_USER_BY_EMAIL_SUCCESS = "Get user by email successfully";
         public const string USER_NOT_EXIST = "User is not exist";

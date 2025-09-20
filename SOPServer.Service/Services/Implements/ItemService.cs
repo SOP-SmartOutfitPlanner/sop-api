@@ -1,5 +1,9 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
+using SOPServer.Repository.Commons;
+using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.ResultModels;
@@ -10,6 +14,7 @@ using SOPServer.Service.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -28,10 +33,97 @@ namespace SOPServer.Service.Services.Implements
             _geminiService = geminiService;
         }
 
-        public Task<BaseResponseModel> AddNewItem(ItemCreateModel model)
+        public async Task<BaseResponseModel> AddNewItem(ItemCreateModel model)
         {
-            throw new NotImplementedException();
+            if (await _unitOfWork.ItemRepository.ExistsByNameAsync(model.Name, model.UserId))
+                throw new BadRequestException(MessageConstants.ITEM_ALREADY_EXISTS);
+
+            var entity = _mapper.Map<Item>(model);
+            await _unitOfWork.ItemRepository.AddAsync(entity);
+            await _unitOfWork.SaveAsync();
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status201Created,
+                Message = MessageConstants.ITEM_CREATE_SUCCESS,
+                Data = _mapper.Map<ItemModel>(entity)
+            };
         }
+
+
+        public async Task<BaseResponseModel> UpdateItemAsync(long id, ItemCreateModel model)
+        {
+            var entity = await _unitOfWork.ItemRepository.GetByIdAsync(id);
+            if (entity == null) throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+
+            if (await _unitOfWork.ItemRepository.ExistsByNameAsync(model.Name, model.UserId, id))
+                throw new BadRequestException(MessageConstants.ITEM_ALREADY_EXISTS);
+
+            _mapper.Map(model, entity);
+            _unitOfWork.ItemRepository.UpdateAsync(entity);
+            await _unitOfWork.SaveAsync();
+
+            var data = _mapper.Map<ItemModel>(entity);
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.ITEM_UPDATE_SUCCESS,
+                Data = data
+            };
+        }
+
+        public async Task<BaseResponseModel> GetItemByIdAsync(long id)
+        {
+            var entity = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(
+                id,
+                filter: x => !x.IsDeleted,
+                include: q => q.Include(x => x.Category)
+                               .Include(x => x.User)
+            );
+
+            if (entity == null) throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+
+            var data = _mapper.Map<ItemModel>(entity);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.ITEM_GET_SUCCESS,
+                Data = data
+            };
+        }
+
+        public async Task<BaseResponseModel> GetItemsAsync(long userId, PaginationParameter pagination)
+        {
+            var page = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(
+                pagination,
+                filter: x => !x.IsDeleted && x.UserId == userId,
+                include: q => q.Include(x => x.Category)
+            );
+
+            var items = page.Select(x => _mapper.Map<ItemModel>(x)).ToList();
+
+            var meta = new
+            {
+                PageIndex = page.CurrentPage,
+                PageSize = page.PageSize,
+                page.TotalCount,
+                page.TotalPages
+            };
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.ITEM_GET_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = items,
+                    MetaData = meta
+                }
+            };
+        }
+
+
 
         public async Task<BaseResponseModel> DeleteItemByIdAsync(long id)
         {

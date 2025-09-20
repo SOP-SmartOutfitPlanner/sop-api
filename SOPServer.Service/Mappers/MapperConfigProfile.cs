@@ -10,6 +10,7 @@ namespace SOPServer.Service.Mappers
         public MapperConfigProfile()
         {
             CreateMap<ItemModel, Item>().ReverseMap();
+            CreateMap<ItemCreateModel, Item>();
         }
 
         public class PaginationConverter<TSource, TDestination> : ITypeConverter<Pagination<TSource>, Pagination<TDestination>>

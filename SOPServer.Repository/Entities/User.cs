@@ -22,6 +22,10 @@ public partial class User : BaseEntity
 
     public bool? IsPremium { get; set; }
 
+    public bool IsLoginWithGoogle { get; set; } = false;
+
+    public bool? IsFirstTime { get; set; }
+
     public string AvtUrl { get; set; }
 
     public DateOnly? Dob { get; set; }

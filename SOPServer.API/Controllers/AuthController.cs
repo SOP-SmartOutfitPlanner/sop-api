@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SOPServer.Service.BusinessModels.AuthenModels;
 using SOPServer.Service.Services.Interfaces;
 
 namespace SOPServer.API.Controllers
@@ -24,6 +25,12 @@ namespace SOPServer.API.Controllers
         public Task<IActionResult> RefreshToken([FromBody] string token)
         {
             return ValidateAndExecute(() => _userService.RefreshToken(token));
+        }
+
+        [HttpPost]
+        public Task<IActionResult> LoginWithEmailAndPassword([FromBody] LoginRequestModel model)
+        {
+            throw new NotImplementedException();
         }
     }
 }

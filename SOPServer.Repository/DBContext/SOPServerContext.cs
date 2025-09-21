@@ -261,6 +261,8 @@ public partial class SOPServerContext : DbContext
             entity.Property(e => e.IsPremium).HasDefaultValue(false);
             entity.Property(e => e.IsStylist).HasDefaultValue(false);
             entity.Property(e => e.IsVerifiedEmail).HasDefaultValue(false);
+            entity.Property(e => e.IsLoginWithGoogle).HasDefaultValue(false);
+            entity.Property(e => e.IsFirstTime).HasDefaultValue(false);
             entity.Property(e => e.Location)
                 .HasMaxLength(255)
                 .IsUnicode(true);
@@ -275,6 +277,8 @@ public partial class SOPServerContext : DbContext
                 .HasConversion<int>();
             entity.Property(e => e.Gender)
                 .HasConversion<int>();
+            entity.Property(e => e.Dob)
+                .HasColumnType("date");
 
             entity.HasOne(d => d.Job).WithMany(p => p.Users)
                 .HasForeignKey(d => d.JobId)

@@ -98,7 +98,7 @@ namespace SOPServer.Service.Services.Implements
                 {
                     StatusCode = StatusCodes.Status200OK,
                     Message = MessageConstants.LOGIN_SUCCESS_MESSAGE,
-                    Data = new AuthenModel
+                    Data = new AuthenResultModel
                     {
                         AccessToken = accessToken,
                         RefreshToken = refreshToken
@@ -136,7 +136,7 @@ namespace SOPServer.Service.Services.Implements
                 {
                     StatusCode = StatusCodes.Status200OK,
                     Message = MessageConstants.LOGIN_SUCCESS_MESSAGE,
-                    Data = new AuthenModel
+                    Data = new AuthenResultModel
                     {
                         AccessToken = accessToken,
                         RefreshToken = refreshToken
@@ -175,7 +175,7 @@ namespace SOPServer.Service.Services.Implements
                         return new BaseResponseModel
                         {
                             StatusCode = StatusCodes.Status200OK,
-                            Data = new AuthenModel
+                            Data = new AuthenResultModel
                             {
                                 AccessToken = accessToken,
                                 RefreshToken = refreshToken
@@ -304,6 +304,28 @@ namespace SOPServer.Service.Services.Implements
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.USER_ADDRESS_UPDATE_SUCCESS
             };
+        }
+
+        public async Task<BaseResponseModel> LoginWithEmailAndPassword(LoginRequestModel model)
+        {
+            var user = await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email);
+
+            if(user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            if (user.IsLoginWithGoogle)
+            {
+                throw new BadRequestException(MessageConstants.USER_MUST_LOGIN_WITH_GOOGLE);
+            }
+
+            if(!PasswordUtils.VerifyPassword(model.Password, user.PasswordHash))
+            {
+                //throw new 
+            }
+
+            throw new NotImplementedException();
         }
     }
 }

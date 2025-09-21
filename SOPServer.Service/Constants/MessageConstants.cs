@@ -27,6 +27,9 @@ namespace SOPServer.Service.Constants
         public const string USER_MUST_LOGIN_WITH_GOOGLE = "User must login with google";
         public const string EMAIL_OR_PASSWORD_INCORRECT = "Email or password incorrect";
         public const string USER_FORBIDDEN = "User forbidden access to the system";
+        public const string EMAIL_EXISTED = "Email is existed";
+        public const string PASSWORD_DOES_NOT_MATCH = "Password does not match";
+        public const string USER_MUST_LOGIN_WITH_PASSWORD = "User must login with password";
 
         public const string TOKEN_NOT_VALID = "Token not valid";
         public const string LOGIN_SUCCESS_MESSAGE = "Login successfully";
@@ -48,6 +51,5 @@ namespace SOPServer.Service.Constants
         public const string CALL_REM_BACKGROUND_FAIL = "Call remove background service fail";
 
         public const string REM_BACKGROUND_IMAGE_FAIL = "Remove background image fail";
-        
     }
 }

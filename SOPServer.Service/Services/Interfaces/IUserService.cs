@@ -20,5 +20,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> DeleteUser(int id);
         Task<BaseResponseModel> UpdateUserAddress(UpdateUserAddressModel userAddress);
         Task<BaseResponseModel> LoginWithEmailAndPassword(LoginRequestModel model);
+        Task<BaseResponseModel> RegisterUser(RegisterRequestModel model);
     }
 }

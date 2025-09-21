@@ -90,6 +90,11 @@ namespace SOPServer.Service.Services.Implements
                     throw new ForbiddenException(MessageConstants.USER_FORBIDDEN);
                 }
 
+                if(!existUser.IsLoginWithGoogle)
+                {
+                    throw new BadRequestException(MessageConstants.USER_MUST_LOGIN_WITH_PASSWORD);
+                }
+
                 var accessToken = AuthenTokenUtils.GenerateAccessToken(existUser, existUser.Role, _configuration);
                 var refreshToken = AuthenTokenUtils.GenerateRefreshToken(existUser, _configuration);
 
@@ -329,6 +334,11 @@ namespace SOPServer.Service.Services.Implements
                 throw new ForbiddenException(MessageConstants.USER_FORBIDDEN);
             }
 
+            if(!user.IsVerifiedEmail) 
+            {
+                //TODO RESEND EMAIL VERIFY
+            }
+
             var accessToken = AuthenTokenUtils.GenerateAccessToken(user, user.Role, _configuration);
             var refreshToken = AuthenTokenUtils.GenerateRefreshToken(user, _configuration);
 
@@ -342,6 +352,38 @@ namespace SOPServer.Service.Services.Implements
                     RefreshToken = refreshToken
                 },
             };
+        }
+
+        public async Task<BaseResponseModel> RegisterUser(RegisterRequestModel model)
+        {
+            var existingUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email);
+
+            if (existingUser != null)
+            {
+                throw new BadRequestException(MessageConstants.EMAIL_EXISTED);
+            }
+
+            if(model.Password != model.ConfirmPassword)
+            {
+                throw new BadRequestException(MessageConstants.PASSWORD_DOES_NOT_MATCH);
+            }
+
+            //TODO VERIFY EMAIL
+
+            var newUser = new User
+            {
+                Email = model.Email,
+                DisplayName = model.DisplayName,
+                Role = Role.USER,
+                IsVerifiedEmail = false,
+                IsFirstTime = true,
+                IsLoginWithGoogle = true
+            };
+
+            await _unitOfWork.UserRepository.AddAsync(newUser);
+            _unitOfWork.Save();
+
+            throw new NotImplementedException();
         }
     }
 }

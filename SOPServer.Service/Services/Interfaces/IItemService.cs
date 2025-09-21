@@ -18,6 +18,9 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> DeleteItemByIdAsync(long id);
         Task<BaseResponseModel> GetSummaryItem(IFormFile file);
         Task<BaseResponseModel> AddNewItem(ItemCreateModel model);
+        Task<BaseResponseModel> GetItemById(long id);
+        Task<BaseResponseModel> GetItemPaginationAsync(PaginationParameter paginationParameter);
+        Task<BaseResponseModel> GetItemByUserPaginationAsync(PaginationParameter paginationParameter, long userId);
         Task<BaseResponseModel> UpdateItemAsync(long id, ItemCreateModel model);
         Task<BaseResponseModel> GetItemByIdAsync(long id);
         Task<BaseResponseModel> GetItemsAsync(long userId, PaginationParameter pagination);

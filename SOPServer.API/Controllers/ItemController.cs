@@ -18,11 +18,34 @@ namespace SOPServer.API.Controllers
             _itemService = itemService;
         }
 
+        [HttpGet]
+        public Task<IActionResult> GetListItem([FromQuery] PaginationParameter paginationParameter)
+        {
+            return ValidateAndExecute(async () => await _itemService.GetItemPaginationAsync(paginationParameter));
+        }
+
+        [HttpGet("user/{userId}")]
+        public Task<IActionResult> GetListItem([FromQuery] PaginationParameter paginationParameter, long userId)
+        {
+            return ValidateAndExecute(async () => await _itemService.GetItemByUserPaginationAsync(paginationParameter, userId));
+        }
+
+        [HttpGet("{id}")]
+        public Task<IActionResult> GetItemById(long id)
+        {
+            return ValidateAndExecute(async () => await _itemService.GetItemById(id));
+        }
+
         [HttpPost("summary")]
         public Task<IActionResult> ValidationImage(IFormFile file)
         {
             return ValidateAndExecute(async () => await _itemService.GetSummaryItem(file));
-            throw new NotImplementedException();
+        }
+
+        [HttpPost]
+        public Task<IActionResult> CreateNewItem(ItemCreateModel model)
+        {
+            return ValidateAndExecute(async () => await _itemService.AddNewItem(model));
         }
 
         [HttpPost]
@@ -55,7 +78,6 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _itemService.DeleteItemByIdAsync(id));
         }
-
         //Sample CODE
 
         //[Authorize(Roles = "1,3,4")]

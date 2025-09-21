@@ -9,5 +9,6 @@ namespace SOPServer.Service.SettingModels
     public class FirebaseStorageSettings
     {
         public string BucketName { get; set; }
+        public string Path { get; set; }
     }
 }

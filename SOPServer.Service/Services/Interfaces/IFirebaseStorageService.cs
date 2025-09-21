@@ -11,5 +11,6 @@ namespace SOPServer.Service.Services.Interfaces
     public interface IFirebaseStorageService
     {
         Task<BaseResponseModel> UploadImageAsync(IFormFile file);
+        Task<BaseResponseModel> DeleteImageAsync(string fullPath);
     }
 }

@@ -98,7 +98,7 @@ namespace SOPServer.Repository.Repositories.Generic
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null)
         {
             IQueryable<TEntity> query = _dbSet;
-
+            query = query.Where(e => !e.IsDeleted);
             if (filter != null)
             {
                 query = query.Where(filter);
@@ -113,7 +113,7 @@ namespace SOPServer.Repository.Repositories.Generic
             {
                 query = orderBy(query);
             }
-
+            
             var itemCount = await query.CountAsync();
 
 
@@ -145,6 +145,7 @@ namespace SOPServer.Repository.Repositories.Generic
             {
                 query = query.Where(filter);
             }
+            query = query.Where(e => !e.IsDeleted);
             return await query.FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
         }
     }

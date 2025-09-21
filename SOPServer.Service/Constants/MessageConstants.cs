@@ -30,6 +30,7 @@ namespace SOPServer.Service.Constants
         public const string EMAIL_EXISTED = "Email is existed";
         public const string PASSWORD_DOES_NOT_MATCH = "Password does not match";
         public const string USER_MUST_LOGIN_WITH_PASSWORD = "User must login with password";
+        public const string USER_NOT_VERIFY = "User not verify email";
 
         public const string TOKEN_NOT_VALID = "Token not valid";
         public const string LOGIN_SUCCESS_MESSAGE = "Login successfully";

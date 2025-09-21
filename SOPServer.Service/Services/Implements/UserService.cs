@@ -336,7 +336,7 @@ namespace SOPServer.Service.Services.Implements
 
             if(!user.IsVerifiedEmail) 
             {
-                //TODO RESEND EMAIL VERIFY
+                throw new BadRequestException(MessageConstants.USER_NOT_VERIFY);
             }
 
             var accessToken = AuthenTokenUtils.GenerateAccessToken(user, user.Role, _configuration);

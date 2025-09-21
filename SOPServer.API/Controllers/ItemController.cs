@@ -48,29 +48,10 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _itemService.AddNewItem(model));
         }
 
-        [HttpPost]
-        public Task<IActionResult> Create([FromBody] ItemCreateModel model)
-        {
-            return ValidateAndExecute(() => _itemService.AddNewItem(model));
-        }
-
         [HttpPut("{id}")]
         public Task<IActionResult> Update(long id, [FromBody] ItemCreateModel model)
         {
             return ValidateAndExecute(() => _itemService.UpdateItemAsync(id, model));
-        }
-
-        [HttpGet("{id}")]
-        public Task<IActionResult> GetById(long id)
-        {
-            return ValidateAndExecute(() => _itemService.GetItemByIdAsync(id));
-        }
-
-        [HttpGet("user/{userId}")]
-        public Task<IActionResult> ListByUser(long userId, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 20)
-        {
-            var pagination = new PaginationParameter { PageIndex = pageIndex, PageSize = pageSize };
-            return ValidateAndExecute(() => _itemService.GetItemsAsync(userId, pagination));
         }
 
         [HttpDelete("{id}")]
@@ -78,13 +59,5 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _itemService.DeleteItemByIdAsync(id));
         }
-        //Sample CODE
-
-        //[Authorize(Roles = "1,3,4")]
-        //[HttpGet("order/{orderCode}")]
-        //public Task<IActionResult> GetPaymentByOrderCode(int orderCode)
-        //{
-        //    return ValidateAndExecute(async () => await _paymentService.GetPaymentInfoByOrderCode(orderCode));
-        //}
     }
 }

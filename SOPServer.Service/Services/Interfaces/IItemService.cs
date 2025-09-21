@@ -22,7 +22,5 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> GetItemPaginationAsync(PaginationParameter paginationParameter);
         Task<BaseResponseModel> GetItemByUserPaginationAsync(PaginationParameter paginationParameter, long userId);
         Task<BaseResponseModel> UpdateItemAsync(long id, ItemCreateModel model);
-        Task<BaseResponseModel> GetItemByIdAsync(long id);
-        Task<BaseResponseModel> GetItemsAsync(long userId, PaginationParameter pagination);
     }
 }

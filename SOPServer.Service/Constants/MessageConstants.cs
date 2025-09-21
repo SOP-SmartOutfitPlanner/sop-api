@@ -22,7 +22,6 @@ namespace SOPServer.Service.Constants
         public const string DELETE_ITEM_SUCCESS = "Item deleted successfully";
         public const string GET_LIST_ITEM_SUCCESS = "Get list item successfully";
         public const string ITEM_ALREADY_EXISTS = "Item already exists";
-        public const string ITEM_CREATE_SUCCESS = "Item created successfully";
         public const string ITEM_UPDATE_SUCCESS = "Item updated successfully";
         public const string ITEM_GET_SUCCESS = "Get item successfully";
 

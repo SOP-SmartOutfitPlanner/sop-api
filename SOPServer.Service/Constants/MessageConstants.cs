@@ -38,10 +38,21 @@ namespace SOPServer.Service.Constants
         public const string FILE_NOT_FOUND = "File not found";
         public const string UPLOAD_FILE_SUCCESS = "File uploaded successfully";
 
+
+
+        // Category related messages used by CategoryService
+        public const string GET_CATEGORY_BY_ID_SUCCESS = "Get category by id successfully";
+        public const string GET_CATEGORY_BY_PARENTID_SUCCESS = "Get categories by parent id successfully";
+        public const string DELETE_CATEGORY_SUCCESS = "Category deleted successfully";
+        public const string UPDATE_CATEGORY_SUCCESS = "Category updated successfully";
+        public const string CATEGORY_HAS_CHILDREN = "Category has active children and cannot be deleted";
+        public const string CATEGORY_CREATE_SUCCESS = "Category created successfully";
         public const string CATEGORY_NOT_EXIST = "Category is not existed";
+        public const string CATEGORY_PARENT_NOT_EXIST = "Category is not existed";
 
         public const string CALL_REM_BACKGROUND_FAIL = "Call remove background service fail";
 
         public const string REM_BACKGROUND_IMAGE_FAIL = "Remove background image fail";
+        
     }
 }

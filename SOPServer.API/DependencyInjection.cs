@@ -12,13 +12,19 @@ namespace SOPServer.API
         {
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-            // Repositories
             services.AddScoped<IItemRepository, ItemRepository>();
+
             services.AddScoped<ICategoryRepository, CategoryRepository>();
+            services.AddScoped<ICategoryService, CategoryService>();
+
             services.AddScoped<IItemGoalRepository, ItemGoalRepository>();
+
             services.AddScoped<IItemOccasionRepository, ItemOccasionRepository>();
+
             services.AddScoped<IItemSeasonRepository, ItemSeasonRepository>();
+
             services.AddScoped<IItemStyleRepository, ItemStyleRepository>();
+
             services.AddScoped<IUserRepository, UserRepository>();
 
             // Services

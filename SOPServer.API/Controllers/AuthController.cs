@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
 using SOPServer.Service.BusinessModels.AuthenModels;
 using SOPServer.Service.Services.Interfaces;
 
@@ -30,7 +31,7 @@ namespace SOPServer.API.Controllers
         [HttpPost]
         public Task<IActionResult> LoginWithEmailAndPassword([FromBody] LoginRequestModel model)
         {
-            throw new NotImplementedException();
+            return ValidateAndExecute(() => _userService.LoginWithEmailAndPassword(model));
         }
     }
 }

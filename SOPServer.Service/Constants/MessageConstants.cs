@@ -25,12 +25,13 @@ namespace SOPServer.Service.Constants
         public const string USER_DELETE_SUCCESS = "User deleted successfully";
         public const string USER_ADDRESS_UPDATE_SUCCESS = "User address updated successfully";
         public const string USER_MUST_LOGIN_WITH_GOOGLE = "User must login with google";
+        public const string EMAIL_OR_PASSWORD_INCORRECT = "Email or password incorrect";
+        public const string USER_FORBIDDEN = "User forbidden access to the system";
 
         public const string TOKEN_NOT_VALID = "Token not valid";
         public const string LOGIN_SUCCESS_MESSAGE = "Login successfully";
         public const string LOGIN_GOOGLE_SUCCESS_MESSAGE = "Login with google successfully";
         public const string TOKEN_REFRESH_SUCCESS_MESSAGE = "Token refresh successfully";
-        public const string USER_HAS_BEEN_DELETE = "User has been deleted";
         public const string FILE_NOT_FOUND = "File not found";
         public const string UPLOAD_FILE_SUCCESS = "File uploaded successfully";
 
@@ -47,5 +48,6 @@ namespace SOPServer.Service.Constants
         public const string CALL_REM_BACKGROUND_FAIL = "Call remove background service fail";
 
         public const string REM_BACKGROUND_IMAGE_FAIL = "Remove background image fail";
+        
     }
 }

@@ -10,17 +10,17 @@ public partial class User : BaseEntity
 {
     public string Email { get; set; }
 
-    public string PasswordHash { get; set; }
+    public string? PasswordHash { get; set; }
 
     public Role Role { get; set; }
 
     public string DisplayName { get; set; }
 
-    public bool? IsVerifiedEmail { get; set; }
+    public bool IsVerifiedEmail { get; set; } = false;
 
-    public bool? IsStylist { get; set; }
+    public bool IsStylist { get; set; } = false;
 
-    public bool? IsPremium { get; set; }
+    public bool IsPremium { get; set; } = false;
 
     public bool IsLoginWithGoogle { get; set; } = false;
 

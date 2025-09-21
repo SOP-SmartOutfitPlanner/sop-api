@@ -81,18 +81,17 @@ namespace SOPServer.Service.Services.Implements
             }
 
             var existUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(payload.Email);
+
+            // If user exists, generate tokens and return
             if (existUser != null)
             {
                 if (existUser.IsDeleted)
                 {
-                    return new BaseResponseModel
-                    {
-                        StatusCode = StatusCodes.Status400BadRequest,
-                        Message = MessageConstants.USER_HAS_BEEN_DELETE,
-                    };
+                    throw new ForbiddenException(MessageConstants.USER_FORBIDDEN);
                 }
-                var accessToken = AuthenTokenUtils.GenerateAccessToken(existUser.Email, existUser, existUser.Role, _configuration);
-                var refreshToken = AuthenTokenUtils.GenerateRefreshToken(existUser.Email, _configuration);
+
+                var accessToken = AuthenTokenUtils.GenerateAccessToken(existUser, existUser.Role, _configuration);
+                var refreshToken = AuthenTokenUtils.GenerateRefreshToken(existUser, _configuration);
 
                 return new BaseResponseModel
                 {
@@ -111,11 +110,11 @@ namespace SOPServer.Service.Services.Implements
                 {
                     Email = payload.Email,
                     DisplayName = payload.Name,
-                    //UnsignName = StringUtils.ConvertToUnSign(payload.Name),
                     AvtUrl = payload.Picture,
-                    //GoogleId = payload.JwtId,
                     Role = Role.USER,
-                    IsVerifiedEmail = payload.EmailVerified
+                    IsVerifiedEmail = payload.EmailVerified,
+                    IsFirstTime = true,
+                    IsLoginWithGoogle = true
                 };
 
                 await _unitOfWork.UserRepository.AddAsync(newUser);
@@ -129,8 +128,8 @@ namespace SOPServer.Service.Services.Implements
                 //        ToEmail = newUser.Email
                 //    }));
 
-                var accessToken = AuthenTokenUtils.GenerateAccessToken(newUser.Email, newUser, Role.USER, _configuration);
-                var refreshToken = AuthenTokenUtils.GenerateRefreshToken(newUser.Email, _configuration);
+                var accessToken = AuthenTokenUtils.GenerateAccessToken(newUser, Role.USER, _configuration);
+                var refreshToken = AuthenTokenUtils.GenerateRefreshToken(newUser, _configuration);
 
                 return new BaseResponseModel
                 {
@@ -170,8 +169,8 @@ namespace SOPServer.Service.Services.Implements
                     var existUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(email);
                     if (existUser != null)
                     {
-                        var accessToken = AuthenTokenUtils.GenerateAccessToken(email, existUser, existUser.Role, _configuration);
-                        var refreshToken = AuthenTokenUtils.GenerateRefreshToken(email, _configuration);
+                        var accessToken = AuthenTokenUtils.GenerateAccessToken(existUser, existUser.Role, _configuration);
+                        var refreshToken = AuthenTokenUtils.GenerateRefreshToken(existUser, _configuration);
                         return new BaseResponseModel
                         {
                             StatusCode = StatusCodes.Status200OK,
@@ -322,10 +321,27 @@ namespace SOPServer.Service.Services.Implements
 
             if(!PasswordUtils.VerifyPassword(model.Password, user.PasswordHash))
             {
-                //throw new 
+                throw new UnauthorizedException(MessageConstants.EMAIL_OR_PASSWORD_INCORRECT);
             }
 
-            throw new NotImplementedException();
+            if (user.IsDeleted)
+            {
+                throw new ForbiddenException(MessageConstants.USER_FORBIDDEN);
+            }
+
+            var accessToken = AuthenTokenUtils.GenerateAccessToken(user, user.Role, _configuration);
+            var refreshToken = AuthenTokenUtils.GenerateRefreshToken(user, _configuration);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.LOGIN_SUCCESS_MESSAGE,
+                Data = new AuthenResultModel
+                {
+                    AccessToken = accessToken,
+                    RefreshToken = refreshToken
+                },
+            };
         }
     }
 }

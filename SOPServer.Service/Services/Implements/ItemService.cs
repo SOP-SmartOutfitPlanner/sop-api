@@ -71,7 +71,7 @@ namespace SOPServer.Service.Services.Implements
         {
             var item = await _unitOfWork.ItemRepository.GetByIdAsync(id);
 
-            if(item == null)
+            if (item == null)
             {
                 throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
             }
@@ -162,7 +162,6 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> GetSummaryItem(IFormFile file)
         {
-
             if (file == null || file.Length == 0)
             {
                 throw new BadRequestException(MessageConstants.IMAGE_IS_NOT_VALID);
@@ -180,60 +179,22 @@ namespace SOPServer.Service.Services.Implements
             }
 
             //upload image to firebase storage
-            var uploadToRemoveBg = await _firebaseStorageService.UploadImageAsync(file);
+            var uploadToRemoveBg = await UploadFileToFirebase(file);
 
-            if (uploadToRemoveBg?.Data is not ImageUploadResult uploadData || string.IsNullOrEmpty(uploadData.DownloadUrl))
-            {
-                throw new BadRequestException(MessageConstants.FILE_NOT_FOUND);
-            }
-
-            var imageDownloadUrl = uploadData.DownloadUrl;
+            var imageDownloadUrl = uploadToRemoveBg.DownloadUrl;
 
             //call rembg service to remove background and convert to formfile
-            IFormFile fileRemoveBackground;
-            using (var client = _httpClientFactory.CreateClient("RembgClient"))
-            {
-                var requestBody = new RembgRequest
-                {
-                    Input = new RembgInput { Image = imageDownloadUrl }
-                };
-
-                //call rembg service
-                var responseRemBg = await client.PostAsJsonAsync("predictions", requestBody);
-
-                //delete image after call rembg service
-                await _firebaseStorageService.DeleteImageAsync(uploadData.FullPath);
-
-                if (!responseRemBg.IsSuccessStatusCode)
-                {
-                    throw new BadRequestException(MessageConstants.CALL_REM_BACKGROUND_FAIL);
-                }
-
-                //cast response to object
-                var result = await responseRemBg.Content.ReadFromJsonAsync<RembgResponse>();
-
-                if(!string.Equals(result.Status, "succeeded", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new BadRequestException(MessageConstants.REM_BACKGROUND_IMAGE_FAIL);
-                }
-
-                //convert base64 to formfile
-                fileRemoveBackground = ImageUtils.Base64ToFormFile(result.Output, file.FileName);
-            }
+            var fileRemoveBackground = await CallRembgAndGetRemovedFile(imageDownloadUrl, file.FileName, uploadToRemoveBg.FullPath);
 
             //call gemini service to get summary
             var summaryFromGemini = await _geminiService.ImageGenerateContent(await ImageUtils.ConvertToBase64Async(fileRemoveBackground), fileRemoveBackground.ContentType);
-            //upload image remove background to firebase storage
-            var imageRemBgResponse = await _firebaseStorageService.UploadImageAsync(fileRemoveBackground);
 
-            if (imageRemBgResponse?.Data is not ImageUploadResult imageRemBg || string.IsNullOrEmpty(imageRemBg.DownloadUrl))
-            {
-                throw new BadRequestException(MessageConstants.FILE_NOT_FOUND);
-            }
+            //upload image remove background to firebase storage
+            var imageRemBgResponse = await UploadFileToFirebase(fileRemoveBackground);
 
             var itemSummary = _mapper.Map<ItemSummaryModel>(summaryFromGemini);
 
-            itemSummary.ImageRemBgURL = imageRemBg.DownloadUrl;
+            itemSummary.ImageRemBgURL = imageRemBgResponse.DownloadUrl;
 
             return new BaseResponseModel
             {
@@ -241,6 +202,50 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.GET_SUMMARY_IMAGE_SUCCESS,
                 Data = itemSummary
             };
+        }
+
+        // Helper: upload file to firebase and return ImageUploadResult
+        private async Task<ImageUploadResult> UploadFileToFirebase(IFormFile file)
+        {
+            var uploadResult = await _firebaseStorageService.UploadImageAsync(file);
+            if (uploadResult?.Data is not ImageUploadResult uploadData || string.IsNullOrEmpty(uploadData.DownloadUrl))
+            {
+                throw new BadRequestException(MessageConstants.FILE_NOT_FOUND);
+            }
+
+            return uploadData;
+        }
+
+        // Helper: call rembg service and return IFormFile of removed background image
+        private async Task<IFormFile> CallRembgAndGetRemovedFile(string imageUrl, string originalFileName, string fullPathToDelete)
+        {
+            var client = _httpClientFactory.CreateClient("RembgClient");
+
+            var requestBody = new RembgRequest
+            {
+                Input = new RembgInput { Image = imageUrl }
+            };
+
+            var responseRemBg = await client.PostAsJsonAsync("predictions", requestBody);
+
+            // delete original uploaded image regardless of rembg result
+            await _firebaseStorageService.DeleteImageAsync(fullPathToDelete);
+
+            if (!responseRemBg.IsSuccessStatusCode)
+            {
+                throw new BadRequestException(MessageConstants.CALL_REM_BACKGROUND_FAIL);
+            }
+
+            var result = await responseRemBg.Content.ReadFromJsonAsync<RembgResponse>();
+
+            if (result == null || !string.Equals(result.Status, "succeeded", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new BadRequestException(MessageConstants.REM_BACKGROUND_IMAGE_FAIL);
+            }
+
+            var fileRemoveBackground = ImageUtils.Base64ToFormFile(result.Output, originalFileName);
+            return fileRemoveBackground;
+
         }
     }
 }

@@ -3,6 +3,7 @@ using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Service.BusinessModels.CategoryModels;
 using SOPServer.Service.BusinessModels.ItemModels;
+using SOPServer.Service.BusinessModels.SeasonModels;
 using System.Collections.Generic;
 
 namespace SOPServer.Service.Mappers
@@ -31,6 +32,7 @@ namespace SOPServer.Service.Mappers
             CreateMap<Category, CategoryModel>()
                 .ForMember(dest => dest.ParentName, opt => opt.MapFrom(src => src.Parent != null ? src.Parent.Name : null));
 
+
             CreateMap<CategoryModel, Category>();
 
             CreateMap<CategoryUpdateModel, Category>();
@@ -38,6 +40,20 @@ namespace SOPServer.Service.Mappers
             CreateMap<CategoryCreateModel, Category>();
 
             CreateMap<Pagination<Category>, Pagination<CategoryModel>>().ConvertUsing<PaginationConverter<Category, CategoryModel>>();
+
+            // Season mappings
+            CreateMap<Season, SeasonModel>();
+
+            CreateMap<SeasonModel, Season>();
+
+            CreateMap<Season, SeasonDetailModel>()
+                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.ItemSeasons != null ? src.ItemSeasons.Select(x => x.Item) : new List<Item>()));
+
+            CreateMap<SeasonUpdateModel, Season>();
+
+            CreateMap<SeasonCreateModel, Season>();
+
+            CreateMap<Pagination<Season>, Pagination<SeasonModel>>().ConvertUsing<PaginationConverter<Season, SeasonModel>>();
         }
 
         public class PaginationConverter<TSource, TDestination> : ITypeConverter<Pagination<TSource>, Pagination<TDestination>>

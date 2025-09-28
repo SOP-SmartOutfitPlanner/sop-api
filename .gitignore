@@ -484,3 +484,4 @@ $RECYCLE.BIN/
 *.swp
 /HimariServer.API/appsettings.json
 /HimariServer.API/firebase-adminsdk.json
+/SOPServer.API/appsettings.json

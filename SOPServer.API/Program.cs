@@ -14,6 +14,20 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var env = builder.Environment;
+
+if (!env.IsDevelopment())
+{
+    var deploymentPath = Environment.GetEnvironmentVariable("PATH_SOP");
+
+    if (string.IsNullOrEmpty(deploymentPath))
+    {
+        throw new Exception("Environment variable PATH_SOP is not set.");
+    }
+
+    builder.Configuration.AddJsonFile(deploymentPath, optional: false, reloadOnChange: true);
+}
+
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;

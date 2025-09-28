@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SOPServer.Repository.Repositories.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,14 @@ namespace SOPServer.Repository.UnitOfWork
 {
     public interface IUnitOfWork : IDisposable
     {
+        IItemRepository ItemRepository { get; }
+        ICategoryRepository CategoryRepository { get; }
+        IItemGoalRepository ItemGoalRepository { get; }
+        IItemOccasionRepository ItemOccasionRepository { get; }
+        IItemSeasonRepository ItemSeasonRepository { get; }
+        IItemStyleRepository ItemStyleRepository { get; }
+        IUserRepository UserRepository { get; }
+
         int Save();
         void Commit();
         void Rollback();

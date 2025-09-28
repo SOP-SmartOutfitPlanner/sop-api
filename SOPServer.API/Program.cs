@@ -8,10 +8,25 @@ using SOPServer.API.Middlewares;
 using SOPServer.Repository.DBContext;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Mappers;
+using SOPServer.Service.SettingModels;
 using System.Text;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var env = builder.Environment;
+
+if (!env.IsDevelopment())
+{
+    var deploymentPath = Environment.GetEnvironmentVariable("PATH_SOP");
+
+    if (string.IsNullOrEmpty(deploymentPath))
+    {
+        throw new Exception("Environment variable PATH_SOP is not set.");
+    }
+
+    builder.Configuration.AddJsonFile(deploymentPath, optional: false, reloadOnChange: true);
+}
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
@@ -114,6 +129,9 @@ builder.Services.AddAutoMapper(typeof(MapperConfigProfile).Assembly);
 
 builder.Services.AddInfractstructure(builder.Configuration);
 
+builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
+builder.Services.Configure<FirebaseStorageSettings>(builder.Configuration.GetSection("FirebaseStorage"));
+
 // ===================== CONFIG DATABASE CONNECTION =======================
 
 builder.Services.AddDbContext<SOPServerContext>(options =>
@@ -122,6 +140,14 @@ builder.Services.AddDbContext<SOPServerContext>(options =>
 });
 
 // ==========================================================
+
+builder.Services.AddHttpClient("RembgClient", client =>
+{
+    client.BaseAddress = new Uri("https://rembg.wizlab.io.vn/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 
 var app = builder.Build();
 

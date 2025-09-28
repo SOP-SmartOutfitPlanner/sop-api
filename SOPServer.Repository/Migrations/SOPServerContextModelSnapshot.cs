@@ -100,6 +100,9 @@ namespace SOPServer.Repository.Migrations
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<long?>("CategoryId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("Color")
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(max)");
@@ -121,11 +124,6 @@ namespace SOPServer.Repository.Migrations
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(255)");
 
-                    b.Property<string>("Image")
-                        .HasMaxLength(255)
-                        .IsUnicode(true)
-                        .HasColumnType("nvarchar(255)");
-
                     b.Property<string>("ImgUrl")
                         .HasMaxLength(255)
                         .IsUnicode(true)
@@ -134,10 +132,8 @@ namespace SOPServer.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("LastWornAt")
-                        .HasMaxLength(255)
-                        .IsUnicode(true)
-                        .HasColumnType("nvarchar(255)");
+                    b.Property<DateTime>("LastWornAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .HasMaxLength(255)
@@ -167,6 +163,8 @@ namespace SOPServer.Repository.Migrations
 
                     b.HasKey("Id")
                         .HasName("PK__Item__3214EC0747906DDA");
+
+                    b.HasIndex("CategoryId");
 
                     b.HasIndex("UserId");
 
@@ -569,10 +567,17 @@ namespace SOPServer.Repository.Migrations
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Item", b =>
                 {
+                    b.HasOne("SOPServer.Repository.Entities.Category", "Category")
+                        .WithMany("Items")
+                        .HasForeignKey("CategoryId")
+                        .HasConstraintName("FK_Item_Category");
+
                     b.HasOne("SOPServer.Repository.Entities.User", "User")
                         .WithMany("Items")
                         .HasForeignKey("UserId")
                         .HasConstraintName("FK_Item_User");
+
+                    b.Navigation("Category");
 
                     b.Navigation("User");
                 });
@@ -675,6 +680,8 @@ namespace SOPServer.Repository.Migrations
             modelBuilder.Entity("SOPServer.Repository.Entities.Category", b =>
                 {
                     b.Navigation("InverseParent");
+
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Goal", b =>

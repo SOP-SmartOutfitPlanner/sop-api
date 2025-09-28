@@ -14,4 +14,6 @@ public partial class Category : BaseEntity
     public virtual ICollection<Category> InverseParent { get; set; } = new List<Category>();
 
     public virtual Category Parent { get; set; }
+
+    public virtual ICollection<Item> Items { get; set; } = new List<Item>();
 }

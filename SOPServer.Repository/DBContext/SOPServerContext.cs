@@ -20,11 +20,7 @@ public partial class SOPServerContext : DbContext
 
     public virtual DbSet<Category> Categories { get; set; }
 
-    public virtual DbSet<Goal> Goals { get; set; }
-
     public virtual DbSet<Item> Items { get; set; }
-
-    public virtual DbSet<ItemGoal> ItemGoals { get; set; }
 
     public virtual DbSet<ItemOccasion> ItemOccasions { get; set; }
 
@@ -63,17 +59,6 @@ public partial class SOPServerContext : DbContext
             entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent)
                 .HasForeignKey(d => d.ParentId)
                 .HasConstraintName("FK_Category_Parent");
-        });
-
-        modelBuilder.Entity<Goal>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__Goal__3214EC07C1B22C27");
-
-            entity.ToTable("Goal");
-
-            entity.Property(e => e.Name)
-                .HasMaxLength(255)
-                .IsUnicode(true);
         });
 
         modelBuilder.Entity<Item>(entity =>
@@ -122,21 +107,6 @@ public partial class SOPServerContext : DbContext
             entity.HasOne(d => d.Category).WithMany(p => p.Items)
                 .HasForeignKey(d => d.CategoryId)
                 .HasConstraintName("FK_Item_Category");
-        });
-
-        modelBuilder.Entity<ItemGoal>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__ItemGoal__3214EC07628E8E1B");
-
-            entity.ToTable("ItemGoal");
-
-            entity.HasOne(d => d.Goal).WithMany(p => p.ItemGoals)
-                .HasForeignKey(d => d.GoalId)
-                .HasConstraintName("FK_ItemGoal_Goal");
-
-            entity.HasOne(d => d.Item).WithMany(p => p.ItemGoals)
-                .HasForeignKey(d => d.ItemId)
-                .HasConstraintName("FK_ItemGoal_Item");
         });
 
         modelBuilder.Entity<ItemOccasion>(entity =>

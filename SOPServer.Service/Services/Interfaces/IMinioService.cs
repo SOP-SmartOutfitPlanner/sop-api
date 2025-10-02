@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Interfaces
 {
-    public interface IFirebaseStorageService
+    public interface IMinioService
     {
         Task<BaseResponseModel> UploadImageAsync(IFormFile file);
         Task<BaseResponseModel> DeleteImageAsync(string fullPath);

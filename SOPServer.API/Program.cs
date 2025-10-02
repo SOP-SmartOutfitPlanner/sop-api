@@ -131,6 +131,7 @@ builder.Services.AddInfractstructure(builder.Configuration);
 
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
 builder.Services.Configure<FirebaseStorageSettings>(builder.Configuration.GetSection("FirebaseStorage"));
+builder.Services.Configure<MinioSettings>(builder.Configuration.GetSection("MinioStorage"));
 
 // ===================== CONFIG DATABASE CONNECTION =======================
 

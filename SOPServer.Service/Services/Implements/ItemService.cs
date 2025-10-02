@@ -26,15 +26,15 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IGeminiService _geminiService;
-        private readonly IFirebaseStorageService _firebaseStorageService;
+        private readonly IMinioService _minioService;
         private readonly IHttpClientFactory _httpClientFactory;
 
-        public ItemService(IUnitOfWork unitOfWork, IMapper mapper, IGeminiService geminiService, IFirebaseStorageService firebaseStorageService, IHttpClientFactory httpClientFactory)
+        public ItemService(IUnitOfWork unitOfWork, IMapper mapper, IGeminiService geminiService, IMinioService minioService, IHttpClientFactory httpClientFactory)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _geminiService = geminiService;
-            _firebaseStorageService = firebaseStorageService;
+            _minioService = minioService;
             _httpClientFactory = httpClientFactory;
         }
 
@@ -171,26 +171,23 @@ namespace SOPServer.Service.Services.Implements
             var base64Image = await ImageUtils.ConvertToBase64Async(file);
 
             //validation image
-            bool isValid = await _geminiService.ImageValidation(base64Image, file.ContentType);
-
-            if (!isValid)
+            var validation = await _geminiService.ImageValidation(base64Image, file.ContentType);
+            if (!validation.IsValid)
             {
-                throw new BadRequestException(MessageConstants.IMAGE_IS_NOT_VALID);
+                throw new BadRequestException(validation.Message);
             }
 
             //upload image to firebase storage
-            var uploadToRemoveBg = await UploadFileToFirebase(file);
-
-            var imageDownloadUrl = uploadToRemoveBg.DownloadUrl;
+            var uploadToRemoveBg = await UploadFileToMinio(file);
 
             //call rembg service to remove background and convert to formfile
-            var fileRemoveBackground = await CallRembgAndGetRemovedFile(imageDownloadUrl, file.FileName, uploadToRemoveBg.FullPath);
+            var fileRemoveBackground = await CallRembgAndGetRemovedFile(uploadToRemoveBg.DownloadUrl, uploadToRemoveBg.FileName);
 
             //call gemini service to get summary
             var summaryFromGemini = await _geminiService.ImageGenerateContent(await ImageUtils.ConvertToBase64Async(fileRemoveBackground), fileRemoveBackground.ContentType);
 
             //upload image remove background to firebase storage
-            var imageRemBgResponse = await UploadFileToFirebase(fileRemoveBackground);
+            var imageRemBgResponse = await UploadFileToMinio(fileRemoveBackground);
 
             var itemSummary = _mapper.Map<ItemSummaryModel>(summaryFromGemini);
 
@@ -205,9 +202,9 @@ namespace SOPServer.Service.Services.Implements
         }
 
         // Helper: upload file to firebase and return ImageUploadResult
-        private async Task<ImageUploadResult> UploadFileToFirebase(IFormFile file)
+        private async Task<ImageUploadResult> UploadFileToMinio(IFormFile file)
         {
-            var uploadResult = await _firebaseStorageService.UploadImageAsync(file);
+            var uploadResult = await _minioService.UploadImageAsync(file);
             if (uploadResult?.Data is not ImageUploadResult uploadData || string.IsNullOrEmpty(uploadData.DownloadUrl))
             {
                 throw new BadRequestException(MessageConstants.FILE_NOT_FOUND);
@@ -217,7 +214,7 @@ namespace SOPServer.Service.Services.Implements
         }
 
         // Helper: call rembg service and return IFormFile of removed background image
-        private async Task<IFormFile> CallRembgAndGetRemovedFile(string imageUrl, string originalFileName, string fullPathToDelete)
+        private async Task<IFormFile> CallRembgAndGetRemovedFile(string imageUrl, string originalFileName)
         {
             var client = _httpClientFactory.CreateClient("RembgClient");
 
@@ -229,7 +226,7 @@ namespace SOPServer.Service.Services.Implements
             var responseRemBg = await client.PostAsJsonAsync("predictions", requestBody);
 
             // delete original uploaded image regardless of rembg result
-            await _firebaseStorageService.DeleteImageAsync(fullPathToDelete);
+            await _minioService.DeleteImageAsync(originalFileName);
 
             if (!responseRemBg.IsSuccessStatusCode)
             {

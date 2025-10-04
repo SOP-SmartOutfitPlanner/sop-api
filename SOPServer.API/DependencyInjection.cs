@@ -29,6 +29,10 @@ namespace SOPServer.API
             services.AddScoped<IGeminiService, GeminiService>();
             services.AddScoped<IItemService, ItemService>();
 
+            services.AddScoped<IRedisService, RedisService>();
+            services.AddScoped<IMailService, MailService>();
+            services.AddScoped<IOtpService, OtpService>();
+            services.AddScoped<IUserService, UserService>();
             services.AddScoped<IMinioService, MinioService>();
 
             return services;

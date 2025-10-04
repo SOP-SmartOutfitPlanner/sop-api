@@ -33,8 +33,10 @@ namespace SOPServer.Service.Constants
         public const string USER_FORBIDDEN = "User forbidden access to the system";
         public const string EMAIL_EXISTED = "Email is existed";
         public const string PASSWORD_DOES_NOT_MATCH = "Password does not match";
-        public const string USER_MUST_LOGIN_WITH_PASSWORD = "User must login with password";
+        public const string USER_MUST_LOGIN_WITH_PASSWORD = "User must login with email and password";
         public const string USER_NOT_VERIFY = "User not verify email";
+        public const string USER_ALREADY_VERIFY = "User has already verified email";
+
 
         public const string TOKEN_NOT_VALID = "Token not valid";
         public const string LOGIN_SUCCESS_MESSAGE = "Login successfully";
@@ -43,8 +45,11 @@ namespace SOPServer.Service.Constants
         public const string FILE_NOT_FOUND = "File not found";
         public const string UPLOAD_FILE_SUCCESS = "File uploaded successfully";
 
+<<<<<<<<< Temporary merge branch 1
+=========
 
 
+>>>>>>>>> Temporary merge branch 2
         // Category related messages used by CategoryService
         public const string GET_CATEGORY_BY_ID_SUCCESS = "Get category by id successfully";
         public const string GET_CATEGORY_BY_PARENTID_SUCCESS = "Get categories by parent id successfully";
@@ -58,6 +63,10 @@ namespace SOPServer.Service.Constants
         public const string CALL_REM_BACKGROUND_FAIL = "Call remove background service fail";
 
         public const string REM_BACKGROUND_IMAGE_FAIL = "Remove background image fail";
-        
+        public const string OTP_SENT_SUCCESS = "OTP sent successfully to your gmail";
+        public const string OTP_VERIFY_SUCCESS = "Verify OTP successfully";
+        public const string OTP_INVALID = "OTP is invalid or expired!";
+        public const string OTP_TOO_MANY_ATTEMPTS = "You request OTP too many time, please retry after 15 minutes!";
+        public const string EMAIL_SEND_FAILED = "Send email failed, please retry";
     }
 }

@@ -5,6 +5,7 @@ using SOPServer.Service.BusinessModels.UserModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -21,5 +22,9 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> UpdateUserAddress(UpdateUserAddressModel userAddress);
         Task<BaseResponseModel> LoginWithEmailAndPassword(LoginRequestModel model);
         Task<BaseResponseModel> RegisterUser(RegisterRequestModel model);
+        Task<BaseResponseModel> ResendOtp(string email);
+        Task<BaseResponseModel> VerifyOtp(VerifyOtpRequestModel model);
+        Task<BaseResponseModel> LogoutCurrentAsync(ClaimsPrincipal principal);
+
     }
 }

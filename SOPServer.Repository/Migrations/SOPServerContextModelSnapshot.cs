@@ -420,17 +420,17 @@ namespace SOPServer.Repository.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool?>("IsPremium")
+                    b.Property<bool>("IsPremium")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool?>("IsStylist")
+                    b.Property<bool>("IsStylist")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool?>("IsVerifiedEmail")
+                    b.Property<bool>("IsVerifiedEmail")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
@@ -444,7 +444,6 @@ namespace SOPServer.Repository.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PasswordHash")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(255)");

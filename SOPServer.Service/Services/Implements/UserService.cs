@@ -448,21 +448,22 @@ namespace SOPServer.Service.Services.Implements
         {
             var tokenId = Guid.NewGuid().ToString("N");
 
-            var accessToken = AuthenTokenUtils.GenerateAccessToken(user, user.Role, _configuration);
-            var refreshToken = AuthenTokenUtils.GenerateRefreshToken(user, _configuration);
+            var accessToken = AuthenTokenUtils.GenerateAccessToken(user, user.Role, _configuration, tokenId);
+            var refreshToken = AuthenTokenUtils.GenerateRefreshToken(user, _configuration, tokenId);
 
-            var accessKey = RedisKeyConstants.GetAccessTokenKey(user.Id);
-            var refreshKey = RedisKeyConstants.GetRefreshTokenKey(user.Id);
+            var accessKey = RedisKeyConstants.GetAccessTokenKey(user.Id, tokenId);
+            var refreshKey = RedisKeyConstants.GetRefreshTokenKey(user.Id, tokenId);
 
-            await _redisService.SetAsync(accessKey, accessToken, TimeSpan.FromHours(1));        
-            await _redisService.SetAsync(refreshKey, refreshToken, TimeSpan.FromDays(7));  
-            
+            await _redisService.SetAsync(accessKey, accessToken, TimeSpan.FromHours(1));
+            await _redisService.SetAsync(refreshKey, refreshToken, TimeSpan.FromDays(7));
+
             return new AuthenResultModel
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken
             };
         }
+
 
     }
 }

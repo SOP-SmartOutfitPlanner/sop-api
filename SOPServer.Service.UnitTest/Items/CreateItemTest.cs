@@ -12,6 +12,7 @@ using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Mappers;
 using SOPServer.Service.Services.Implements;
+using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.Services.Interfaces;
 using Xunit;
 using System.Linq;

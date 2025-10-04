@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SOPServer.Repository.DBContext;
 
@@ -11,9 +12,11 @@ using SOPServer.Repository.DBContext;
 namespace SOPServer.Repository.Migrations
 {
     [DbContext(typeof(SOPServerContext))]
-    partial class SOPServerContextModelSnapshot : ModelSnapshot
+    [Migration("20250921092649_AddUserDobAndLoginWithGoogle")]
+    partial class AddUserDobAndLoginWithGoogle
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -53,6 +56,34 @@ namespace SOPServer.Repository.Migrations
                     b.HasIndex("ParentId");
 
                     b.ToTable("Category", (string)null);
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.Goal", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(255)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id")
+                        .HasName("PK__Goal__3214EC07C1B22C27");
+
+                    b.ToTable("Goal", (string)null);
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Item", b =>
@@ -141,6 +172,39 @@ namespace SOPServer.Repository.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Item", (string)null);
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.ItemGoal", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("GoalId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("ItemId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id")
+                        .HasName("PK__ItemGoal__3214EC07628E8E1B");
+
+                    b.HasIndex("GoalId");
+
+                    b.HasIndex("ItemId");
+
+                    b.ToTable("ItemGoal", (string)null);
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.ItemOccasion", b =>
@@ -410,27 +474,22 @@ namespace SOPServer.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("IsFirstTime")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
                     b.Property<bool>("IsLoginWithGoogle")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool>("IsPremium")
+                    b.Property<bool?>("IsPremium")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool>("IsStylist")
+                    b.Property<bool?>("IsStylist")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool>("IsVerifiedEmail")
+                    b.Property<bool?>("IsVerifiedEmail")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
@@ -444,6 +503,7 @@ namespace SOPServer.Repository.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PasswordHash")
+                        .IsRequired()
                         .HasMaxLength(255)
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(255)");
@@ -528,6 +588,23 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("Category");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.ItemGoal", b =>
+                {
+                    b.HasOne("SOPServer.Repository.Entities.Goal", "Goal")
+                        .WithMany("ItemGoals")
+                        .HasForeignKey("GoalId")
+                        .HasConstraintName("FK_ItemGoal_Goal");
+
+                    b.HasOne("SOPServer.Repository.Entities.Item", "Item")
+                        .WithMany("ItemGoals")
+                        .HasForeignKey("ItemId")
+                        .HasConstraintName("FK_ItemGoal_Item");
+
+                    b.Navigation("Goal");
+
+                    b.Navigation("Item");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.ItemOccasion", b =>
@@ -615,8 +692,15 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("Items");
                 });
 
+            modelBuilder.Entity("SOPServer.Repository.Entities.Goal", b =>
+                {
+                    b.Navigation("ItemGoals");
+                });
+
             modelBuilder.Entity("SOPServer.Repository.Entities.Item", b =>
                 {
+                    b.Navigation("ItemGoals");
+
                     b.Navigation("ItemOccasions");
 
                     b.Navigation("ItemSeasons");

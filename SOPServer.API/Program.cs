@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -7,8 +7,12 @@ using SOPServer.API;
 using SOPServer.API.Middlewares;
 using SOPServer.Repository.DBContext;
 using SOPServer.Service.BusinessModels.ResultModels;
+using SOPServer.Service.Constants;
 using SOPServer.Service.Mappers;
+using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
+using StackExchange.Redis;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -97,32 +101,85 @@ builder.Services.AddCors(options =>
         });
 });
 
+// ===================== CONFIG REDIS CONNECTION =======================
+
+builder.Services.Configure<RedisSettings>(
+    builder.Configuration.GetSection("RedisSettings"));
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var configuration = ConfigurationOptions.Parse(
+        builder.Configuration["RedisSettings:RedisConnectionString"],
+        true);
+    return ConnectionMultiplexer.Connect(configuration);
+});
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration["RedisSettings:RedisConnectionString"];
+    options.InstanceName = builder.Configuration["RedisSettings:InstanceName"];
+});
+// ======================================================================
+
+builder.Services.Configure<MailSettings>(
+    builder.Configuration.GetSection("MailSettings"));
 builder.Services.AddHttpClient("SOPHttpClient", client =>
 {
     // Configure default headers, timeout, etc. if needed
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(options =>
-{
-    options.SaveToken = true;
-    options.RequireHttpsMetadata = false;
-    options.TokenValidationParameters = new TokenValidationParameters
+builder.Services
+    .AddAuthentication(options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidAudience = builder.Configuration["JWT:ValidAudience"],
-        ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:SecretKey"])),
-        ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero
-    };
-});
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme             = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+        options.SaveToken = true;
+
+        var cfg = builder.Configuration;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(cfg["JWT:SecretKey"])
+            ),
+
+            ValidateIssuer   = true,
+            ValidIssuer      = cfg["JWT:ValidIssuer"],
+            ValidateAudience = true,
+            ValidAudience    = cfg["JWT:ValidAudience"],
+            ValidateLifetime = true,
+            ClockSkew        = TimeSpan.Zero,
+            RoleClaimType = "role"
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async ctx =>
+            {
+                var userIdStr = ctx.Principal?.FindFirst("UserId")?.Value;
+                var jti = ctx.Principal?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+
+                if (string.IsNullOrEmpty(userIdStr) || string.IsNullOrEmpty(jti))
+                {
+                    ctx.Fail("Invalid token claims");
+                    return;
+                }
+                var redis = ctx.HttpContext.RequestServices.GetRequiredService<IRedisService>();
+                var key = RedisKeyConstants.GetAccessTokenKey(long.Parse(userIdStr), jti);
+                var exists = await redis.ExistsAsync(key);
+                if (!exists)
+                {
+                    ctx.Fail("Token revoked or expired in session store");
+                }
+            }
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddAutoMapper(typeof(MapperConfigProfile).Assembly);
@@ -157,6 +214,17 @@ app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "SOP Server v.01");
 });
+try
+{
+    var redis = app.Services.GetRequiredService<IConnectionMultiplexer>();
+    var db = redis.GetDatabase();
+    await db.PingAsync();
+    Console.WriteLine("Redis connection successful!");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"❌ Redis connection failed: {ex.Message}");
+}
 
 app.UseHttpsRedirection();
 

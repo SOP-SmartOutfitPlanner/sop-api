@@ -21,6 +21,7 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -443,6 +444,27 @@ namespace SOPServer.Service.Services.Implements
 
             return otpResult;
         }
+
+        public async Task<BaseResponseModel> LogoutCurrentAsync(ClaimsPrincipal principal)
+        {
+            var userIdStr = principal.FindFirst("UserId")?.Value;
+            var jti = principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+            if (string.IsNullOrEmpty(userIdStr) || string.IsNullOrEmpty(jti))
+                throw new BadRequestException("Invalid token claims");
+
+            var userId = long.Parse(userIdStr);
+
+            await _redisService.RemoveAsync(RedisKeyConstants.GetAccessTokenKey(userId, jti));
+            await _redisService.RemoveAsync(RedisKeyConstants.GetRefreshTokenKey(userId, jti));
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status202Accepted,
+                Message = "Logged out"
+            };
+        }
+
+
 
         private async Task<AuthenResultModel> IssueAndCacheTokensAsync(User user)
         {

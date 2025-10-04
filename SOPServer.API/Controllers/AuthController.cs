@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using SOPServer.Service.BusinessModels.AuthenModels;
 using SOPServer.Service.Services.Interfaces;
@@ -58,6 +59,13 @@ namespace SOPServer.API.Controllers
         public Task<IActionResult> ResendOtp([FromBody] SendOtpRequestModel model)
         {
             return ValidateAndExecute(() => _userService.ResendOtp(model.Email));
+        }
+
+        [Authorize]
+        [HttpPost("logout")]
+        public Task<IActionResult> LogoutCurrent()
+        {
+            return ValidateAndExecute(() => _userService.LogoutCurrentAsync(User));
         }
 
         [HttpPost]

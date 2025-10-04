@@ -7,9 +7,12 @@ using SOPServer.API;
 using SOPServer.API.Middlewares;
 using SOPServer.Repository.DBContext;
 using SOPServer.Service.BusinessModels.ResultModels;
+using SOPServer.Service.Constants;
 using SOPServer.Service.Mappers;
+using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
 using StackExchange.Redis;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -124,26 +127,59 @@ builder.Services.AddHttpClient("SOPHttpClient", client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-}).AddJwtBearer(options =>
-{
-    options.SaveToken = true;
-    options.RequireHttpsMetadata = false;
-    options.TokenValidationParameters = new TokenValidationParameters
+builder.Services
+    .AddAuthentication(options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidAudience = builder.Configuration["JWT:ValidAudience"],
-        ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:SecretKey"])),
-        ValidateLifetime = true,
-        ClockSkew = TimeSpan.Zero
-    };
-});
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme             = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+        options.SaveToken = true;
+
+        var cfg = builder.Configuration;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(cfg["JWT:SecretKey"])
+            ),
+
+            ValidateIssuer   = true,
+            ValidIssuer      = cfg["JWT:ValidIssuer"],
+            ValidateAudience = true,
+            ValidAudience    = cfg["JWT:ValidAudience"],
+            ValidateLifetime = true,
+            ClockSkew        = TimeSpan.Zero,
+            RoleClaimType = "role"
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async ctx =>
+            {
+                var userIdStr = ctx.Principal?.FindFirst("UserId")?.Value;
+                var jti = ctx.Principal?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+
+                if (string.IsNullOrEmpty(userIdStr) || string.IsNullOrEmpty(jti))
+                {
+                    ctx.Fail("Invalid token claims");
+                    return;
+                }
+                var redis = ctx.HttpContext.RequestServices.GetRequiredService<IRedisService>();
+                var key = RedisKeyConstants.GetAccessTokenKey(long.Parse(userIdStr), jti);
+                var exists = await redis.ExistsAsync(key);
+                if (!exists)
+                {
+                    ctx.Fail("Token revoked or expired in session store");
+                }
+            }
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddAutoMapper(typeof(MapperConfigProfile).Assembly);

@@ -40,5 +40,7 @@ namespace SOPServer.Service.Utils
             var refreshToken = GenerateJsonWebToken.CreateRefreshToken(claims, configuration, DateTime.UtcNow);
             return new JwtSecurityTokenHandler().WriteToken(refreshToken).ToString();
         }
+
+
     }
 }

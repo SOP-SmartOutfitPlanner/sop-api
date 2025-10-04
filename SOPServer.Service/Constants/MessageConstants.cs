@@ -58,11 +58,10 @@ namespace SOPServer.Service.Constants
         public const string CALL_REM_BACKGROUND_FAIL = "Call remove background service fail";
 
         public const string REM_BACKGROUND_IMAGE_FAIL = "Remove background image fail";
-        public const string OTP_SENT_SUCCESS = "OTP đã được gửi đến email của bạn";
-        public const string OTP_VERIFY_SUCCESS = "Xác thực OTP thành công";
-        public const string OTP_INVALID = "OTP không hợp lệ hoặc đã hết hạn";
-        public const string OTP_EXPIRED = "OTP đã hết hạn, vui lòng yêu cầu OTP mới";
-        public const string OTP_TOO_MANY_ATTEMPTS = "Bạn đã yêu cầu OTP quá nhiều lần, vui lòng thử lại sau 15 phút";
-        public const string EMAIL_SEND_FAILED = "Gửi email thất bại, vui lòng thử lại";
+        public const string OTP_SENT_SUCCESS = "OTP sent successfully to your gmail";
+        public const string OTP_VERIFY_SUCCESS = "Verify OTP successfully";
+        public const string OTP_INVALID = "OTP is invalid or expired!";
+        public const string OTP_TOO_MANY_ATTEMPTS = "You request OTP too many time, please retry after 15 minutes!";
+        public const string EMAIL_SEND_FAILED = "Send email failed, please retry";
     }
 }

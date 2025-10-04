@@ -84,7 +84,7 @@ namespace SOPServer.Service.Services.Implements
 
             if (string.IsNullOrEmpty(storedOtp))
             {
-                throw new BadRequestException(MessageConstants.OTP_EXPIRED);
+                throw new BadRequestException(MessageConstants.OTP_INVALID);
             }
 
             if (storedOtp != otp)

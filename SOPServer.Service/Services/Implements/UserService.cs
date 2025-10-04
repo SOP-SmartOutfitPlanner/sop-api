@@ -33,19 +33,21 @@ namespace SOPServer.Service.Services.Implements
         private readonly IConfiguration _configuration;
         private readonly IMailService _mailService;
         private readonly IOtpService _otpService;
+        private readonly IRedisService _redisService;
 
         public UserService(
             IUnitOfWork unitOfWork,
             IMapper mapper,
             IConfiguration configuration,
             IMailService mailService,
-            IOtpService otpService) 
+            IOtpService otpService, IRedisService redisService) 
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _configuration = configuration;
             _mailService = mailService;
             _otpService = otpService;
+            _redisService = redisService;
         }
 
         public async Task<BaseResponseModel> GetUserById(int id)
@@ -118,27 +120,22 @@ namespace SOPServer.Service.Services.Implements
                     return new BaseResponseModel
                     {
                         StatusCode = StatusCodes.Status201Created,
-                        Message = "Người dùng đã đăng ký! Vui lòng kiểm tra email để xác thực tài khoản.",
+                        Message = "User is already registered. Please check your mail for new OTP",
                         Data = new
                         {
                             Email = payload.Email,
-                            Message = "Mã OTP đã được gửi đến email của bạn"
+                            Message = "OTP has been sent to your gmail"
                         }
                     };
                 }
 
-                var accessToken = AuthenTokenUtils.GenerateAccessToken(existUser, existUser.Role, _configuration);
-                var refreshToken = AuthenTokenUtils.GenerateRefreshToken(existUser, _configuration);
+                var authResult = await IssueAndCacheTokensAsync(existUser);
 
                 return new BaseResponseModel
                 {
                     StatusCode = StatusCodes.Status200OK,
                     Message = MessageConstants.LOGIN_SUCCESS_MESSAGE,
-                    Data = new AuthenResultModel
-                    {
-                        AccessToken = accessToken,
-                        RefreshToken = refreshToken
-                    },
+                    Data = authResult
                 };
             }
             else
@@ -160,11 +157,11 @@ namespace SOPServer.Service.Services.Implements
                 return new BaseResponseModel
                 {
                     StatusCode = StatusCodes.Status201Created,
-                    Message = "Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.",
+                    Message = "Successfully registered. Please check your mail for new OTP.",
                     Data = new
                     {
                         Email = payload.Email,
-                        Message = "Mã OTP đã được gửi đến email của bạn"
+                        Message = "OTP has been sent to your gmail"
                     }
                 };
             }
@@ -195,17 +192,13 @@ namespace SOPServer.Service.Services.Implements
                     var existUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(email);
                     if (existUser != null)
                     {
-                        var accessToken = AuthenTokenUtils.GenerateAccessToken(existUser, existUser.Role, _configuration);
-                        var refreshToken = AuthenTokenUtils.GenerateRefreshToken(existUser, _configuration);
+                        var authResult = await IssueAndCacheTokensAsync(existUser);
+
                         return new BaseResponseModel
                         {
                             StatusCode = StatusCodes.Status200OK,
-                            Data = new AuthenResultModel
-                            {
-                                AccessToken = accessToken,
-                                RefreshToken = refreshToken
-                            },
-                            Message = MessageConstants.TOKEN_REFRESH_SUCCESS_MESSAGE
+                            Message = MessageConstants.LOGIN_SUCCESS_MESSAGE,
+                            Data = authResult
                         };
                     }
                 }
@@ -360,18 +353,13 @@ namespace SOPServer.Service.Services.Implements
                 throw new BadRequestException(MessageConstants.USER_NOT_VERIFY);
             }
 
-            var accessToken = AuthenTokenUtils.GenerateAccessToken(user, user.Role, _configuration);
-            var refreshToken = AuthenTokenUtils.GenerateRefreshToken(user, _configuration);
+            var authResult = await IssueAndCacheTokensAsync(user);
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.LOGIN_SUCCESS_MESSAGE,
-                Data = new AuthenResultModel
-                {
-                    AccessToken = accessToken,
-                    RefreshToken = refreshToken
-                },
+                Data = authResult
             };
         }
 
@@ -437,21 +425,44 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> VerifyOtp(VerifyOtpRequestModel model)
         {
             var existingUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email);
+            if (existingUser == null) throw new BadRequestException(MessageConstants.USER_NOT_EXIST);
+            if (existingUser.IsVerifiedEmail == true) throw new BadRequestException(MessageConstants.USER_ALREADY_VERIFY);
 
-            if (existingUser == null)
-            {
-                throw new BadRequestException(MessageConstants.USER_NOT_EXIST);
-            }
-            else if (existingUser.IsVerifiedEmail == true)
-            {
-                throw new BadRequestException(MessageConstants.USER_ALREADY_VERIFY);
-            }
+            var otpResult = await _otpService.VerifyOtpAsync(model.Email, model.Otp);
 
             existingUser.IsVerifiedEmail = true;
             _unitOfWork.UserRepository.UpdateAsync(existingUser);
             await _unitOfWork.SaveAsync();
 
-            return await _otpService.VerifyOtpAsync(model.Email, model.Otp);
+            await _mailService.SendEmailAsync(new MailRequest
+            {
+                ToEmail = existingUser.Email,
+                Subject = "Welcome to Smart Outfit Planner",
+                Body = EmailUtils.WelcomeEmail(existingUser.DisplayName ?? existingUser.Email)
+            });
+
+            return otpResult;
         }
+
+        private async Task<AuthenResultModel> IssueAndCacheTokensAsync(User user)
+        {
+            var tokenId = Guid.NewGuid().ToString("N");
+
+            var accessToken = AuthenTokenUtils.GenerateAccessToken(user, user.Role, _configuration);
+            var refreshToken = AuthenTokenUtils.GenerateRefreshToken(user, _configuration);
+
+            var accessKey = RedisKeyConstants.GetAccessTokenKey(user.Id);
+            var refreshKey = RedisKeyConstants.GetRefreshTokenKey(user.Id);
+
+            await _redisService.SetAsync(accessKey, accessToken, TimeSpan.FromHours(1));        
+            await _redisService.SetAsync(refreshKey, refreshToken, TimeSpan.FromDays(7));  
+            
+            return new AuthenResultModel
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken
+            };
+        }
+
     }
 }

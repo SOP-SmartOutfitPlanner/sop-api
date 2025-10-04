@@ -1,27 +1,28 @@
 ﻿using AutoMapper;
 using Google.Apis.Auth;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.AuthenModels;
+using SOPServer.Service.BusinessModels.EmailModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.UserModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
+//using SOPServer.Service.BusinessModels.EmailModels;
+using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.Utils;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using SOPServer.Repository.Commons;
-//using SOPServer.Service.BusinessModels.EmailModels;
-using SOPServer.Service.Services.Interfaces;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -31,13 +32,20 @@ namespace SOPServer.Service.Services.Implements
         private readonly IMapper _mapper;
         private readonly IConfiguration _configuration;
         private readonly IMailService _mailService;
+        private readonly IOtpService _otpService;
 
-        public UserService(IUnitOfWork unitOfWork, IMapper mapper, IConfiguration configuration, IMailService mailService)
+        public UserService(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            IConfiguration configuration,
+            IMailService mailService,
+            IOtpService otpService) 
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _configuration = configuration;
             _mailService = mailService;
+            _otpService = otpService;
         }
 
         public async Task<BaseResponseModel> GetUserById(int id)
@@ -62,19 +70,28 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> LoginWithGoogleOAuth(string credential)
         {
-            string cliendId = _configuration["GoogleCredential:ClientId"];
+            string clientId = _configuration["GoogleCredential:ClientId"];
 
-            if (string.IsNullOrEmpty(cliendId))
+            if (string.IsNullOrEmpty(clientId))
             {
                 throw new BadRequestException(MessageConstants.TOKEN_NOT_VALID);
             }
 
             var settings = new GoogleJsonWebSignature.ValidationSettings()
             {
-                Audience = new List<string> { cliendId }
+                Audience = new List<string> { clientId }
             };
 
-            var payload = await GoogleJsonWebSignature.ValidateAsync(credential, settings);
+            GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                payload = await GoogleJsonWebSignature.ValidateAsync(credential, settings);
+            }
+            catch (Exception)
+            {
+                throw new BadRequestException(MessageConstants.TOKEN_NOT_VALID);
+            }
+
             if (payload == null)
             {
                 throw new BadRequestException(MessageConstants.TOKEN_NOT_VALID);
@@ -82,7 +99,6 @@ namespace SOPServer.Service.Services.Implements
 
             var existUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(payload.Email);
 
-            // If user exists, generate tokens and return
             if (existUser != null)
             {
                 if (existUser.IsDeleted)
@@ -117,34 +133,23 @@ namespace SOPServer.Service.Services.Implements
                     DisplayName = payload.Name,
                     AvtUrl = payload.Picture,
                     Role = Role.USER,
-                    IsVerifiedEmail = payload.EmailVerified,
+                    IsVerifiedEmail = false,
                     IsFirstTime = true,
                     IsLoginWithGoogle = true
                 };
-
                 await _unitOfWork.UserRepository.AddAsync(newUser);
                 _unitOfWork.Save();
-
-                //_ = Task.Run(async () =>
-                //    await _mailService.SendEmailAsync(new MailRequest()
-                //    {
-                //        Subject = "Chào mừng bạn đến với Himari!",
-                //        Body = EmailUtils.WelcomeEmail(newUser.FullName),
-                //        ToEmail = newUser.Email
-                //    }));
-
-                var accessToken = AuthenTokenUtils.GenerateAccessToken(newUser, Role.USER, _configuration);
-                var refreshToken = AuthenTokenUtils.GenerateRefreshToken(newUser, _configuration);
+                await _otpService.SendOtpAsync(payload.Email);
 
                 return new BaseResponseModel
                 {
-                    StatusCode = StatusCodes.Status200OK,
-                    Message = MessageConstants.LOGIN_SUCCESS_MESSAGE,
-                    Data = new AuthenResultModel
+                    StatusCode = StatusCodes.Status201Created,
+                    Message = "Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.",
+                    Data = new
                     {
-                        AccessToken = accessToken,
-                        RefreshToken = refreshToken
-                    },
+                        Email = payload.Email,
+                        Message = "Mã OTP đã được gửi đến email của bạn"
+                    }
                 };
             }
         }
@@ -363,27 +368,72 @@ namespace SOPServer.Service.Services.Implements
                 throw new BadRequestException(MessageConstants.EMAIL_EXISTED);
             }
 
-            if(model.Password != model.ConfirmPassword)
+            if (model.Password != model.ConfirmPassword)
             {
                 throw new BadRequestException(MessageConstants.PASSWORD_DOES_NOT_MATCH);
             }
 
-            //TODO VERIFY EMAIL
+            var passwordHash = PasswordUtils.HashPassword(model.Password);
 
             var newUser = new User
             {
                 Email = model.Email,
                 DisplayName = model.DisplayName,
+                PasswordHash = passwordHash,
                 Role = Role.USER,
                 IsVerifiedEmail = false,
                 IsFirstTime = true,
-                IsLoginWithGoogle = true
+                IsLoginWithGoogle = false
             };
 
             await _unitOfWork.UserRepository.AddAsync(newUser);
-            _unitOfWork.Save();
+            await _unitOfWork.SaveAsync();
 
-            throw new NotImplementedException();
+            await _otpService.SendOtpAsync(model.Email);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status201Created,
+                Message = "Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.",
+                Data = new
+                {
+                    Email = model.Email,
+                    Message = "Mã OTP đã được gửi đến email của bạn"
+                }
+            };
+        }
+
+        public async Task<BaseResponseModel> ResendOtp(string email)
+        {
+            var existingUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(email);
+
+            if (existingUser == null)
+            {
+                throw new BadRequestException(MessageConstants.USER_NOT_EXIST);
+            }
+            else if (existingUser.IsVerifiedEmail == true)
+            {
+                throw new BadRequestException(MessageConstants.USER_ALREADY_VERIFY);
+            }
+            return await _otpService.SendOtpAsync(email);
+        }
+
+        public async Task<BaseResponseModel> VerifyOtp(VerifyOtpRequestModel model)
+        {
+            var existingUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email);
+
+            if (existingUser == null)
+            {
+                throw new BadRequestException(MessageConstants.USER_NOT_EXIST);
+            }
+            else if (existingUser.IsVerifiedEmail == true)
+            {
+                throw new BadRequestException(MessageConstants.USER_ALREADY_VERIFY);
+            }
+
+            existingUser.IsVerifiedEmail = true;
+
+            return await _otpService.VerifyOtpAsync(model.Email, model.Otp);
         }
     }
 }

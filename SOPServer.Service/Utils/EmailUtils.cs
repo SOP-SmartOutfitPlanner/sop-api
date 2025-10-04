@@ -8,628 +8,419 @@ namespace SOPServer.Service.Utils
 {
     public class EmailUtils
     {
-        public static string WelcomeEmail(string fullName)
+        public static string GenerateOtpEmail(string otp, int expiryMinutes)
         {
-            string emailContent = $@"<!DOCTYPE html>
-<html lang=""vi"">
+            return $@"
+<!DOCTYPE html>
+<html lang='vi'>
 <head>
-    <meta charset=""UTF-8"">
-    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>Chào mừng đến với Himari</title>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
-        
-        body {{
-            font-family: 'Poppins', Arial, sans-serif;
+        * {{
             margin: 0;
             padding: 0;
-            background-color: #f8f8f8;
-            color: #333333;
+            box-sizing: border-box;
+        }}
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            padding: 40px 20px;
+            position: relative;
         }}
-        
-        table {{
-            border-spacing: 0;
-            border-collapse: collapse;
-            mso-table-lspace: 0pt;
-            mso-table-rspace: 0pt;
+        body::before {{
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3), transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(240, 147, 251, 0.3), transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(102, 126, 234, 0.3), transparent 50%);
+            pointer-events: none;
         }}
-        
-        td {{
-            padding: 0;
-        }}
-        
-        img {{
-            border: 0;
-            height: auto;
-            line-height: 100%;
-            outline: none;
-            text-decoration: none;
-            -ms-interpolation-mode: bicubic;
-        }}
-        
-        .email-container {{
+        .email-wrapper {{
             max-width: 600px;
             margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 10px;
+            position: relative;
+            z-index: 1;
+        }}
+        .container {{
+            background: white;
+            border-radius: 20px;
             overflow: hidden;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35);
         }}
-        
-        .email-header {{
-            background-color: #ffd1dc;
-            padding: 20px;
+        .header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            color: white;
+            padding: 60px 40px;
             text-align: center;
+            position: relative;
+            overflow: hidden;
         }}
-        
-        .logo {{
-            max-width: 150px;
-            height: auto;
-            display: inline-block;
+        .header::before {{
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 255, 255, 0.05) 10px,
+                rgba(255, 255, 255, 0.05) 20px
+            );
+            animation: slide 20s linear infinite;
         }}
-        
-        .email-body {{
-            padding: 30px;
-            background-color: #fff;
+        @keyframes slide {{
+            0% {{ transform: translate(0, 0); }}
+            100% {{ transform: translate(50px, 50px); }}
         }}
-        
+        .header-content {{
+            position: relative;
+            z-index: 1;
+        }}
+        .header h1 {{
+            font-size: 36px;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }}
+        .content {{
+            padding: 50px 40px;
+            text-align: center;
+            background: linear-gradient(180deg, #ffffff 0%, #f8f9ff 100%);
+        }}
         .greeting {{
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: #ff85a2;
-            text-align: center;
-        }}
-        
-        .message {{
-            font-size: 16px;
+            font-size: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             margin-bottom: 25px;
-            color: #555555;
-            text-align: justify;
-            -webkit-hyphens: auto;
-            -ms-hyphens: auto;
-            hyphens: auto;
+            font-weight: 700;
         }}
-        
-        .button-container {{
-            text-align: center;
-            margin: 25px 0;
-        }}
-        
-        .cta-button {{
-            display: inline-block;
-            background-color: #ff85a2;
-            color: white !important;
-            text-decoration: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-weight: 500;
-            font-size: 16px;
-            text-align: center;
-            box-shadow: 0 4px 8px rgba(255, 133, 162, 0.3);
-            -webkit-text-size-adjust: none;
-            mso-hide: all;
-        }}
-        
-        .benefits {{
-            margin: 30px 0;
-            border-top: 1px solid #f0f0f0;
-            padding-top: 20px;
-        }}
-        
-        .benefit-item {{
-            display: table;
-            width: 100%;
+        .message {{
+            font-size: 15px;
+            color: #555;
             margin-bottom: 15px;
-            table-layout: fixed;
+            line-height: 1.8;
         }}
-        
-        .benefit-icon {{
-            display: table-cell;
-            vertical-align: middle;
-            width: 40px;
+        .otp-container {{
+            margin: 45px 0;
+            padding: 40px 30px;
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            border-radius: 16px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }}
-        
-        .benefit-icon-inner {{
-            width: 30px;
-            height: 30px;
-            background-color: #ffe0e6;
-            border-radius: 50%;
-            text-align: center;
-            line-height: 30px;
-            color: #ff85a2;
-            font-weight: bold;
-            display: inline-block;
+        .otp-container::before {{
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%),
+                        linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            border-radius: 16px;
+            opacity: 0.3;
         }}
-        
-        .benefit-text {{
-            display: table-cell;
-            vertical-align: middle;
-            padding-left: 10px;
-        }}
-        
-        .email-footer {{
-            background-color: #ffd1dc;
-            padding: 20px;
-            text-align: center;
+        .otp-label {{
             font-size: 14px;
-            color: #666;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
         }}
-        
-        .social-icons {{
-            margin: 15px 0;
-            font-size: 0;
-        }}
-        
-        .social-icon {{
+        .otp-box {{
+            background: white;
+            border-radius: 12px;
+            padding: 25px 30px;
             display: inline-block;
-            margin: 0 8px;
-            width: 36px;
-            height: 36px;
-            background-color: #ff85a2;
-            border-radius: 50%;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            position: relative;
+            z-index: 1;
+            border: 3px solid transparent;
+            background-clip: padding-box;
+            position: relative;
+        }}
+        .otp-box::before {{
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            border-radius: 12px;
+            z-index: -1;
+        }}
+        .otp-code {{
+            font-size: 48px;
+            font-weight: bold;
+            letter-spacing: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-family: 'Courier New', monospace;
+        }}
+        .expiry-info {{
+            margin-top: 35px;
+            padding: 25px;
+            background: linear-gradient(135deg, #fff7e6 0%, #ffe8cc 100%);
+            border-radius: 12px;
+            text-align: left;
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.2);
+        }}
+        .expiry-info p {{
+            font-size: 14px;
+            color: #e65100;
+        }}
+        .expiry-info strong {{
+            color: #bf360c;
+            font-weight: 700;
+        }}
+        .security-notice {{
+            margin-top: 25px;
+            padding: 25px;
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            border-radius: 12px;
+            text-align: left;
+            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.2);
+        }}
+        .security-notice p {{
+            font-size: 14px;
+            color: #c62828;
+        }}
+        .security-notice strong {{
+            color: #b71c1c;
+            font-weight: 700;
+        }}
+        .help-text {{
+            margin-top: 40px;
+            padding: 20px;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-radius: 12px;
+            font-size: 14px;
+            color: #2e7d32;
+            line-height: 1.8;
+            box-shadow: 0 5px 15px rgba(46, 125, 50, 0.15);
+        }}
+        .divider {{
+            height: 2px;
+            background: linear-gradient(to right, transparent, #667eea, #764ba2, #f093fb, transparent);
+            margin: 40px 0;
+        }}
+        .footer {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            padding: 40px;
             text-align: center;
-            line-height: 36px;
+            position: relative;
+            overflow: hidden;
+        }}
+        .footer::before {{
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 255, 255, 0.05) 10px,
+                rgba(255, 255, 255, 0.05) 20px
+            );
+        }}
+        .footer-content {{
+            position: relative;
+            z-index: 1;
+        }}
+        .footer-brand {{
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }}
+        .footer-text {{
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.9);
+            margin: 8px 0;
+        }}
+        .footer-links {{
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }}
+        .footer-links a {{
             color: white;
             text-decoration: none;
-            font-size: 16px;
+            font-size: 13px;
+            margin: 0 15px;
+            transition: all 0.3s ease;
+            font-weight: 500;
         }}
-        
-        .footer-info {{
-            margin-top: 10px;
-            line-height: 1.5;
+        .footer-links a:hover {{
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
         }}
-        
         @media only screen and (max-width: 600px) {{
-            .email-container {{
-                width: 100% !important;
-                border-radius: 0 !important;
+            .header {{
+                padding: 40px 25px;
             }}
-            
-            .email-body {{
-                padding: 20px !important;
+            .header h1 {{
+                font-size: 28px;
             }}
-            
-            .greeting {{
-                font-size: 22px !important;
+            .content {{
+                padding: 35px 25px;
             }}
-            
-            .message {{
-                font-size: 15px !important;
+            .otp-code {{
+                font-size: 36px;
+                letter-spacing: 10px;
             }}
-            
-            .button-container {{
-                margin: 20px 0 !important;
-                text-align: center !important;
-                width: 100% !important;
-            }}
-            
-            .cta-button {{
-                display: block !important;
-                width: 80% !important;
-                margin: 0 auto !important;
-                padding: 12px 20px !important;
-                font-size: 16px !important;
-                text-align: center !important;
-            }}
-            
-            .benefit-item {{
-                margin-bottom: 15px !important;
-            }}
-            
-            .social-icon {{
-                width: 34px !important;
-                height: 34px !important;
-                line-height: 34px !important;
+            .footer {{
+                padding: 30px 20px;
             }}
         }}
     </style>
 </head>
 <body>
-    <table role=""presentation"" cellspacing=""0"" cellpadding=""0"" border=""0"" align=""center"" width=""100%"" style=""max-width: 600px;"" class=""email-container"">
-        <tr>
-            <td class=""email-header"">
-                <img src=""https://firebasestorage.googleapis.com/v0/b/thelavenstore-fe036.appspot.com/o/HimariLogo.jpg?alt=media&token=33c99a89-4a91-4c9f-9b81-2aea896ed569"" alt=""Himari Logo"" class=""logo"">
-            </td>
-        </tr>
-        
-        <tr>
-            <td class=""email-body"">
-                <div class=""greeting"">Xin chào {fullName}!</div>
+    <div class='email-wrapper'>
+        <div class='container'>
+            <div class='header'>
+                <div class='header-content'>
+                    <h1>Verification Code</h1>
+                </div>
+            </div>
+            
+            <div class='content'>
+                <div class='greeting'>
+                    Dear,
+                </div>
                 
-                <p class=""message"">
-                    Cảm ơn bạn đã tham gia vào gia đình Himari! Chúng tôi rất vui mừng được đồng hành cùng bạn trong hành trình làm đẹp này.
-                    Tại Himari, chúng tôi cam kết mang đến những sản phẩm mỹ phẩm chất lượng cao giúp tôn lên vẻ đẹp tự nhiên và tự tin của bạn.
+                <p class='message'>
+                    We received a request to verify your account. Please use the code below to complete your verification.
                 </p>
                 
-                <div class=""button-container"">
-                    <a href=""himari://"" class=""cta-button"">Tải ứng dụng Himari</a>
+                <div class='otp-container'>
+                    <div class='otp-label'>
+                        Your OTP Code
+                    </div>
+                    <div class='otp-box'>
+                        <div class='otp-code'>{otp}</div>
+                    </div>
                 </div>
                 
-                <div class=""benefits"">
-                    <table role=""presentation"" cellspacing=""0"" cellpadding=""0"" border=""0"" width=""100%"">
-                        <tr class=""benefit-item"">
-                            <td class=""benefit-icon"" width=""40"">
-                                <span class=""benefit-icon-inner"">✓</span>
-                            </td>
-                            <td class=""benefit-text"">
-                                Mỹ phẩm chất lượng cao được sản xuất với sự tỉ mỉ
-                            </td>
-                        </tr>
-                        
-                        <tr class=""benefit-item"">
-                            <td class=""benefit-icon"" width=""40"">
-                                <span class=""benefit-icon-inner"">✓</span>
-                            </td>
-                            <td class=""benefit-text"">
-                                AI Hỗ trợ tư vấn sản phẩm thông minh
-                            </td>
-                        </tr>
-                        
-                        <tr class=""benefit-item"">
-                            <td class=""benefit-icon"" width=""40"">
-                                <span class=""benefit-icon-inner"">✓</span>
-                            </td>
-                            <td class=""benefit-text"">
-                                Hàng ngàn ưu đãi độc quyền dành cho riêng bạn
-                            </td>
-                        </tr>
-                    </table>
+                <div class='expiry-info'>
+                    <p><strong>Expiration Notice:</strong> This code will expire in <strong>{expiryMinutes} minutes</strong>.</p>
                 </div>
                 
-                <p class=""message"">
-                    Chúng tôi đã tạo tài khoản cá nhân cho bạn, nơi bạn có thể theo dõi đơn hàng,
-                    lưu sản phẩm yêu thích và tận hưởng trải nghiệm mua sắm thuận tiện trên ứng dụng Himari.
-                </p>
-            </td>
-        </tr>
-        
-        <tr>
-            <td class=""email-footer"">
-                <div class=""footer-info"">
-                    © 2025 Himari Cosmetics. Đã đăng ký bản quyền.
+                <div class='security-notice'>
+                    <p><strong>Security Warning:</strong> Never share this code with anyone.</p>
                 </div>
-            </td>
-        </tr>
-    </table>
+                
+                <div class='divider'></div>
+                
+                <div class='help-text'>
+                    <p>If you didn't request this code, please ignore this email or contact our support team.</p>
+                </div>
+            </div>
+            
+            <div class='footer'>
+                <div class='footer-content'>
+                    <div class='footer-brand'>Smart Outfit Planner - SOP</div>
+                    <p class='footer-text'>© 2025 Smart Outfit Planner - SOP. All rights reserved.</p>
+                    <p class='footer-text'>This is an automated email. Please do not reply.</p>
+                    <div class='footer-links'>
+                        <a href='#'>Privacy Policy</a>
+                        <a href='#'>Terms of Service</a>
+                        <a href='#'>Contact</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>";
-            return emailContent;
         }
 
-//        public static string OrderMail(OrderResponseModel model)
-//        {
-//            string emailContent = $@"<!DOCTYPE html>
-//<html lang=""vi"">
-//<head>
-//    <meta charset=""UTF-8"">
-//    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-//    <title>Xác nhận đơn hàng từ Himari</title>
-//    <style>
-//        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
-        
-//        body {{
-//            font-family: 'Poppins', Arial, sans-serif;
-//            margin: 0;
-//            padding: 0;
-//            background-color: #f8f8f8;
-//            color: #333333;
-//            line-height: 1.6;
-//            -webkit-font-smoothing: antialiased;
-//        }}
-        
-//        table {{
-//            border-spacing: 0;
-//            border-collapse: collapse;
-//            mso-table-lspace: 0pt;
-//            mso-table-rspace: 0pt;
-//        }}
-        
-//        td {{
-//            padding: 0;
-//        }}
-        
-//        img {{
-//            border: 0;
-//            height: auto;
-//            line-height: 100%;
-//            outline: none;
-//            text-decoration: none;
-//            -ms-interpolation-mode: bicubic;
-//        }}
-        
-//        .email-container {{
-//            max-width: 600px;
-//            margin: 0 auto;
-//            background-color: #ffffff;
-//            border-radius: 10px;
-//            overflow: hidden;
-//            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-//        }}
-        
-//        .email-header {{
-//            background-color: #ffd1dc;
-//            padding: 20px;
-//            text-align: center;
-//        }}
-        
-//        .logo {{
-//            max-width: 150px;
-//            height: auto;
-//            display: inline-block;
-//        }}
-        
-//        .email-body {{
-//            padding: 30px;
-//            background-color: #fff;
-//        }}
-        
-//        .greeting {{
-//            font-size: 24px;
-//            font-weight: 600;
-//            margin-bottom: 20px;
-//            color: #ff85a2;
-//            text-align: center;
-//        }}
-        
-//        .message {{
-//            font-size: 16px;
-//            margin-bottom: 25px;
-//            color: #555555;
-//            text-align: justify;
-//            -webkit-hyphens: auto;
-//            -ms-hyphens: auto;
-//            hyphens: auto;
-//        }}
-        
-//        .order-info {{
-//            margin: 20px 0;
-//            border: 1px solid #ffe0e6;
-//            border-radius: 8px;
-//            padding: 15px;
-//            background-color: #fff5f7;
-//        }}
-        
-//        .order-header {{
-//            font-size: 18px;
-//            font-weight: 600;
-//            color: #ff85a2;
-//            margin-bottom: 15px;
-//            text-align: center;
-//        }}
-        
-//        .order-details {{
-//            font-size: 15px;
-//            color: #666;
-//            margin-bottom: 5px;
-//        }}
-        
-//        .status-success {{
-//            color: #28a745;
-//            font-weight: 600;
-//        }}
-        
-//        .product-table {{
-//            width: 100%;
-//            margin: 20px 0;
-//            border-collapse: collapse;
-//            box-shadow: 0 2px 5px rgba(255, 133, 162, 0.1);
-//            border-radius: 8px;
-//            overflow: hidden;
-//        }}
-        
-//        .product-table th {{
-//            background-color: #ffe0e6;
-//            color: #ff5a87;
-//            font-weight: 500;
-//            text-align: left;
-//            padding: 12px;
-//            font-size: 14px;
-//        }}
-        
-//        .product-table td {{
-//            padding: 12px;
-//            border-bottom: 1px solid #f0f0f0;
-//            color: #555;
-//            font-size: 14px;
-//        }}
-        
-//        .product-table tr:nth-child(even) {{
-//            background-color: #fff9fa;
-//        }}
-        
-//        .product-table tr:last-child td {{
-//            border-bottom: none;
-//        }}
-        
-//        .text-right {{
-//            text-align: right;
-//        }}
-        
-//        .product-name {{
-//            font-weight: 500;
-//            color: #444;
-//        }}
-        
-//        .order-total {{
-//            margin-top: 15px;
-//            font-weight: 600;
-//            font-size: 16px;
-//            text-align: right;
-//            color: #ff5a87;
-//            padding: 10px 0;
-//            border-top: 2px solid #ffe0e6;
-//        }}
-        
-//        .address-block {{
-//            background-color: #fff5f7;
-//            border: 1px solid #ffe0e6;
-//            border-radius: 8px;
-//            padding: 15px;
-//            margin: 20px 0;
-//        }}
-        
-//        .address-title {{
-//            font-weight: 600;
-//            color: #ff85a2;
-//            margin-bottom: 8px;
-//        }}
-        
-//        .button-container {{
-//            text-align: center;
-//            margin: 25px 0;
-//        }}
-        
-//        .cta-button {{
-//            display: inline-block;
-//            background-color: #ff85a2;
-//            color: white !important;
-//            text-decoration: none;
-//            padding: 12px 30px;
-//            border-radius: 25px;
-//            font-weight: 500;
-//            font-size: 16px;
-//            text-align: center;
-//            box-shadow: 0 4px 8px rgba(255, 133, 162, 0.3);
-//            -webkit-text-size-adjust: none;
-//            mso-hide: all;
-//        }}
-        
-//        .email-footer {{
-//            background-color: #ffd1dc;
-//            padding: 20px;
-//            text-align: center;
-//            font-size: 14px;
-//            color: #666;
-//        }}
-        
-//        .footer-info {{
-//            margin-top: 10px;
-//            line-height: 1.5;
-//        }}
-        
-//        @media only screen and (max-width: 600px) {{
-//            .email-container {{
-//                width: 100% !important;
-//                border-radius: 0 !important;
-//            }}
-            
-//            .email-body {{
-//                padding: 20px !important;
-//            }}
-            
-//            .greeting {{
-//                font-size: 22px !important;
-//            }}
-            
-//            .message {{
-//                font-size: 15px !important;
-//            }}
-            
-//            .product-table th,
-//            .product-table td {{
-//                padding: 10px 8px !important;
-//                font-size: 13px !important;
-//            }}
-            
-//            .button-container {{
-//                margin: 20px 0 !important;
-//            }}
-            
-//            .cta-button {{
-//                display: block !important;
-//                width: 80% !important;
-//                margin: 0 auto !important;
-//                padding: 10px 20px !important;
-//                font-size: 15px !important;
-//            }}
-//        }}
-//    </style>
-//</head>
-//<body>
-//    <table role=""presentation"" cellspacing=""0"" cellpadding=""0"" border=""0"" align=""center"" width=""100%"" style=""max-width: 600px;"" class=""email-container"">
-//        <tr>
-//            <td class=""email-header"">
-//                <img src=""https://firebasestorage.googleapis.com/v0/b/thelavenstore-fe036.appspot.com/o/HimariLogo.jpg?alt=media&token=33c99a89-4a91-4c9f-9b81-2aea896ed569"" alt=""Himari Logo"" class=""logo"">
-//            </td>
-//        </tr>
-        
-//        <tr>
-//            <td class=""email-body"">
-//                <div class=""greeting"">Thanh toán thành công!</div>
-                
-//                <p class=""message"">
-//                    Xin chào quý khách, cảm ơn bạn đã mua sắm tại Himari! Đơn hàng của bạn đã được thanh toán thành công và đang được xử lý.
-//                </p>
-                
-//                <div class=""order-info"">
-//                    <div class=""order-header"">Thông tin đơn hàng</div>
-//                    <div class=""order-details"">Mã đơn hàng: <strong>#{model.OrderCode}</strong></div>
-//                    <div class=""order-details"">Ngày đặt hàng: <strong>{model.CreatedDate:dd/MM/yyyy HH:mm}</strong></div>
-//                    <div class=""order-details"">Trạng thái thanh toán: <span class=""status-success"">Thanh toán thành công</span></div>
-//                </div>
-                
-//                <div class=""address-block"">
-//                    <div class=""address-title"">Địa chỉ giao hàng:</div>
-//                    <div>{model.Address}</div>
-//                </div>
-                
-//                <div class=""order-header"">Chi tiết sản phẩm</div>
-//                <table class=""product-table"" cellspacing=""0"" cellpadding=""0"">
-//                    <tr>
-//                        <th>Sản phẩm</th>
-//                        <th>Số lượng</th>
-//                        <th class=""text-right"">Đơn giá</th>
-//                        <th class=""text-right"">Thành tiền</th>
-//                    </tr>
-//                    {GetProductRows(model.OrderDetails)}
-//                </table>
-                
-//                <div class=""order-total"">Tổng thanh toán: {model.OrderPrice.ToString("N0")} đ</div>
-                
-//                <p class=""message"">
-//                    Chúng tôi sẽ gửi thông báo khi đơn hàng của bạn được gửi đi.
-//                    Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với dịch vụ khách hàng của chúng tôi.
-//                </p>
-                
-//                <div class=""button-container"">
-//                    <a href=""himari://orders/{model.Id}"" class=""cta-button"">Theo dõi đơn hàng</a>
-//                </div>
-//            </td>
-//        </tr>
-        
-//        <tr>
-//            <td class=""email-footer"">
-//                <div class=""footer-info"">
-//                    © 2025 Himari Cosmetics. Đã đăng ký bản quyền.
-//                </div>
-//            </td>
-//        </tr>
-//    </table>
-//</body>
-//</html>";
-//            return emailContent;
-//        }
-
-        //private static string GetProductRows(List<OrderDetailsModel> products)
-        //{
-        //    var rows = new StringBuilder();
-            
-        //    foreach (var product in products)
-        //    {
-        //        int subtotal = product.Price * product.Quantity;
-        //        rows.Append($@"
-        //            <tr>
-        //                <td class=""product-name"">{product.ProductName}</td>
-        //                <td>{product.Quantity}</td>
-        //                <td class=""text-right"">{product.Price.ToString("N0")} đ</td>
-        //                <td class=""text-right"">{subtotal.ToString("N0")} đ</td>
-        //            </tr>");
-        //    }
-            
-        //    return rows.ToString();
-        //}
-    }
+        public static string WelcomeEmail(string displayName)
+        {
+            return $@"
+<!DOCTYPE html>
+<html lang='vi'>
+<head>
+    <meta charset='UTF-8'>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }}
+        .header {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }}
+        .content {{
+            padding: 40px 30px;
+        }}
+        .button {{
+            display: inline-block;
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1>🎉 Chào mừng bạn đến với SOPServer!</h1>
+        </div>
+        <div class='content'>
+            <p>Xin chào <strong>{displayName}</strong>,</p>
+            <p>Cảm ơn bạn đã đăng ký tài khoản tại SOPServer. Chúng tôi rất vui mừng được đồng hành cùng bạn!</p>
+            <p>Bạn đã có thể bắt đầu sử dụng các dịch vụ của chúng tôi ngay bây giờ.</p>
+            <p style='text-align: center;'>
+                <a href='#' class='button'>Bắt đầu khám phá</a>
+            </p>
+            <p>Nếu bạn có bất kỳ câu hỏi nào, đừng ngại liên hệ với chúng tôi.</p>
+            <p>Trân trọng,<br><strong>Đội ngũ SOPServer</strong></p>
+        </div>
+    </div>
+</body>
+</html>";
+        }
+        }
 }

@@ -26,19 +26,19 @@ public partial class User : BaseEntity
 
     public bool? IsFirstTime { get; set; }
 
-    public string AvtUrl { get; set; }
+    public string? AvtUrl { get; set; }
 
     public DateOnly? Dob { get; set; }
 
     public Gender Gender { get; set; }
 
-    public string PreferedColor { get; set; }
+    public string? PreferedColor { get; set; }
 
-    public string AvoidedColor { get; set; }
+    public string? AvoidedColor { get; set; }
 
-    public string Location { get; set; }
+    public string? Location { get; set; }
 
-    public string Bio { get; set; }
+    public string? Bio { get; set; }
 
     public long? JobId { get; set; }
 

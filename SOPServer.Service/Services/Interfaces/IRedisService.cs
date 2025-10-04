@@ -12,5 +12,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task SetAsync<T>(string key, T value, TimeSpan? expiry = null);
         Task RemoveAsync(string key);
         Task<bool> ExistsAsync(string key);
+        Task<long> IncrementAsync(string key, TimeSpan? expiry = null);
     }
 }

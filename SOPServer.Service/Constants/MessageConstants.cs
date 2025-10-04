@@ -29,8 +29,10 @@ namespace SOPServer.Service.Constants
         public const string USER_FORBIDDEN = "User forbidden access to the system";
         public const string EMAIL_EXISTED = "Email is existed";
         public const string PASSWORD_DOES_NOT_MATCH = "Password does not match";
-        public const string USER_MUST_LOGIN_WITH_PASSWORD = "User must login with password";
+        public const string USER_MUST_LOGIN_WITH_PASSWORD = "User must login with email and password";
         public const string USER_NOT_VERIFY = "User not verify email";
+        public const string USER_ALREADY_VERIFY = "User has already verified email";
+
 
         public const string TOKEN_NOT_VALID = "Token not valid";
         public const string LOGIN_SUCCESS_MESSAGE = "Login successfully";
@@ -52,5 +54,11 @@ namespace SOPServer.Service.Constants
         public const string CALL_REM_BACKGROUND_FAIL = "Call remove background service fail";
 
         public const string REM_BACKGROUND_IMAGE_FAIL = "Remove background image fail";
+        public const string OTP_SENT_SUCCESS = "OTP đã được gửi đến email của bạn";
+        public const string OTP_VERIFY_SUCCESS = "Xác thực OTP thành công";
+        public const string OTP_INVALID = "OTP không hợp lệ hoặc đã hết hạn";
+        public const string OTP_EXPIRED = "OTP đã hết hạn, vui lòng yêu cầu OTP mới";
+        public const string OTP_TOO_MANY_ATTEMPTS = "Bạn đã yêu cầu OTP quá nhiều lần, vui lòng thử lại sau 15 phút";
+        public const string EMAIL_SEND_FAILED = "Gửi email thất bại, vui lòng thử lại";
     }
 }

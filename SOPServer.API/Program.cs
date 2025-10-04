@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -9,6 +9,7 @@ using SOPServer.Repository.DBContext;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Mappers;
 using SOPServer.Service.SettingModels;
+using StackExchange.Redis;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -83,6 +84,26 @@ builder.Services.AddCors(options =>
         });
 });
 
+// ===================== CONFIG REDIS CONNECTION =======================
+
+builder.Services.Configure<RedisSettings>(
+    builder.Configuration.GetSection("RedisSettings"));
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var configuration = ConfigurationOptions.Parse(
+        builder.Configuration["RedisSettings:RedisConnectionString"],
+        true);
+    return ConnectionMultiplexer.Connect(configuration);
+});
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration["RedisSettings:RedisConnectionString"];
+    options.InstanceName = builder.Configuration["RedisSettings:InstanceName"];
+});
+// ======================================================================
+
+builder.Services.Configure<MailSettings>(
+    builder.Configuration.GetSection("MailSettings"));
 builder.Services.AddHttpClient("SOPHttpClient", client =>
 {
     // Configure default headers, timeout, etc. if needed
@@ -140,6 +161,17 @@ app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "SOP Server v.01");
 });
+try
+{
+    var redis = app.Services.GetRequiredService<IConnectionMultiplexer>();
+    var db = redis.GetDatabase();
+    await db.PingAsync();
+    Console.WriteLine("Redis connection successful!");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"❌ Redis connection failed: {ex.Message}");
+}
 
 app.UseHttpsRedirection();
 

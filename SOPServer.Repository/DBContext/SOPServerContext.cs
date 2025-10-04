@@ -267,7 +267,6 @@ public partial class SOPServerContext : DbContext
                 .HasMaxLength(255)
                 .IsUnicode(true);
             entity.Property(e => e.PasswordHash)
-                .IsRequired()
                 .HasMaxLength(255)
                 .IsUnicode(true);
             entity.Property(e => e.PreferedColor)

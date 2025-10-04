@@ -9,11 +9,11 @@ using SOPServer.Repository.DBContext;
 
 #nullable disable
 
-namespace SOPServer.Repository.Migrations.SOPServerContextMigrations
+namespace SOPServer.Repository.Migrations
 {
     [DbContext(typeof(SOPServerContext))]
-    [Migration("20250921100012_MakePasswordHashNullable")]
-    partial class MakePasswordHashNullable
+    [Migration("20251004073226_PasswordNull")]
+    partial class PasswordNull
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -484,17 +484,17 @@ namespace SOPServer.Repository.Migrations.SOPServerContextMigrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool?>("IsPremium")
+                    b.Property<bool>("IsPremium")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool?>("IsStylist")
+                    b.Property<bool>("IsStylist")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool?>("IsVerifiedEmail")
+                    b.Property<bool>("IsVerifiedEmail")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
@@ -508,7 +508,6 @@ namespace SOPServer.Repository.Migrations.SOPServerContextMigrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PasswordHash")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(255)");

@@ -115,7 +115,7 @@ namespace SOPServer.Service.Services.Implements
 
                 if (!existUser.IsVerifiedEmail)
                 {
-                    await _otpService.SendOtpAsync(payload.Email);
+                    await _otpService.SendOtpAsync(payload.Email, payload.Name);
 
                     return new BaseResponseModel
                     {
@@ -152,7 +152,7 @@ namespace SOPServer.Service.Services.Implements
                 };
                 await _unitOfWork.UserRepository.AddAsync(newUser);
                 _unitOfWork.Save();
-                await _otpService.SendOtpAsync(payload.Email);
+                await _otpService.SendOtpAsync(payload.Email, payload.Name);
 
                 return new BaseResponseModel
                 {
@@ -393,7 +393,7 @@ namespace SOPServer.Service.Services.Implements
             await _unitOfWork.UserRepository.AddAsync(newUser);
             await _unitOfWork.SaveAsync();
 
-            await _otpService.SendOtpAsync(model.Email);
+            await _otpService.SendOtpAsync(model.Email, model.DisplayName);
 
             return new BaseResponseModel
             {
@@ -419,7 +419,7 @@ namespace SOPServer.Service.Services.Implements
             {
                 throw new BadRequestException(MessageConstants.USER_ALREADY_VERIFY);
             }
-            return await _otpService.SendOtpAsync(email);
+            return await _otpService.SendOtpAsync(email, existingUser.DisplayName);
         }
 
         public async Task<BaseResponseModel> VerifyOtp(VerifyOtpRequestModel model)

@@ -28,7 +28,7 @@ namespace SOPServer.Service.Services.Implements
             _mailService = mailService;
         }
 
-        public async Task<BaseResponseModel> SendOtpAsync(string email)
+        public async Task<BaseResponseModel> SendOtpAsync(string email, string name)
         {
             var attemptKey = RedisKeyConstants.GetOtpAttemptKey(email);
             var attempts = await _redisService.IncrementAsync(
@@ -56,7 +56,7 @@ namespace SOPServer.Service.Services.Implements
                 {
                     ToEmail = email,
                     Subject = "Smart Outfit Planner - Verification Code",
-                    Body = EmailUtils.GenerateOtpEmail(otp, OTP_EXPIRY_MINUTES)
+                    Body = EmailUtils.GenerateOtpEmail(otp, OTP_EXPIRY_MINUTES, name)
                 });
 
                 return new BaseResponseModel

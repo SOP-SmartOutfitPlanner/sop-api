@@ -8,7 +8,7 @@ namespace SOPServer.Service.Utils
 {
     public class EmailUtils
     {
-        public static string GenerateOtpEmail(string otp, int expiryMinutes)
+        public static string GenerateOtpEmail(string otp, int expiryMinutes, string displayName)
         {
             return $@"
 <!DOCTYPE html>
@@ -312,7 +312,7 @@ namespace SOPServer.Service.Utils
             
             <div class='content'>
                 <div class='greeting'>
-                    Dear,
+                    Hi {displayName},
                 </div>
                 
                 <p class='message'>
@@ -675,9 +675,7 @@ namespace SOPServer.Service.Utils
                     <li><strong>📸 Quick Image Import</strong> with automatic clothing type recognition.</li>
                 </ul>
                 
-                <div class='button-container'>
-                    <a href='#' class='button'>Start Exploring</a>
-                </div>
+
                 
                 <div class='support-box'>
                     <p>💜 Need help? Just reply to this email. We hope you have awesome outfits every day!</p>

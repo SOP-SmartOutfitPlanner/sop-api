@@ -9,7 +9,7 @@ namespace SOPServer.Service.Services.Interfaces
 {
     public interface IOtpService
     {
-        Task<BaseResponseModel> SendOtpAsync(string email);
+        Task<BaseResponseModel> SendOtpAsync(string email, string name);
         Task<BaseResponseModel> VerifyOtpAsync(string email, string otp);
         Task<bool> IsEmailVerifiedAsync(string email);
     }

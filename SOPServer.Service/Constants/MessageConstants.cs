@@ -45,6 +45,11 @@ namespace SOPServer.Service.Constants
         public const string FILE_NOT_FOUND = "File not found";
         public const string UPLOAD_FILE_SUCCESS = "File uploaded successfully";
 
+<<<<<<<<< Temporary merge branch 1
+=========
+
+
+>>>>>>>>> Temporary merge branch 2
         // Category related messages used by CategoryService
         public const string GET_CATEGORY_BY_ID_SUCCESS = "Get category by id successfully";
         public const string GET_CATEGORY_BY_PARENTID_SUCCESS = "Get categories by parent id successfully";

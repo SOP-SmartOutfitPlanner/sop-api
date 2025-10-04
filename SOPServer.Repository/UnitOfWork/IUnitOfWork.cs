@@ -11,7 +11,6 @@ namespace SOPServer.Repository.UnitOfWork
     {
         IItemRepository ItemRepository { get; }
         ICategoryRepository CategoryRepository { get; }
-        IItemGoalRepository ItemGoalRepository { get; }
         IItemOccasionRepository ItemOccasionRepository { get; }
         IItemSeasonRepository ItemSeasonRepository { get; }
         IItemStyleRepository ItemStyleRepository { get; }

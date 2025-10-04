@@ -14,9 +14,13 @@ namespace SOPServer.Service.Constants
         public const string IMAGE_IS_LARGE = "Image is very large";
         public const string IMAGE_IS_NOT_VALID = "Image is not valid";
         public const string IMAGE_IS_VALID = "Image is valid";
+        public const string GET_SUMMARY_IMAGE_SUCCESS = "Get summary image successfully";
+        public const string DELETE_FILE_SUCCESS = "Delete file successfully";
 
         public const string ITEM_NOT_EXISTED = "Item is not existed";
+        public const string ITEM_CREATE_SUCCESS = "Item created successfully";
         public const string DELETE_ITEM_SUCCESS = "Item deleted successfully";
+        public const string GET_LIST_ITEM_SUCCESS = "Get list item successfully";
 
         public const string GET_USER_BY_EMAIL_SUCCESS = "Get user by email successfully";
         public const string USER_NOT_EXIST = "User is not exist";

@@ -15,6 +15,20 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var env = builder.Environment;
+
+if (!env.IsDevelopment())
+{
+    var deploymentPath = Environment.GetEnvironmentVariable("PATH_SOP");
+
+    if (string.IsNullOrEmpty(deploymentPath))
+    {
+        throw new Exception("Environment variable PATH_SOP is not set.");
+    }
+
+    builder.Configuration.AddJsonFile(deploymentPath, optional: false, reloadOnChange: true);
+}
+
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
@@ -138,6 +152,7 @@ builder.Services.AddInfractstructure(builder.Configuration);
 
 builder.Services.Configure<GeminiSettings>(builder.Configuration.GetSection("Gemini"));
 builder.Services.Configure<FirebaseStorageSettings>(builder.Configuration.GetSection("FirebaseStorage"));
+builder.Services.Configure<MinioSettings>(builder.Configuration.GetSection("MinioStorage"));
 
 // ===================== CONFIG DATABASE CONNECTION =======================
 
@@ -148,8 +163,10 @@ builder.Services.AddDbContext<SOPServerContext>(options =>
 
 // ==========================================================
 
-builder.Services.AddHttpClient("FileDownloader", client =>
+builder.Services.AddHttpClient("RembgClient", client =>
 {
+    client.BaseAddress = new Uri("https://rembg.wizlab.io.vn/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 

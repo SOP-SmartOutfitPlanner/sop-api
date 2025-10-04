@@ -9,6 +9,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
     public class ItemModel
     {
         public long UserId { get; set; }
+        public string UserDisplayName { get; set; }
         public string Name { get; set; }
 
         public long CategoryId { get; set; }
@@ -78,5 +79,16 @@ namespace SOPServer.Service.BusinessModels.ItemModels
         public string Condition { get; set; }
         public string Pattern { get; set; }
         public string Fabric { get; set; }
+    }
+
+    public class ItemSummaryModel
+    {
+        public string Color { get; set; }
+        public string AiDescription { get; set; }
+        public string WeatherSuitable { get; set; }
+        public string Condition { get; set; }
+        public string Pattern { get; set; }
+        public string Fabric { get; set; }
+        public string ImageRemBgURL { get; set; }
     }
 }

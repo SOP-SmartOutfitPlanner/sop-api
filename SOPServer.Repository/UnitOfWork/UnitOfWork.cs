@@ -17,7 +17,6 @@ namespace SOPServer.Repository.UnitOfWork
         private IDbContextTransaction _transaction;
         private IItemRepository _itemRepository;
         private ICategoryRepository _categoryRepository;
-        private IItemGoalRepository _itemGoalRepository;
         private IItemOccasionRepository _itemOccasionRepository;
         private IItemSeasonRepository _itemSeasonRepository;
         private IItemStyleRepository _itemStyleRepository;
@@ -49,14 +48,6 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _categoryRepository ??= new CategoryRepository(_context);
-            }
-        }
-
-        public IItemGoalRepository ItemGoalRepository
-        {
-            get
-            {
-                return _itemGoalRepository ??= new ItemGoalRepository(_context);
             }
         }
 

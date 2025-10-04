@@ -111,6 +111,22 @@ namespace SOPServer.Service.Services.Implements
                     throw new BadRequestException(MessageConstants.USER_MUST_LOGIN_WITH_PASSWORD);
                 }
 
+                if (!existUser.IsVerifiedEmail)
+                {
+                    await _otpService.SendOtpAsync(payload.Email);
+
+                    return new BaseResponseModel
+                    {
+                        StatusCode = StatusCodes.Status201Created,
+                        Message = "Người dùng đã đăng ký! Vui lòng kiểm tra email để xác thực tài khoản.",
+                        Data = new
+                        {
+                            Email = payload.Email,
+                            Message = "Mã OTP đã được gửi đến email của bạn"
+                        }
+                    };
+                }
+
                 var accessToken = AuthenTokenUtils.GenerateAccessToken(existUser, existUser.Role, _configuration);
                 var refreshToken = AuthenTokenUtils.GenerateRefreshToken(existUser, _configuration);
 
@@ -432,6 +448,8 @@ namespace SOPServer.Service.Services.Implements
             }
 
             existingUser.IsVerifiedEmail = true;
+            _unitOfWork.UserRepository.UpdateAsync(existingUser);
+            await _unitOfWork.SaveAsync();
 
             return await _otpService.VerifyOtpAsync(model.Email, model.Otp);
         }

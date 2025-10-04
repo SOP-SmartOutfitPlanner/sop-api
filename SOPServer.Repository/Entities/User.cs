@@ -10,31 +10,35 @@ public partial class User : BaseEntity
 {
     public string Email { get; set; }
 
-    public string PasswordHash { get; set; }
+    public string? PasswordHash { get; set; }
 
     public Role Role { get; set; }
 
     public string DisplayName { get; set; }
 
-    public bool? IsVerifiedEmail { get; set; }
+    public bool IsVerifiedEmail { get; set; } = false;
 
-    public bool? IsStylist { get; set; }
+    public bool IsStylist { get; set; } = false;
 
-    public bool? IsPremium { get; set; }
+    public bool IsPremium { get; set; } = false;
 
-    public string AvtUrl { get; set; }
+    public bool IsLoginWithGoogle { get; set; } = false;
+
+    public bool? IsFirstTime { get; set; }
+
+    public string? AvtUrl { get; set; }
 
     public DateOnly? Dob { get; set; }
 
     public Gender Gender { get; set; }
 
-    public string PreferedColor { get; set; }
+    public string? PreferedColor { get; set; }
 
-    public string AvoidedColor { get; set; }
+    public string? AvoidedColor { get; set; }
 
-    public string Location { get; set; }
+    public string? Location { get; set; }
 
-    public string Bio { get; set; }
+    public string? Bio { get; set; }
 
     public long? JobId { get; set; }
 

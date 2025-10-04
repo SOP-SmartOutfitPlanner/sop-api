@@ -121,11 +121,11 @@ namespace SOPServer.Service.Services.Implements
                     return new BaseResponseModel
                     {
                         StatusCode = StatusCodes.Status201Created,
-                        Message = "User is already registered. Please check your mail for new OTP",
+                        Message = MessageConstants.USER_ALREADY_REGISTERED_OTP_SENT,
                         Data = new
                         {
                             Email = payload.Email,
-                            Message = "OTP has been sent to your gmail"
+                            Message = MessageConstants.OTP_HAS_BEEN_SENT_TO_GMAIL
                         }
                     };
                 }
@@ -158,11 +158,11 @@ namespace SOPServer.Service.Services.Implements
                 return new BaseResponseModel
                 {
                     StatusCode = StatusCodes.Status201Created,
-                    Message = "Successfully registered. Please check your mail for new OTP.",
+                    Message = MessageConstants.REGISTERED_SUCCESS_OTP_SENT,
                     Data = new
                     {
                         Email = payload.Email,
-                        Message = "OTP has been sent to your gmail"
+                        Message = MessageConstants.OTP_HAS_BEEN_SENT_TO_GMAIL
                     }
                 };
             }
@@ -399,11 +399,11 @@ namespace SOPServer.Service.Services.Implements
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status201Created,
-                Message = "Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.",
+                Message = MessageConstants.REGISTER_SUCCESS_VI,
                 Data = new
                 {
                     Email = model.Email,
-                    Message = "Mã OTP đã được gửi đến email của bạn"
+                    Message = MessageConstants.OTP_SENT_VI
                 }
             };
         }
@@ -438,7 +438,7 @@ namespace SOPServer.Service.Services.Implements
             await _mailService.SendEmailAsync(new MailRequest
             {
                 ToEmail = existingUser.Email,
-                Subject = "Welcome to Smart Outfit Planner",
+                Subject = MessageConstants.WELCOME_EMAIL_SUBJECT,
                 Body = EmailUtils.WelcomeEmail(existingUser.DisplayName ?? existingUser.Email)
             });
 
@@ -450,7 +450,7 @@ namespace SOPServer.Service.Services.Implements
             var userIdStr = principal.FindFirst("UserId")?.Value;
             var jti = principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
             if (string.IsNullOrEmpty(userIdStr) || string.IsNullOrEmpty(jti))
-                throw new BadRequestException("Invalid token claims");
+                throw new BadRequestException(MessageConstants.INVALID_TOKEN_CLAIMS);
 
             var userId = long.Parse(userIdStr);
 
@@ -460,7 +460,7 @@ namespace SOPServer.Service.Services.Implements
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status202Accepted,
-                Message = "Logged out"
+                Message = MessageConstants.LOGGED_OUT
             };
         }
 

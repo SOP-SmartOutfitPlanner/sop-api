@@ -1,27 +1,29 @@
 ﻿using AutoMapper;
 using Google.Apis.Auth;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.AuthenModels;
+using SOPServer.Service.BusinessModels.EmailModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.UserModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
+//using SOPServer.Service.BusinessModels.EmailModels;
+using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.Utils;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using SOPServer.Repository.Commons;
-//using SOPServer.Service.BusinessModels.EmailModels;
-using SOPServer.Service.Services.Interfaces;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -31,13 +33,22 @@ namespace SOPServer.Service.Services.Implements
         private readonly IMapper _mapper;
         private readonly IConfiguration _configuration;
         private readonly IMailService _mailService;
+        private readonly IOtpService _otpService;
+        private readonly IRedisService _redisService;
 
-        public UserService(IUnitOfWork unitOfWork, IMapper mapper, IConfiguration configuration, IMailService mailService)
+        public UserService(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            IConfiguration configuration,
+            IMailService mailService,
+            IOtpService otpService, IRedisService redisService) 
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _configuration = configuration;
             _mailService = mailService;
+            _otpService = otpService;
+            _redisService = redisService;
         }
 
         public async Task<BaseResponseModel> GetUserById(int id)
@@ -62,47 +73,70 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> LoginWithGoogleOAuth(string credential)
         {
-            string cliendId = _configuration["GoogleCredential:ClientId"];
+            string clientId = _configuration["GoogleCredential:ClientId"];
 
-            if (string.IsNullOrEmpty(cliendId))
+            if (string.IsNullOrEmpty(clientId))
             {
                 throw new BadRequestException(MessageConstants.TOKEN_NOT_VALID);
             }
 
             var settings = new GoogleJsonWebSignature.ValidationSettings()
             {
-                Audience = new List<string> { cliendId }
+                Audience = new List<string> { clientId }
             };
 
-            var payload = await GoogleJsonWebSignature.ValidateAsync(credential, settings);
+            GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                payload = await GoogleJsonWebSignature.ValidateAsync(credential, settings);
+            }
+            catch (Exception)
+            {
+                throw new BadRequestException(MessageConstants.TOKEN_NOT_VALID);
+            }
+
             if (payload == null)
             {
                 throw new BadRequestException(MessageConstants.TOKEN_NOT_VALID);
             }
 
             var existUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(payload.Email);
+
             if (existUser != null)
             {
                 if (existUser.IsDeleted)
                 {
+                    throw new ForbiddenException(MessageConstants.USER_FORBIDDEN);
+                }
+
+                if(!existUser.IsLoginWithGoogle)
+                {
+                    throw new BadRequestException(MessageConstants.USER_MUST_LOGIN_WITH_PASSWORD);
+                }
+
+                if (!existUser.IsVerifiedEmail)
+                {
+                    await _otpService.SendOtpAsync(payload.Email, payload.Name);
+
                     return new BaseResponseModel
                     {
-                        StatusCode = StatusCodes.Status400BadRequest,
-                        Message = MessageConstants.USER_HAS_BEEN_DELETE,
+                        StatusCode = StatusCodes.Status201Created,
+                        Message = MessageConstants.USER_ALREADY_REGISTERED_OTP_SENT,
+                        Data = new
+                        {
+                            Email = payload.Email,
+                            Message = MessageConstants.OTP_HAS_BEEN_SENT_TO_GMAIL
+                        }
                     };
                 }
-                var accessToken = AuthenTokenUtils.GenerateAccessToken(existUser.Email, existUser, existUser.Role, _configuration);
-                var refreshToken = AuthenTokenUtils.GenerateRefreshToken(existUser.Email, _configuration);
+
+                var authResult = await IssueAndCacheTokensAsync(existUser);
 
                 return new BaseResponseModel
                 {
                     StatusCode = StatusCodes.Status200OK,
                     Message = MessageConstants.LOGIN_SUCCESS_MESSAGE,
-                    Data = new AuthenModel
-                    {
-                        AccessToken = accessToken,
-                        RefreshToken = refreshToken
-                    },
+                    Data = authResult
                 };
             }
             else
@@ -111,36 +145,25 @@ namespace SOPServer.Service.Services.Implements
                 {
                     Email = payload.Email,
                     DisplayName = payload.Name,
-                    //UnsignName = StringUtils.ConvertToUnSign(payload.Name),
                     AvtUrl = payload.Picture,
-                    //GoogleId = payload.JwtId,
                     Role = Role.USER,
-                    IsVerifiedEmail = payload.EmailVerified
+                    IsVerifiedEmail = false,
+                    IsFirstTime = true,
+                    IsLoginWithGoogle = true
                 };
-
                 await _unitOfWork.UserRepository.AddAsync(newUser);
                 _unitOfWork.Save();
-
-                //_ = Task.Run(async () =>
-                //    await _mailService.SendEmailAsync(new MailRequest()
-                //    {
-                //        Subject = "Chào mừng bạn đến với Himari!",
-                //        Body = EmailUtils.WelcomeEmail(newUser.FullName),
-                //        ToEmail = newUser.Email
-                //    }));
-
-                var accessToken = AuthenTokenUtils.GenerateAccessToken(newUser.Email, newUser, Role.USER, _configuration);
-                var refreshToken = AuthenTokenUtils.GenerateRefreshToken(newUser.Email, _configuration);
+                await _otpService.SendOtpAsync(payload.Email, payload.Name);
 
                 return new BaseResponseModel
                 {
-                    StatusCode = StatusCodes.Status200OK,
-                    Message = MessageConstants.LOGIN_SUCCESS_MESSAGE,
-                    Data = new AuthenModel
+                    StatusCode = StatusCodes.Status201Created,
+                    Message = MessageConstants.REGISTERED_SUCCESS_OTP_SENT,
+                    Data = new
                     {
-                        AccessToken = accessToken,
-                        RefreshToken = refreshToken
-                    },
+                        Email = payload.Email,
+                        Message = MessageConstants.OTP_HAS_BEEN_SENT_TO_GMAIL
+                    }
                 };
             }
         }
@@ -170,17 +193,13 @@ namespace SOPServer.Service.Services.Implements
                     var existUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(email);
                     if (existUser != null)
                     {
-                        var accessToken = AuthenTokenUtils.GenerateAccessToken(email, existUser, existUser.Role, _configuration);
-                        var refreshToken = AuthenTokenUtils.GenerateRefreshToken(email, _configuration);
+                        var authResult = await IssueAndCacheTokensAsync(existUser);
+
                         return new BaseResponseModel
                         {
                             StatusCode = StatusCodes.Status200OK,
-                            Data = new AuthenModel
-                            {
-                                AccessToken = accessToken,
-                                RefreshToken = refreshToken
-                            },
-                            Message = MessageConstants.TOKEN_REFRESH_SUCCESS_MESSAGE
+                            Message = MessageConstants.LOGIN_SUCCESS_MESSAGE,
+                            Data = authResult
                         };
                     }
                 }
@@ -305,5 +324,168 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.USER_ADDRESS_UPDATE_SUCCESS
             };
         }
+
+        public async Task<BaseResponseModel> LoginWithEmailAndPassword(LoginRequestModel model)
+        {
+            var user = await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email);
+
+            if(user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            if (user.IsLoginWithGoogle)
+            {
+                throw new BadRequestException(MessageConstants.USER_MUST_LOGIN_WITH_GOOGLE);
+            }
+
+            if(!PasswordUtils.VerifyPassword(model.Password, user.PasswordHash))
+            {
+                throw new UnauthorizedException(MessageConstants.EMAIL_OR_PASSWORD_INCORRECT);
+            }
+
+            if (user.IsDeleted)
+            {
+                throw new ForbiddenException(MessageConstants.USER_FORBIDDEN);
+            }
+
+            if(!user.IsVerifiedEmail) 
+            {
+                throw new BadRequestException(MessageConstants.USER_NOT_VERIFY);
+            }
+
+            var authResult = await IssueAndCacheTokensAsync(user);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.LOGIN_SUCCESS_MESSAGE,
+                Data = authResult
+            };
+        }
+
+        public async Task<BaseResponseModel> RegisterUser(RegisterRequestModel model)
+        {
+            var existingUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email);
+
+            if (existingUser != null)
+            {
+                throw new BadRequestException(MessageConstants.EMAIL_EXISTED);
+            }
+
+            if (model.Password != model.ConfirmPassword)
+            {
+                throw new BadRequestException(MessageConstants.PASSWORD_DOES_NOT_MATCH);
+            }
+
+            var passwordHash = PasswordUtils.HashPassword(model.Password);
+
+            var newUser = new User
+            {
+                Email = model.Email,
+                DisplayName = model.DisplayName,
+                PasswordHash = passwordHash,
+                Role = Role.USER,
+                IsVerifiedEmail = false,
+                IsFirstTime = true,
+                IsLoginWithGoogle = false
+            };
+
+            await _unitOfWork.UserRepository.AddAsync(newUser);
+            await _unitOfWork.SaveAsync();
+
+            await _otpService.SendOtpAsync(model.Email, model.DisplayName);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status201Created,
+                Message = MessageConstants.REGISTER_SUCCESS_VI,
+                Data = new
+                {
+                    Email = model.Email,
+                    Message = MessageConstants.OTP_SENT_VI
+                }
+            };
+        }
+
+        public async Task<BaseResponseModel> ResendOtp(string email)
+        {
+            var existingUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(email);
+
+            if (existingUser == null)
+            {
+                throw new BadRequestException(MessageConstants.USER_NOT_EXIST);
+            }
+            else if (existingUser.IsVerifiedEmail == true)
+            {
+                throw new BadRequestException(MessageConstants.USER_ALREADY_VERIFY);
+            }
+            return await _otpService.SendOtpAsync(email, existingUser.DisplayName);
+        }
+
+        public async Task<BaseResponseModel> VerifyOtp(VerifyOtpRequestModel model)
+        {
+            var existingUser = await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email);
+            if (existingUser == null) throw new BadRequestException(MessageConstants.USER_NOT_EXIST);
+            if (existingUser.IsVerifiedEmail == true) throw new BadRequestException(MessageConstants.USER_ALREADY_VERIFY);
+
+            var otpResult = await _otpService.VerifyOtpAsync(model.Email, model.Otp);
+
+            existingUser.IsVerifiedEmail = true;
+            _unitOfWork.UserRepository.UpdateAsync(existingUser);
+            await _unitOfWork.SaveAsync();
+
+            await _mailService.SendEmailAsync(new MailRequest
+            {
+                ToEmail = existingUser.Email,
+                Subject = MessageConstants.WELCOME_EMAIL_SUBJECT,
+                Body = EmailUtils.WelcomeEmail(existingUser.DisplayName ?? existingUser.Email)
+            });
+
+            return otpResult;
+        }
+
+        public async Task<BaseResponseModel> LogoutCurrentAsync(ClaimsPrincipal principal)
+        {
+            var userIdStr = principal.FindFirst("UserId")?.Value;
+            var jti = principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+            if (string.IsNullOrEmpty(userIdStr) || string.IsNullOrEmpty(jti))
+                throw new BadRequestException(MessageConstants.INVALID_TOKEN_CLAIMS);
+
+            var userId = long.Parse(userIdStr);
+
+            await _redisService.RemoveAsync(RedisKeyConstants.GetAccessTokenKey(userId, jti));
+            await _redisService.RemoveAsync(RedisKeyConstants.GetRefreshTokenKey(userId, jti));
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status202Accepted,
+                Message = MessageConstants.LOGGED_OUT
+            };
+        }
+
+
+
+        private async Task<AuthenResultModel> IssueAndCacheTokensAsync(User user)
+        {
+            var tokenId = Guid.NewGuid().ToString("N");
+
+            var accessToken = AuthenTokenUtils.GenerateAccessToken(user, user.Role, _configuration, tokenId);
+            var refreshToken = AuthenTokenUtils.GenerateRefreshToken(user, _configuration, tokenId);
+
+            var accessKey = RedisKeyConstants.GetAccessTokenKey(user.Id, tokenId);
+            var refreshKey = RedisKeyConstants.GetRefreshTokenKey(user.Id, tokenId);
+
+            await _redisService.SetAsync(accessKey, accessToken, TimeSpan.FromHours(1));
+            await _redisService.SetAsync(refreshKey, refreshToken, TimeSpan.FromDays(7));
+
+            return new AuthenResultModel
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken
+            };
+        }
+
+
     }
 }

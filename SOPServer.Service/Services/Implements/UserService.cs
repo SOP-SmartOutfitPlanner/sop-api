@@ -114,23 +114,8 @@ namespace SOPServer.Service.Services.Implements
                     throw new BadRequestException(MessageConstants.USER_MUST_LOGIN_WITH_PASSWORD);
                 }
 
-                if (!existUser.IsVerifiedEmail)
-                {
-                    await _otpService.SendOtpAsync(payload.Email, payload.Name);
-
-                    return new BaseResponseModel
-                    {
-                        StatusCode = StatusCodes.Status201Created,
-                        Message = MessageConstants.USER_ALREADY_REGISTERED_OTP_SENT,
-                        Data = new
-                        {
-                            Email = payload.Email,
-                            Message = MessageConstants.OTP_HAS_BEEN_SENT_TO_GMAIL
-                        }
-                    };
-                }
-
                 var authResult = await IssueAndCacheTokensAsync(existUser);
+
 
                 return new BaseResponseModel
                 {
@@ -147,23 +132,27 @@ namespace SOPServer.Service.Services.Implements
                     DisplayName = payload.Name,
                     AvtUrl = payload.Picture,
                     Role = Role.USER,
-                    IsVerifiedEmail = false,
+                    IsVerifiedEmail = true,
                     IsFirstTime = true,
                     IsLoginWithGoogle = true
                 };
                 await _unitOfWork.UserRepository.AddAsync(newUser);
                 _unitOfWork.Save();
-                await _otpService.SendOtpAsync(payload.Email, payload.Name);
+
+                await _mailService.SendEmailAsync(new MailRequest
+                {
+                    ToEmail = newUser.Email,
+                    Subject = MessageConstants.WELCOME_EMAIL_SUBJECT,
+                    Body = EmailUtils.WelcomeEmail(newUser.DisplayName ?? newUser.Email)
+                });
+
+                var authResult = await IssueAndCacheTokensAsync(newUser);
 
                 return new BaseResponseModel
                 {
-                    StatusCode = StatusCodes.Status201Created,
-                    Message = MessageConstants.REGISTERED_SUCCESS_OTP_SENT,
-                    Data = new
-                    {
-                        Email = payload.Email,
-                        Message = MessageConstants.OTP_HAS_BEEN_SENT_TO_GMAIL
-                    }
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = MessageConstants.LOGIN_SUCCESS_MESSAGE,
+                    Data = authResult
                 };
             }
         }

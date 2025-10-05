@@ -25,9 +25,15 @@ namespace SOPServer.API
             services.AddScoped<IItemStyleRepository, ItemStyleRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
 
+            services.AddScoped<IPostImageRepository, PostImageRepository>();
+            services.AddScoped<IPostRepository, PostRepository>();
+            services.AddScoped<IHashtagRepository, HashtagRepository>();
+            services.AddScoped<IPostHashtagsRepository, PostHashtagsRepository>();
+
             // Services
             services.AddScoped<IGeminiService, GeminiService>();
             services.AddScoped<IItemService, ItemService>();
+            services.AddScoped<IPostService, PostService>();
 
             services.AddScoped<IMinioService, MinioService>();
 

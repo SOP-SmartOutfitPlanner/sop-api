@@ -43,4 +43,6 @@ public partial class User : BaseEntity
     public virtual Job Job { get; set; }
 
     public virtual ICollection<UserStyle> UserStyles { get; set; } = new List<UserStyle>();
+
+    public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
 }

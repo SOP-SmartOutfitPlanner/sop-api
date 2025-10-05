@@ -53,6 +53,12 @@ namespace SOPServer.Service.Constants
         public const string CALL_REM_BACKGROUND_FAIL = "Call remove background service fail";
 
         public const string REM_BACKGROUND_IMAGE_FAIL = "Remove background image fail";
+
+        // Post related messages
+        public const string POST_CREATE_SUCCESS = "Post created successfully";
+        public const string POST_DELETE_SUCCESS = "Post deleted successfully";
+        public const string POST_GET_SUCCESS = "Post retrieved successfully";
+        public const string POST_NOT_FOUND = "Post not found";
         
     }
 }

@@ -31,7 +31,8 @@ namespace SOPServer.API.Middlewares
             }
             catch (Exception ex)
             {
-                await HandleAppExceptionAsync(new BaseErrorResponseException(MessageConstants.INTERNAL_SERVER_ERROR, 500), context);
+                //await HandleAppExceptionAsync(new BaseErrorResponseException(MessageConstants.INTERNAL_SERVER_ERROR, 500), context);
+                await HandleAppExceptionAsync(new BaseErrorResponseException(ex.Message, 500), context);
             }
         }
 

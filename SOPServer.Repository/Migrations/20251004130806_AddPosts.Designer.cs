@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SOPServer.Repository.DBContext;
 
@@ -11,9 +12,11 @@ using SOPServer.Repository.DBContext;
 namespace SOPServer.Repository.Migrations
 {
     [DbContext(typeof(SOPServerContext))]
-    partial class SOPServerContextModelSnapshot : ModelSnapshot
+    [Migration("20251004130806_AddPosts")]
+    partial class AddPosts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -53,34 +56,6 @@ namespace SOPServer.Repository.Migrations
                     b.HasIndex("ParentId");
 
                     b.ToTable("Category", (string)null);
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.Hashtag", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(255)
-                        .IsUnicode(true)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id")
-                        .HasName("PK__Hashtag__3214EC07");
-
-                    b.ToTable("Hashtag", (string)null);
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Item", b =>
@@ -331,104 +306,6 @@ namespace SOPServer.Repository.Migrations
                     b.ToTable("Occasion", (string)null);
                 });
 
-            modelBuilder.Entity("SOPServer.Repository.Entities.Post", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Body")
-                        .IsUnicode(true)
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("UserId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id")
-                        .HasName("PK__Post__3214EC07");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Post", (string)null);
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.PostHashtags", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("HashtagId")
-                        .HasColumnType("bigint");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<long>("PostId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id")
-                        .HasName("PK__PostHash__3214EC07");
-
-                    b.HasIndex("HashtagId");
-
-                    b.HasIndex("PostId");
-
-                    b.ToTable("PostHashtags", (string)null);
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.PostImage", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ImgUrl")
-                        .HasMaxLength(255)
-                        .IsUnicode(true)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<long?>("PostId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id")
-                        .HasName("PK__PostImag__3214EC07");
-
-                    b.HasIndex("PostId");
-
-                    b.ToTable("PostImage", (string)null);
-                });
-
             modelBuilder.Entity("SOPServer.Repository.Entities.Season", b =>
                 {
                     b.Property<long>("Id")
@@ -536,27 +413,17 @@ namespace SOPServer.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("IsFirstTime")
+                    b.Property<bool?>("IsPremium")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool>("IsLoginWithGoogle")
+                    b.Property<bool?>("IsStylist")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool>("IsPremium")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<bool>("IsStylist")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<bool>("IsVerifiedEmail")
+                    b.Property<bool?>("IsVerifiedEmail")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
@@ -570,6 +437,7 @@ namespace SOPServer.Repository.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PasswordHash")
+                        .IsRequired()
                         .HasMaxLength(255)
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(255)");
@@ -707,47 +575,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("Style");
                 });
 
-            modelBuilder.Entity("SOPServer.Repository.Entities.Post", b =>
-                {
-                    b.HasOne("SOPServer.Repository.Entities.User", "User")
-                        .WithMany("Posts")
-                        .HasForeignKey("UserId")
-                        .HasConstraintName("FK_Post_User");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.PostHashtags", b =>
-                {
-                    b.HasOne("SOPServer.Repository.Entities.Hashtag", "Hashtag")
-                        .WithMany("PostHashtags")
-                        .HasForeignKey("HashtagId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_PostHashtags_Hashtag");
-
-                    b.HasOne("SOPServer.Repository.Entities.Post", "Post")
-                        .WithMany("PostHashtags")
-                        .HasForeignKey("PostId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_PostHashtags_Post");
-
-                    b.Navigation("Hashtag");
-
-                    b.Navigation("Post");
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.PostImage", b =>
-                {
-                    b.HasOne("SOPServer.Repository.Entities.Post", "Post")
-                        .WithMany("PostImages")
-                        .HasForeignKey("PostId")
-                        .HasConstraintName("FK_PostImage_Post");
-
-                    b.Navigation("Post");
-                });
-
             modelBuilder.Entity("SOPServer.Repository.Entities.User", b =>
                 {
                     b.HasOne("SOPServer.Repository.Entities.Job", "Job")
@@ -782,11 +609,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("Items");
                 });
 
-            modelBuilder.Entity("SOPServer.Repository.Entities.Hashtag", b =>
-                {
-                    b.Navigation("PostHashtags");
-                });
-
             modelBuilder.Entity("SOPServer.Repository.Entities.Item", b =>
                 {
                     b.Navigation("ItemOccasions");
@@ -806,13 +628,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("ItemOccasions");
                 });
 
-            modelBuilder.Entity("SOPServer.Repository.Entities.Post", b =>
-                {
-                    b.Navigation("PostHashtags");
-
-                    b.Navigation("PostImages");
-                });
-
             modelBuilder.Entity("SOPServer.Repository.Entities.Season", b =>
                 {
                     b.Navigation("ItemSeasons");
@@ -828,8 +643,6 @@ namespace SOPServer.Repository.Migrations
             modelBuilder.Entity("SOPServer.Repository.Entities.User", b =>
                 {
                     b.Navigation("Items");
-
-                    b.Navigation("Posts");
 
                     b.Navigation("UserStyles");
                 });

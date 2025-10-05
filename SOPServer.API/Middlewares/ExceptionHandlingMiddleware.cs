@@ -31,8 +31,8 @@ namespace SOPServer.API.Middlewares
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Unhandled exception of type {ex.GetType().Name}: {ex.Message}");
-                await HandleAppExceptionAsync(new BaseErrorResponseException(MessageConstants.INTERNAL_SERVER_ERROR, 500), context);
+                //await HandleAppExceptionAsync(new BaseErrorResponseException(MessageConstants.INTERNAL_SERVER_ERROR, 500), context);
+                await HandleAppExceptionAsync(new BaseErrorResponseException(ex.Message, 500), context);
             }
         }
 

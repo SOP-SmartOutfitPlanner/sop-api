@@ -58,10 +58,27 @@ namespace SOPServer.Service.Constants
         public const string CALL_REM_BACKGROUND_FAIL = "Call remove background service fail";
 
         public const string REM_BACKGROUND_IMAGE_FAIL = "Remove background image fail";
+
+        // Post related messages
+        public const string POST_CREATE_SUCCESS = "Post created successfully";
+        public const string POST_DELETE_SUCCESS = "Post deleted successfully";
+        public const string POST_GET_SUCCESS = "Post retrieved successfully";
+        public const string POST_NOT_FOUND = "Post not found";
+        
         public const string OTP_SENT_SUCCESS = "OTP sent successfully to your gmail";
         public const string OTP_VERIFY_SUCCESS = "Verify OTP successfully";
         public const string OTP_INVALID = "OTP is invalid or expired!";
         public const string OTP_TOO_MANY_ATTEMPTS = "You request OTP too many time, please retry after 15 minutes!";
         public const string EMAIL_SEND_FAILED = "Send email failed, please retry";
+
+        // New constants moved from UserService
+        public const string USER_ALREADY_REGISTERED_OTP_SENT = "User is already registered. Please check your mail for new OTP";
+        public const string OTP_HAS_BEEN_SENT_TO_GMAIL = "OTP has been sent to your gmail";
+        public const string REGISTERED_SUCCESS_OTP_SENT = "Successfully registered. Please check your mail for new OTP.";
+        public const string REGISTER_SUCCESS_VI = "Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.";
+        public const string OTP_SENT_VI = "Mã OTP đã được gửi đến email của bạn";
+        public const string INVALID_TOKEN_CLAIMS = "Invalid token claims";
+        public const string LOGGED_OUT = "Logged out";
+        public const string WELCOME_EMAIL_SUBJECT = "Welcome to Smart Outfit Planner";
     }
 }

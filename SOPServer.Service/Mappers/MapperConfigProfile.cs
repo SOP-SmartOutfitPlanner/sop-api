@@ -3,6 +3,7 @@ using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Service.BusinessModels.CategoryModels;
 using SOPServer.Service.BusinessModels.ItemModels;
+using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.PostModels;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,6 +50,28 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.Images, opt => opt.MapFrom(src => src.PostImages != null ? src.PostImages.Select(pi => pi.ImgUrl).Where(url => !string.IsNullOrEmpty(url)).ToList() : new List<string>()))
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedDate))
                 .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedDate));
+
+            // Outfit mappings
+            CreateMap<Outfit, OutfitModel>()
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId ?? 0))
+                .ForMember(dest => dest.UserDisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : "Unknown"))
+                .ForMember(dest => dest.IsFavorite, opt => opt.MapFrom(src => src.isFavorite))
+                .ForMember(dest => dest.IsUsed, opt => opt.MapFrom(src => src.isUsed));
+
+            CreateMap<Outfit, OutfitDetailedModel>()
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId ?? 0))
+                .ForMember(dest => dest.UserDisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : "Unknown"))
+                .ForMember(dest => dest.IsFavorite, opt => opt.MapFrom(src => src.isFavorite))
+                .ForMember(dest => dest.IsUsed, opt => opt.MapFrom(src => src.isUsed))
+                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => 
+                    src.OutfitItems != null 
+                        ? src.OutfitItems.Where(oi => oi.Item != null).Select(oi => oi.Item).ToList() 
+                        : new List<Item>()));
+
+            CreateMap<Item, OutfitItemModel>()
+                .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.CategoryId, opt => opt.MapFrom(src => src.CategoryId ?? 0))
+                .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : null));
         }
 
         public class PaginationConverter<TSource, TDestination> : ITypeConverter<Pagination<TSource>, Pagination<TDestination>>

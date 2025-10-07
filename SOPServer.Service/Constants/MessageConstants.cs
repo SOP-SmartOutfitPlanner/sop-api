@@ -80,5 +80,11 @@ namespace SOPServer.Service.Constants
         public const string INVALID_TOKEN_CLAIMS = "Invalid token claims";
         public const string LOGGED_OUT = "Logged out";
         public const string WELCOME_EMAIL_SUBJECT = "Welcome to Smart Outfit Planner";
+
+        // Outfit related messages
+        public const string OUTFIT_NOT_FOUND = "Outfit not found";
+        public const string OUTFIT_GET_SUCCESS = "Outfit retrieved successfully";
+        public const string OUTFIT_TOGGLE_FAVORITE_SUCCESS = "Outfit favorite status toggled successfully";
+        public const string OUTFIT_MARK_USED_SUCCESS = "Outfit marked as used successfully";
     }
 }

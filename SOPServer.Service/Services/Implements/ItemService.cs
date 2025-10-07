@@ -57,7 +57,7 @@ namespace SOPServer.Service.Services.Implements
             await _unitOfWork.ItemRepository.AddAsync(newItem);
             _unitOfWork.Save();
 
-            var newItemInclude = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(newItem.Id, include: query => query.Include(x => x.Category).Include(x => x.UserId));
+            var newItemInclude = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(newItem.Id, include: query => query.Include(x => x.Category).Include(x => x.User));
 
             return new BaseResponseModel
             {

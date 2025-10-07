@@ -40,8 +40,7 @@ public partial class Item : BaseEntity
     public virtual ICollection<ItemSeason> ItemSeasons { get; set; } = new List<ItemSeason>();
 
     public virtual ICollection<ItemStyle> ItemStyles { get; set; } = new List<ItemStyle>();
-
+    public virtual ICollection<OutfitItems> OutfitItems { get; set; } = new List<OutfitItems>();
     public virtual User User { get; set; }
-
     public virtual Category Category { get; set; }
 }

@@ -30,10 +30,13 @@ namespace SOPServer.API
             services.AddScoped<IHashtagRepository, HashtagRepository>();
             services.AddScoped<IPostHashtagsRepository, PostHashtagsRepository>();
 
+            services.AddScoped<IOutfitRepository, OutfitRepository>();
+
             // Services
             services.AddScoped<IGeminiService, GeminiService>();
             services.AddScoped<IItemService, ItemService>();
             services.AddScoped<IPostService, PostService>();
+            services.AddScoped<IOutfitService, OutfitService>();
 
             services.AddScoped<IRedisService, RedisService>();
             services.AddScoped<IMailService, MailService>();

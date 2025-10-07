@@ -25,6 +25,7 @@ namespace SOPServer.Repository.UnitOfWork
         private IHashtagRepository _hashtagRepository;
         private IPostHashtagsRepository _postHashtagsRepository;
         private IPostImageRepository _postImageRepository;
+        private IOutfitRepository _outfitRepository;
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -108,6 +109,14 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _postImageRepository ??= new PostImageRepository(_context);
+            }
+        }
+
+        public IOutfitRepository OutfitRepository
+        {
+            get
+            {
+                return _outfitRepository ??= new OutfitRepository(_context);
             }
         }
 

@@ -8,6 +8,7 @@ namespace SOPServer.Service.Utils
 {
     public class EmailUtils
     {
+        [Obsolete("Use IEmailTemplateService.GenerateOtpEmailAsync instead. This method will be removed in a future version.")]
         public static string GenerateOtpEmail(string otp, int expiryMinutes, string displayName)
         {
             return $@"
@@ -80,6 +81,7 @@ namespace SOPServer.Service.Utils
 </html>";
         }
 
+        [Obsolete("Use IEmailTemplateService.GenerateWelcomeEmailAsync instead. This method will be removed in a future version.")]
         public static string WelcomeEmail(string displayName)
         {
             return $@"

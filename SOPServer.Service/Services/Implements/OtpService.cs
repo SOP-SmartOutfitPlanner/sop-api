@@ -4,7 +4,6 @@ using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
-using SOPServer.Service.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,14 +17,16 @@ namespace SOPServer.Service.Services.Implements
     {
         private readonly IRedisService _redisService;
         private readonly IMailService _mailService;
+        private readonly IEmailTemplateService _emailTemplateService;
         private const int OTP_EXPIRY_MINUTES = 5;
         private const int MAX_ATTEMPTS_PER_15_MINUTES = 5;
         private const int ATTEMPT_WINDOW_MINUTES = 15;
 
-        public OtpService(IRedisService redisService, IMailService mailService)
+        public OtpService(IRedisService redisService, IMailService mailService, IEmailTemplateService emailTemplateService)
         {
             _redisService = redisService;
             _mailService = mailService;
+            _emailTemplateService = emailTemplateService;
         }
 
         public async Task<BaseResponseModel> SendOtpAsync(string email, string name)
@@ -52,11 +53,18 @@ namespace SOPServer.Service.Services.Implements
 
             try
             {
+                var emailBody = await _emailTemplateService.GenerateOtpEmailAsync(new OtpEmailTemplateModel
+                {
+                    DisplayName = name,
+                    Otp = otp,
+                    ExpiryMinutes = OTP_EXPIRY_MINUTES
+                });
+
                 await _mailService.SendEmailAsync(new MailRequest
                 {
                     ToEmail = email,
                     Subject = "Smart Outfit Planner - Verification Code",
-                    Body = EmailUtils.GenerateOtpEmail(otp, OTP_EXPIRY_MINUTES, name)
+                    Body = emailBody
                 });
 
                 return new BaseResponseModel

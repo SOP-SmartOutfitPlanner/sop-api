@@ -8,6 +8,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 {
     public class ItemModel
     {
+        public long Id { get; set; }
         public long UserId { get; set; }
         public string UserDisplayName { get; set; }
         public string Name { get; set; }

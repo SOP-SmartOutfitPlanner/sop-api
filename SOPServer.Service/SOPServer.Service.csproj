@@ -17,4 +17,8 @@
     <PackageReference Include="StackExchange.Redis" Version="2.9.25" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="SOPServer.Service\Services\Implements\" />
+  </ItemGroup>
+
 </Project>

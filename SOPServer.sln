@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SOPServer.Repository", "SOP
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SOPServer.Service", "SOPServer.Service\SOPServer.Service.csproj", "{CED4CB07-ECE5-45F1-AAB6-37C6B30E439A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SOPServer.Service.UnitTest", "SOPServer.Service.UnitTest\SOPServer.Service.UnitTest.csproj", "{D7E126CF-8565-A971-6878-2F743BC7369C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{CED4CB07-ECE5-45F1-AAB6-37C6B30E439A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CED4CB07-ECE5-45F1-AAB6-37C6B30E439A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CED4CB07-ECE5-45F1-AAB6-37C6B30E439A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D7E126CF-8565-A971-6878-2F743BC7369C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D7E126CF-8565-A971-6878-2F743BC7369C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D7E126CF-8565-A971-6878-2F743BC7369C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D7E126CF-8565-A971-6878-2F743BC7369C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

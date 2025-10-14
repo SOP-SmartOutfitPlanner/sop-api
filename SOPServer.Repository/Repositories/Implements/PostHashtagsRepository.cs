@@ -5,12 +5,10 @@ using SOPServer.Repository.Repositories.Interfaces;
 
 namespace SOPServer.Repository.Repositories.Implements
 {
-    public class ItemGoalRepository : GenericRepository<ItemGoal>, IItemGoalRepository
+    public class PostHashtagsRepository : GenericRepository<PostHashtags>, IPostHashtagsRepository
     {
-        private readonly SOPServerContext _context;
-        public ItemGoalRepository(SOPServerContext context) : base(context)
+        public PostHashtagsRepository(SOPServerContext context) : base(context)
         {
-            _context = context;
         }
     }
 }

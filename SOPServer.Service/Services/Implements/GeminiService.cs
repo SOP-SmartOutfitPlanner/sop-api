@@ -3,6 +3,7 @@ using GenerativeAI.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using SOPServer.Repository.Enums;
+using SOPServer.Service.BusinessModels.GeminiModels;
 using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
@@ -26,20 +27,44 @@ namespace SOPServer.Service.Services.Implements
         "image/jpeg", "image/png", "image/webp", "image/gif"
     };
         private readonly string _promptValidation = @"
-You are a strict validator. Analyze the image and return ONLY a single character:
+You are a strict validator. Analyze the given image and return a JSON object that matches the following C# class:
 
-- Return 1 if ALL conditions are met:
-  • The primary subject is a single clothing item (e.g., shirt, pants) or a fashion accessory (e.g., belt, bag, hat, shoes, jewelry, scarf, sunglasses).
-  • The item is clearly the main subject (dominant/centered), fully visible, in focus, and sharp (not blurry or low-resolution).
-  • The item has clean, well-separated edges so the background can be removed easily (simple or unobtrusive background; minimal occlusion/clutter).
-  • The content is SFW (no sensitive or explicit material): no nudity, no sexual/erotic content, no fetish/suggestive poses, no violence/gore, no illegal content.
+public class ImageValidation
+{
+    public bool IsValid { get; set; }
+    public string Message { get; set; }
+}
 
-- Return 0 in ALL other cases:
-  • Multiple items or people dominate the frame; faces/person is the main subject; heavy occlusion/cropping; busy/cluttered background.
-  • The item is not sharp, is blurry, poorly lit, or partially out of frame; heavy watermarking or compression artifacts.
-  • Any sensitive/NSFW or explicit content of any kind.
+Rules:
 
-Output must be exactly 1 or 0. No explanations, no punctuation, no code blocks.
+- If the image meets ALL conditions, return:
+  {
+    ""IsValid"": true,
+    ""Message"": ""Hình ảnh đạt chất lượng""
+  }
+
+- If the image does NOT meet the conditions, return:
+  {
+    ""IsValid"": false,
+    ""Message"": ""<Lý do ảnh không đạt bằng tiếng Việt>""
+  }
+
+Conditions for IsValid = true:
+  • The primary subject is a single clothing item (shirt, pants, dress, shoes, bag, hat, scarf, sunglasses, jewelry, belt, etc.).
+  • The item is dominant/centered, fully visible, in focus, sharp, and well-lit.
+  • The background must NOT be the same color as the item, must not contain too many colors, and must not contain too many objects.
+  • The content is safe for work (no nudity, no sensitive/explicit material, no violence, no illegal content).
+
+If the image fails, Message must clearly explain why in Vietnamese, for example:
+  • ""Ảnh có nhiều vật thể hoặc người""
+  • ""Ảnh bị mờ, thiếu nét""
+  • ""Ảnh bị che khuất một phần""
+  • ""Ảnh có watermark hoặc nền quá phức tạp""
+  • ""Nền trùng màu với trang phục""
+  • ""Nền quá nhiều màu sắc hoặc quá nhiều vật thể""
+  • ""Ảnh chứa nội dung nhạy cảm""
+
+Output strictly in JSON format. No explanations, no extra text, no code blocks.
 ";
 
         private readonly string _promptDescription = @"
@@ -73,7 +98,7 @@ Chỉ trả về JSON hợp lệ, không thêm giải thích, không thêm chữ
             return await _generativeModel.GenerateObjectAsync<ItemModelAI>(request);
         }
 
-        public async Task<bool> ImageValidation(string base64Image, string mimeType)
+        public async Task<ImageValidation> ImageValidation(string base64Image, string mimeType)
         {
             if (string.IsNullOrWhiteSpace(mimeType) || !_allowedMime.Contains(mimeType))
             {
@@ -85,29 +110,9 @@ Chỉ trả về JSON hợp lệ, không thêm giải thích, không thêm chữ
             var request = new GenerateContentRequest();
             request.AddText(_promptValidation.Trim());
             request.AddInlineData(base64Image, mimeType);
+            request.UseJsonMode<ImageValidation>();
 
-            var response = await _generativeModel.GenerateContentAsync(request);
-
-            rawMessage = response.Text ?? string.Empty;
-
-            var cleaned = CleanOneChar(rawMessage);
-
-            return cleaned == "1";
-        }
-
-        private string CleanOneChar(string x)
-        {
-            var span = x.Trim()
-                        .Replace("```", "")
-                        .Replace("\n", "")
-                        .Replace("\r", "")
-                        .Replace("\"", "")
-                        .Trim();
-
-            foreach (var ch in span)
-                if (ch == '0' || ch == '1') return ch.ToString();
-
-            return "0";
+            return await _generativeModel.GenerateObjectAsync<ImageValidation>(request);
         }
     }
 

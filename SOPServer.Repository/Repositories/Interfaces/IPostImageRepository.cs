@@ -3,7 +3,7 @@ using SOPServer.Repository.Repositories.Generic;
 
 namespace SOPServer.Repository.Repositories.Interfaces
 {
-    public interface IItemGoalRepository : IGenericRepository<ItemGoal>
+    public interface IPostImageRepository : IGenericRepository<PostImage>
     {
     }
 }

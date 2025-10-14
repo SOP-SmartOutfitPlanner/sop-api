@@ -20,11 +20,7 @@ public partial class SOPServerContext : DbContext
 
     public virtual DbSet<Category> Categories { get; set; }
 
-    public virtual DbSet<Goal> Goals { get; set; }
-
     public virtual DbSet<Item> Items { get; set; }
-
-    public virtual DbSet<ItemGoal> ItemGoals { get; set; }
 
     public virtual DbSet<ItemOccasion> ItemOccasions { get; set; }
 
@@ -44,9 +40,20 @@ public partial class SOPServerContext : DbContext
 
     public virtual DbSet<UserStyle> UserStyles { get; set; }
 
-//    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-//#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-//        => optionsBuilder.UseSqlServer("Data Source=.;Initial Catalog=SOPServer;User ID=sa;Password=sa123456");
+    public virtual DbSet<Post> Posts { get; set; }
+
+    public virtual DbSet<PostImage> PostImages { get; set; }
+
+    public virtual DbSet<Hashtag> Hashtags { get; set; }
+
+    public virtual DbSet<PostHashtags> PostHashtags { get; set; }
+    public virtual DbSet<OutfitItems> OutfitItems { get; set; }
+    public virtual DbSet<Outfit> Outfits { get; set; }
+
+
+    //    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    //#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+    //        => optionsBuilder.UseSqlServer("Data Source=.;Initial Catalog=SOPServer;User ID=sa;Password=sa123456");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -63,17 +70,6 @@ public partial class SOPServerContext : DbContext
             entity.HasOne(d => d.Parent).WithMany(p => p.InverseParent)
                 .HasForeignKey(d => d.ParentId)
                 .HasConstraintName("FK_Category_Parent");
-        });
-
-        modelBuilder.Entity<Goal>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__Goal__3214EC07C1B22C27");
-
-            entity.ToTable("Goal");
-
-            entity.Property(e => e.Name)
-                .HasMaxLength(255)
-                .IsUnicode(true);
         });
 
         modelBuilder.Entity<Item>(entity =>
@@ -122,21 +118,6 @@ public partial class SOPServerContext : DbContext
             entity.HasOne(d => d.Category).WithMany(p => p.Items)
                 .HasForeignKey(d => d.CategoryId)
                 .HasConstraintName("FK_Item_Category");
-        });
-
-        modelBuilder.Entity<ItemGoal>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__ItemGoal__3214EC07628E8E1B");
-
-            entity.ToTable("ItemGoal");
-
-            entity.HasOne(d => d.Goal).WithMany(p => p.ItemGoals)
-                .HasForeignKey(d => d.GoalId)
-                .HasConstraintName("FK_ItemGoal_Goal");
-
-            entity.HasOne(d => d.Item).WithMany(p => p.ItemGoals)
-                .HasForeignKey(d => d.ItemId)
-                .HasConstraintName("FK_ItemGoal_Item");
         });
 
         modelBuilder.Entity<ItemOccasion>(entity =>
@@ -261,11 +242,12 @@ public partial class SOPServerContext : DbContext
             entity.Property(e => e.IsPremium).HasDefaultValue(false);
             entity.Property(e => e.IsStylist).HasDefaultValue(false);
             entity.Property(e => e.IsVerifiedEmail).HasDefaultValue(false);
+            entity.Property(e => e.IsLoginWithGoogle).HasDefaultValue(false);
+            entity.Property(e => e.IsFirstTime).HasDefaultValue(false);
             entity.Property(e => e.Location)
                 .HasMaxLength(255)
                 .IsUnicode(true);
             entity.Property(e => e.PasswordHash)
-                .IsRequired()
                 .HasMaxLength(255)
                 .IsUnicode(true);
             entity.Property(e => e.PreferedColor)
@@ -275,6 +257,8 @@ public partial class SOPServerContext : DbContext
                 .HasConversion<int>();
             entity.Property(e => e.Gender)
                 .HasConversion<int>();
+            entity.Property(e => e.Dob)
+                .HasColumnType("date");
 
             entity.HasOne(d => d.Job).WithMany(p => p.Users)
                 .HasForeignKey(d => d.JobId)
@@ -294,6 +278,61 @@ public partial class SOPServerContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.UserStyles)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK_UserStyle_User");
+        });
+
+        modelBuilder.Entity<Post>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Post__3214EC07");
+
+            entity.ToTable("Post");
+
+            entity.Property(e => e.Body)
+                .IsUnicode(true);
+
+            entity.HasOne(d => d.User).WithMany(p => p.Posts)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_Post_User");
+        });
+
+        modelBuilder.Entity<PostImage>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__PostImag__3214EC07");
+
+            entity.ToTable("PostImage");
+
+            entity.Property(e => e.ImgUrl)
+                .HasMaxLength(255)
+                .IsUnicode(true);
+
+            entity.HasOne(d => d.Post).WithMany(p => p.PostImages)
+                .HasForeignKey(d => d.PostId)
+                .HasConstraintName("FK_PostImage_Post");
+        });
+
+        modelBuilder.Entity<Hashtag>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Hashtag__3214EC07");
+
+            entity.ToTable("Hashtag");
+
+            entity.Property(e => e.Name)
+                .HasMaxLength(255)
+                .IsUnicode(true);
+        });
+
+        modelBuilder.Entity<PostHashtags>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__PostHash__3214EC07");
+
+            entity.ToTable("PostHashtags");
+
+            entity.HasOne(d => d.Post).WithMany(p => p.PostHashtags)
+                .HasForeignKey(d => d.PostId)
+                .HasConstraintName("FK_PostHashtags_Post");
+
+            entity.HasOne(d => d.Hashtag).WithMany(p => p.PostHashtags)
+                .HasForeignKey(d => d.HashtagId)
+                .HasConstraintName("FK_PostHashtags_Hashtag");
         });
 
         OnModelCreatingPartial(modelBuilder);

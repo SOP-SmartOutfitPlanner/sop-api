@@ -23,6 +23,11 @@ namespace SOPServer.Repository.UnitOfWork
         private IItemSeasonRepository _itemSeasonRepository;
         private IItemStyleRepository _itemStyleRepository;
         private IUserRepository _userRepository;
+        private IPostRepository _postRepository;
+        private IHashtagRepository _hashtagRepository;
+        private IPostHashtagsRepository _postHashtagsRepository;
+        private IPostImageRepository _postImageRepository;
+        private IOutfitRepository _outfitRepository;
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -53,22 +58,6 @@ namespace SOPServer.Repository.UnitOfWork
             }
         }
 
-        public ISeasonRepository SeasonRepository
-        {
-            get
-            {
-                return _seasonRepository ??= new SeasonRepository(_context);
-            }
-        }
-
-        public IItemGoalRepository ItemGoalRepository
-        {
-            get
-            {
-                return _itemGoalRepository ??= new ItemGoalRepository(_context);
-            }
-        }
-
         public IItemOccasionRepository ItemOccasionRepository
         {
             get
@@ -90,6 +79,55 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _itemStyleRepository ??= new ItemStyleRepository(_context);
+            }
+        }
+
+        public IPostRepository PostRepository
+        public ISeasonRepository SeasonRepository
+        {
+            get
+            {
+                return _seasonRepository ??= new SeasonRepository(_context);
+            }
+        }
+
+        public IItemGoalRepository ItemGoalRepository
+        {
+            get
+            {
+                return _postRepository ??= new PostRepository(_context);
+            }
+        }
+
+        public IHashtagRepository HashtagRepository
+        {
+            get
+            {
+                return _hashtagRepository ??= new HashtagRepository(_context);
+            }
+        }
+
+        public IPostHashtagsRepository PostHashtagsRepository
+        {
+            get
+            {
+                return _postHashtagsRepository ??= new PostHashtagsRepository(_context);
+            }
+        }
+
+        public IPostImageRepository PostImageRepository
+        {
+            get
+            {
+                return _postImageRepository ??= new PostImageRepository(_context);
+            }
+        }
+
+        public IOutfitRepository OutfitRepository
+        {
+            get
+            {
+                return _outfitRepository ??= new OutfitRepository(_context);
             }
         }
 

@@ -14,7 +14,6 @@ using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.UserModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
-//using SOPServer.Service.BusinessModels.EmailModels;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.Utils;
 using System;
@@ -35,13 +34,16 @@ namespace SOPServer.Service.Services.Implements
         private readonly IMailService _mailService;
         private readonly IOtpService _otpService;
         private readonly IRedisService _redisService;
+        private readonly IEmailTemplateService _emailTemplateService;
 
         public UserService(
             IUnitOfWork unitOfWork,
             IMapper mapper,
             IConfiguration configuration,
             IMailService mailService,
-            IOtpService otpService, IRedisService redisService) 
+            IOtpService otpService, 
+            IRedisService redisService,
+            IEmailTemplateService emailTemplateService) 
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -49,6 +51,7 @@ namespace SOPServer.Service.Services.Implements
             _mailService = mailService;
             _otpService = otpService;
             _redisService = redisService;
+            _emailTemplateService = emailTemplateService;
         }
 
         public async Task<BaseResponseModel> GetUserById(int id)
@@ -139,11 +142,16 @@ namespace SOPServer.Service.Services.Implements
                 await _unitOfWork.UserRepository.AddAsync(newUser);
                 _unitOfWork.Save();
 
+                var welcomeEmailBody = await _emailTemplateService.GenerateWelcomeEmailAsync(new WelcomeEmailTemplateModel
+                {
+                    DisplayName = newUser.DisplayName ?? newUser.Email
+                });
+
                 await _mailService.SendEmailAsync(new MailRequest
                 {
                     ToEmail = newUser.Email,
                     Subject = MessageConstants.WELCOME_EMAIL_SUBJECT,
-                    Body = EmailUtils.WelcomeEmail(newUser.DisplayName ?? newUser.Email)
+                    Body = welcomeEmailBody
                 });
 
                 var authResult = await IssueAndCacheTokensAsync(newUser);
@@ -424,11 +432,16 @@ namespace SOPServer.Service.Services.Implements
             _unitOfWork.UserRepository.UpdateAsync(existingUser);
             await _unitOfWork.SaveAsync();
 
+            var welcomeEmailBody = await _emailTemplateService.GenerateWelcomeEmailAsync(new WelcomeEmailTemplateModel
+            {
+                DisplayName = existingUser.DisplayName ?? existingUser.Email
+            });
+
             await _mailService.SendEmailAsync(new MailRequest
             {
                 ToEmail = existingUser.Email,
                 Subject = MessageConstants.WELCOME_EMAIL_SUBJECT,
-                Body = EmailUtils.WelcomeEmail(existingUser.DisplayName ?? existingUser.Email)
+                Body = welcomeEmailBody
             });
 
             return otpResult;

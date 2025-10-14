@@ -29,4 +29,6 @@ RUN dotnet publish "./SOPServer.API.csproj" -c $BUILD_CONFIGURATION -o /app/publ
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+# Copy email templates
+COPY --from=build /src/SOPServer.Service/Templates ./Templates
 ENTRYPOINT ["dotnet", "SOPServer.API.dll", "--urls=http://0.0.0.0:8386"]

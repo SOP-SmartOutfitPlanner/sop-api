@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using SOPServer.Service.BusinessModels.EmailModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
@@ -47,27 +47,23 @@ namespace SOPServer.Service.Services.Implements
         {
             try
             {
-                // Calculate the path to SOPServer.Service project (one level up from API)
-                var serviceProjectPath = Path.GetFullPath(
-                    Path.Combine(_environment.ContentRootPath, "..", "SOPServer.Service")
-                );
-                var templatePath = Path.Combine(serviceProjectPath, "Templates", "Emails", templateName);
+                var templatePath = Path.Combine(_environment.ContentRootPath, "Templates", "Emails", templateName);
 
                 if (File.Exists(templatePath))
                 {
                     return await File.ReadAllTextAsync(templatePath);
                 }
 
-                // Fallback to embedded resources if file not found
-                var assembly = Assembly.GetExecutingAssembly();
+                var assembly = typeof(EmailTemplateService).Assembly;
                 var resourceName = $"SOPServer.Service.Templates.Emails.{templateName}";
-
                 using var stream = assembly.GetManifestResourceStream(resourceName);
                 if (stream == null)
                 {
-                    throw new NotFoundException($"Email template '{templateName}' not found at '{templatePath}'");
+                    var names = string.Join(", ", assembly.GetManifestResourceNames());
+                    throw new FileNotFoundException(
+                        $"Email template '{templateName}' not found at '{templatePath}'. " +
+                        $"Embedded resources available: {names}");
                 }
-
                 using var reader = new StreamReader(stream);
                 return await reader.ReadToEndAsync();
             }

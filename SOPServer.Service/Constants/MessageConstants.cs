@@ -55,6 +55,15 @@ namespace SOPServer.Service.Constants
         public const string CATEGORY_NOT_EXIST = "Category is not existed";
         public const string CATEGORY_PARENT_NOT_EXIST = "Category is not existed";
 
+        // Season related messages used by SeasonService
+        public const string GET_SEASON_BY_ID_SUCCESS = "Get season by id successfully";
+        public const string DELETE_SEASON_SUCCESS = "Season deleted successfully";
+        public const string UPDATE_SEASON_SUCCESS = "Season updated successfully";
+        public const string SEASON_HAS_ITEM = "Season has active items and cannot be deleted";
+        public const string SEASON_CREATE_SUCCESS = "Season created successfully";
+        public const string SEASON_NOT_EXIST = "Season is not existed";
+        public const string GET_LIST_SEASON_SUCCESS = "Get list season successfully";
+
         public const string CALL_REM_BACKGROUND_FAIL = "Call remove background service fail";
 
         public const string REM_BACKGROUND_IMAGE_FAIL = "Remove background image fail";

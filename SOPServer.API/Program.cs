@@ -20,17 +20,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 var env = builder.Environment;
 
-if (!env.IsDevelopment())
-{
-    var deploymentPath = Environment.GetEnvironmentVariable("PATH_SOP");
+//if (!env.IsDevelopment())
+//{
+//    var deploymentPath = Environment.GetEnvironmentVariable("PATH_SOP");
 
-    if (string.IsNullOrEmpty(deploymentPath))
-    {
-        throw new Exception("Environment variable PATH_SOP is not set.");
-    }
+//    if (string.IsNullOrEmpty(deploymentPath))
+//    {
+//        throw new Exception("Environment variable PATH_SOP is not set.");
+//    }
 
-    builder.Configuration.AddJsonFile(deploymentPath, optional: false, reloadOnChange: true);
-}
+//    builder.Configuration.AddJsonFile(deploymentPath, optional: false, reloadOnChange: true);
+//}
 
 builder.Services.AddControllers().AddJsonOptions(options =>
 {

@@ -18,7 +18,6 @@ namespace SOPServer.Repository.UnitOfWork
         private IItemRepository _itemRepository;
         private ICategoryRepository _categoryRepository;
         private ISeasonRepository _seasonRepository;
-        private IItemGoalRepository _itemGoalRepository;
         private IItemOccasionRepository _itemOccasionRepository;
         private IItemSeasonRepository _itemSeasonRepository;
         private IItemStyleRepository _itemStyleRepository;
@@ -83,19 +82,18 @@ namespace SOPServer.Repository.UnitOfWork
         }
 
         public IPostRepository PostRepository
+        {
+            get
+            {
+                return _postRepository ??= new PostRepository(_context);
+            }
+        }
+
         public ISeasonRepository SeasonRepository
         {
             get
             {
                 return _seasonRepository ??= new SeasonRepository(_context);
-            }
-        }
-
-        public IItemGoalRepository ItemGoalRepository
-        {
-            get
-            {
-                return _postRepository ??= new PostRepository(_context);
             }
         }
 

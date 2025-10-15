@@ -10,5 +10,6 @@ namespace SOPServer.Repository.Repositories.Interfaces
 {
     public interface IItemRepository : IGenericRepository<Item>
     {
+        Task<bool> ExistsByNameAsync(string name, long userId, long? excludeId = null);
     }
 }

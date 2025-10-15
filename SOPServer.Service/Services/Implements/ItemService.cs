@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
+using SOPServer.Repository.Commons;
+using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.FirebaseModels;
 using SOPServer.Service.BusinessModels.ItemModels;
@@ -16,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http.Json;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -36,6 +41,27 @@ namespace SOPServer.Service.Services.Implements
             _geminiService = geminiService;
             _minioService = minioService;
             _httpClientFactory = httpClientFactory;
+        }
+
+        public async Task<BaseResponseModel> UpdateItemAsync(long id, ItemCreateModel model)
+        {
+            var entity = await _unitOfWork.ItemRepository.GetByIdAsync(id);
+            if (entity == null) throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+
+            if (await _unitOfWork.ItemRepository.ExistsByNameAsync(model.Name, model.UserId, id))
+                throw new BadRequestException(MessageConstants.ITEM_ALREADY_EXISTS);
+
+            _mapper.Map(model, entity);
+            _unitOfWork.ItemRepository.UpdateAsync(entity);
+            await _unitOfWork.SaveAsync();
+
+            var data = _mapper.Map<ItemModel>(entity);
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.ITEM_UPDATE_SUCCESS,
+                Data = data
+            };
         }
 
         public async Task<BaseResponseModel> AddNewItem(ItemCreateModel model)

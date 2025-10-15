@@ -48,11 +48,16 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _itemService.AddNewItem(model));
         }
 
+        [HttpPut("{id}")]
+        public Task<IActionResult> Update(long id, [FromBody] ItemCreateModel model)
+        {
+            return ValidateAndExecute(() => _itemService.UpdateItemAsync(id, model));
+        }
+
         [HttpDelete("{id}")]
         public Task<IActionResult> DeleteItem(long id)
         {
             return ValidateAndExecute(async () => await _itemService.DeleteItemByIdAsync(id));
         }
-        
     }
 }

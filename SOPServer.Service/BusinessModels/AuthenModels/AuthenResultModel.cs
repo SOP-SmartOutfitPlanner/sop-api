@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SOPServer.Service.BusinessModels.AuthenModels
 {
-    public class AuthenModel
+    public class AuthenResultModel
     {
         public string AccessToken { get; set; } = "";
 

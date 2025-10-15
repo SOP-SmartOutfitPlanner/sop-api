@@ -33,17 +33,22 @@ namespace SOPServer.Service.Constants
         public const string GET_USER_SUCCESS = "Get list user successfully";
         public const string USER_DELETE_SUCCESS = "User deleted successfully";
         public const string USER_ADDRESS_UPDATE_SUCCESS = "User address updated successfully";
-        
+        public const string USER_MUST_LOGIN_WITH_GOOGLE = "User must login with google";
+        public const string EMAIL_OR_PASSWORD_INCORRECT = "Email or password incorrect";
+        public const string USER_FORBIDDEN = "User forbidden access to the system";
+        public const string EMAIL_EXISTED = "Email is existed";
+        public const string PASSWORD_DOES_NOT_MATCH = "Password does not match";
+        public const string USER_MUST_LOGIN_WITH_PASSWORD = "User must login with email and password";
+        public const string USER_NOT_VERIFY = "User not verify email";
+        public const string USER_ALREADY_VERIFY = "User has already verified email";
+
 
         public const string TOKEN_NOT_VALID = "Token not valid";
         public const string LOGIN_SUCCESS_MESSAGE = "Login successfully";
         public const string LOGIN_GOOGLE_SUCCESS_MESSAGE = "Login with google successfully";
         public const string TOKEN_REFRESH_SUCCESS_MESSAGE = "Token refresh successfully";
-        public const string USER_HAS_BEEN_DELETE = "User has been deleted";
         public const string FILE_NOT_FOUND = "File not found";
         public const string UPLOAD_FILE_SUCCESS = "File uploaded successfully";
-
-
 
         // Category related messages used by CategoryService
         public const string GET_CATEGORY_BY_ID_SUCCESS = "Get category by id successfully";
@@ -55,9 +60,45 @@ namespace SOPServer.Service.Constants
         public const string CATEGORY_NOT_EXIST = "Category is not existed";
         public const string CATEGORY_PARENT_NOT_EXIST = "Category is not existed";
 
+        // Season related messages used by SeasonService
+        public const string GET_SEASON_BY_ID_SUCCESS = "Get season by id successfully";
+        public const string DELETE_SEASON_SUCCESS = "Season deleted successfully";
+        public const string UPDATE_SEASON_SUCCESS = "Season updated successfully";
+        public const string SEASON_HAS_ITEM = "Season has active items and cannot be deleted";
+        public const string SEASON_CREATE_SUCCESS = "Season created successfully";
+        public const string SEASON_NOT_EXIST = "Season is not existed";
+        public const string GET_LIST_SEASON_SUCCESS = "Get list season successfully";
+
         public const string CALL_REM_BACKGROUND_FAIL = "Call remove background service fail";
 
         public const string REM_BACKGROUND_IMAGE_FAIL = "Remove background image fail";
+
+        // Post related messages
+        public const string POST_CREATE_SUCCESS = "Post created successfully";
+        public const string POST_DELETE_SUCCESS = "Post deleted successfully";
+        public const string POST_GET_SUCCESS = "Post retrieved successfully";
+        public const string POST_NOT_FOUND = "Post not found";
         
+        public const string OTP_SENT_SUCCESS = "OTP sent successfully to your gmail";
+        public const string OTP_VERIFY_SUCCESS = "Verify OTP successfully";
+        public const string OTP_INVALID = "OTP is invalid or expired!";
+        public const string OTP_TOO_MANY_ATTEMPTS = "You request OTP too many time, please retry after 15 minutes!";
+        public const string EMAIL_SEND_FAILED = "Send email failed, please retry";
+
+        // New constants moved from UserService
+        public const string USER_ALREADY_REGISTERED_OTP_SENT = "User is already registered. Please check your mail for new OTP";
+        public const string OTP_HAS_BEEN_SENT_TO_GMAIL = "OTP has been sent to your gmail";
+        public const string REGISTERED_SUCCESS_OTP_SENT = "Successfully registered. Please check your mail for new OTP.";
+        public const string REGISTER_SUCCESS_VI = "Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.";
+        public const string OTP_SENT_VI = "Mã OTP đã được gửi đến email của bạn";
+        public const string INVALID_TOKEN_CLAIMS = "Invalid token claims";
+        public const string LOGGED_OUT = "Logged out";
+        public const string WELCOME_EMAIL_SUBJECT = "Welcome to Smart Outfit Planner";
+
+        // Outfit related messages
+        public const string OUTFIT_NOT_FOUND = "Outfit not found";
+        public const string OUTFIT_GET_SUCCESS = "Outfit retrieved successfully";
+        public const string OUTFIT_TOGGLE_FAVORITE_SUCCESS = "Outfit favorite status toggled successfully";
+        public const string OUTFIT_MARK_USED_SUCCESS = "Outfit marked as used successfully";
     }
 }

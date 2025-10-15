@@ -9,7 +9,6 @@ namespace SOPServer.Service.BusinessModels.FirebaseModels
     public class ImageUploadResult
     {
         public string FileName { get; set; }
-        public string FullPath { get; set; }
         public string DownloadUrl { get; set; }
     }
 }

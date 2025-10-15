@@ -35,15 +35,12 @@ public partial class Item : BaseEntity
 
     public string Tag { get; set; }
 
-    public virtual ICollection<ItemGoal> ItemGoals { get; set; } = new List<ItemGoal>();
-
     public virtual ICollection<ItemOccasion> ItemOccasions { get; set; } = new List<ItemOccasion>();
 
     public virtual ICollection<ItemSeason> ItemSeasons { get; set; } = new List<ItemSeason>();
 
     public virtual ICollection<ItemStyle> ItemStyles { get; set; } = new List<ItemStyle>();
-
+    public virtual ICollection<OutfitItems> OutfitItems { get; set; } = new List<OutfitItems>();
     public virtual User User { get; set; }
-
     public virtual Category Category { get; set; }
 }

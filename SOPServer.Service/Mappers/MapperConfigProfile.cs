@@ -88,6 +88,8 @@ namespace SOPServer.Service.Mappers
             CreateMap<SeasonCreateModel, Season>();
 
             CreateMap<Pagination<Season>, Pagination<SeasonModel>>().ConvertUsing<PaginationConverter<Season, SeasonModel>>();
+            CreateMap<ItemModel, Item>().ReverseMap();
+            CreateMap<ItemCreateModel, Item>();
         }
 
         public class PaginationConverter<TSource, TDestination> : ITypeConverter<Pagination<TSource>, Pagination<TDestination>>

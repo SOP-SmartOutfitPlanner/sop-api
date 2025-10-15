@@ -27,7 +27,7 @@ namespace SOPServer.Service.Services.Implements
         "image/jpeg", "image/png", "image/webp", "image/gif"
     };
         private readonly string _promptValidation = @"
-You are a strict validator. Analyze the given image and return a JSON object that matches the following C# class:
+You are a fashion image validator. Analyze the given image and return a JSON object that matches the following C# class:
 
 public class ImageValidation
 {
@@ -40,47 +40,50 @@ Rules:
 - If the image meets ALL conditions, return:
   {
     ""IsValid"": true,
-    ""Message"": ""Hình ảnh đạt chất lượng""
+    ""Message"": ""The image is of good quality""
   }
 
 - If the image does NOT meet the conditions, return:
   {
     ""IsValid"": false,
-    ""Message"": ""<Lý do ảnh không đạt bằng tiếng Việt>""
+    ""Message"": ""<Reason why the image is invalid, written in English>""
   }
 
 Conditions for IsValid = true:
   • The primary subject is a single clothing item (shirt, pants, dress, shoes, bag, hat, scarf, sunglasses, jewelry, belt, etc.).
-  • The item is dominant/centered, fully visible, in focus, sharp, and well-lit.
-  • The background must NOT be the same color as the item, must not contain too many colors, and must not contain too many objects.
-  • The content is safe for work (no nudity, no sensitive/explicit material, no violence, no illegal content).
+  • The item is clearly visible, centered, and mostly unobstructed.
+  • The image is in focus, sharp, and well-lit enough to recognize the item’s details.
+  • The background should be reasonably clean and not overly distracting — it can contain some colors or minimal objects, as long as the clothing item remains the main focus.
+  • The content must be safe for work (no nudity, no sensitive/explicit material, no violence, no illegal content).
 
-If the image fails, Message must clearly explain why in Vietnamese, for example:
-  • ""Ảnh có nhiều vật thể hoặc người""
-  • ""Ảnh bị mờ, thiếu nét""
-  • ""Ảnh bị che khuất một phần""
-  • ""Ảnh có watermark hoặc nền quá phức tạp""
-  • ""Nền trùng màu với trang phục""
-  • ""Nền quá nhiều màu sắc hoặc quá nhiều vật thể""
-  • ""Ảnh chứa nội dung nhạy cảm""
+If the image fails, Message must clearly explain why in English, for example:
+  • ""No recognizable clothing item detected.""
+  • ""The image contains multiple objects or people.""
+  • ""The image is blurry or lacks focus.""
+  • ""The clothing item is partially obstructed.""
+  • ""The image has a watermark or poor lighting.""
+  • ""The background is too complex, making it hard to identify the clothing item.""
+  • ""The image contains sensitive or inappropriate content.""
 
-Output strictly in JSON format. No explanations, no extra text, no code blocks.
+Output strictly in JSON format. Do not include explanations, comments, or code blocks.
 ";
+
 
         private readonly string _promptDescription = @"
-Bạn là một chuyên gia thời trang. Hãy phân tích hình ảnh món đồ trong input và trả về một JSON đúng với cấu trúc sau:
+You are a professional fashion expert. Analyze the clothing item in the provided image and return a valid JSON object that follows the structure below:
 
 {
-  ""Color"": ""Màu sắc chủ đạo của món đồ (ví dụ: Đen, Trắng, Xanh navy...)"",
-  ""AiDescription"": ""Mô tả ngắn gọn món đồ bằng tiếng Việt, dễ hiểu, tối đa 2 câu."",
-  ""WeatherSuitable"": ""Thời tiết phù hợp để mặc món đồ (ví dụ: Mùa hè, Trời lạnh, Mưa, Thời tiết mát mẻ...)"",
-  ""Condition"": ""Tình trạng món đồ (ví dụ: Mới, Đã qua sử dụng, Hơi cũ...)"",
-  ""Pattern"": ""Họa tiết nếu có (ví dụ: Trơn, Kẻ sọc, Caro, Hoa văn, Logo...)"",
-  ""Fabric"": ""Chất liệu chính (ví dụ: Cotton, Lụa, Denim, Len, Da, Polyester...)""
+  ""Color"": ""The main color of the item (e.g., Black, White, Navy Blue...)"",
+  ""AiDescription"": ""A detailed yet concise English description of the clothing item (up to 100 words), describing its appearance, style, and possible use occasions."",
+  ""WeatherSuitable"": ""The type of weather suitable for wearing this item (e.g., Summer, Cold weather, Rainy, Mild weather...)"",
+  ""Condition"": ""The condition of the item (e.g., New, Used, Slightly worn...)"",
+  ""Pattern"": ""The visible pattern if any (e.g., Solid, Striped, Plaid, Floral, Logo...)"",
+  ""Fabric"": ""The main fabric or material (e.g., Cotton, Silk, Denim, Wool, Leather, Polyester...)""
 }
 
-Chỉ trả về JSON hợp lệ, không thêm giải thích, không thêm chữ nào khác.
+Only return a valid JSON object. Do not include any explanations, comments, or extra text.
 ";
+
 
         public GeminiService(IOptions<GeminiSettings> geminiSettings)
         {

@@ -41,6 +41,11 @@ namespace SOPServer.Service.Constants
         public const string USER_MUST_LOGIN_WITH_PASSWORD = "User must login with email and password";
         public const string USER_NOT_VERIFY = "User not verify email";
         public const string USER_ALREADY_VERIFY = "User has already verified email";
+        public const string ONBOARDING_SUCCESS = "Onboarding data saved successfully";
+        public const string INVALID_USER_TOKEN = "Invalid user token";
+        public const string ONBOARDING_ALREADY_COMPLETED_MSG = "Onboarding has already been completed";
+
+
 
 
         public const string TOKEN_NOT_VALID = "Token not valid";

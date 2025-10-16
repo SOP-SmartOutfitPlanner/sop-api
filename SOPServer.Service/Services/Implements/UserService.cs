@@ -10,6 +10,7 @@ using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.AuthenModels;
 using SOPServer.Service.BusinessModels.EmailModels;
+using SOPServer.Service.BusinessModels.OnboardingModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.UserModels;
 using SOPServer.Service.Constants;
@@ -485,6 +486,41 @@ namespace SOPServer.Service.Services.Implements
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken
+            };
+        }
+
+        public async Task<BaseResponseModel> SubmitOnboardingAsync(long userId, OnboardingRequestModel requestModel)
+        {
+            var existingUser = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (existingUser == null)
+            {
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status404NotFound,
+                    Message = MessageConstants.USER_NOT_EXIST
+                };
+            }
+
+            if (existingUser.IsFirstTime == false)
+            {
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    Message = MessageConstants.ONBOARDING_ALREADY_COMPLETED_MSG,
+                };
+            }
+
+            _mapper.Map(requestModel, existingUser);
+            existingUser.IsFirstTime = false;
+
+            _unitOfWork.UserRepository.UpdateAsync(existingUser);
+            await _unitOfWork.SaveAsync();
+
+            return new BaseResponseModel
+            {
+                StatusCode = 200,
+                Message = MessageConstants.ONBOARDING_SUCCESS,
+                Data = existingUser
             };
         }
 

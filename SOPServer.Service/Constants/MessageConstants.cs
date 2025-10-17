@@ -105,5 +105,13 @@ namespace SOPServer.Service.Constants
         public const string OUTFIT_GET_SUCCESS = "Outfit retrieved successfully";
         public const string OUTFIT_TOGGLE_FAVORITE_SUCCESS = "Outfit favorite status toggled successfully";
         public const string OUTFIT_MARK_USED_SUCCESS = "Outfit marked as used successfully";
+
+        // Reset Password related messages
+        public const string RESET_PASSWORD_REQUEST_SENT = "If the email exists, a password reset OTP has been sent";
+        public const string RESET_PASSWORD_OTP_VERIFIED = "OTP verified successfully. Reset token has been generated";
+        public const string RESET_PASSWORD_SUCCESS = "Password has been reset successfully";
+        public const string RESET_TOKEN_INVALID = "Reset token is invalid or expired";
+        public const string RESET_TOKEN_ALREADY_USED = "Reset token has already been used";
+        public const string USER_MUST_USE_GOOGLE_LOGIN = "This account uses Google login. Password reset is not available";
     }
 }

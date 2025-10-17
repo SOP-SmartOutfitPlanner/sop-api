@@ -43,6 +43,18 @@ namespace SOPServer.Service.Services.Implements
             return body;
         }
 
+        public async Task<string> GeneratePasswordResetSuccessEmailAsync(PasswordResetSuccessEmailTemplateModel model)
+        {
+            var template = await LoadTemplateAsync("PasswordResetSuccessEmail.html");
+
+            var body = template
+                .Replace("{{DisplayName}}", model.DisplayName)
+                .Replace("{{Email}}", model.Email)
+                .Replace("{{ResetTime}}", model.ResetTime);
+
+            return body;
+        }
+
         private async Task<string> LoadTemplateAsync(string templateName)
         {
             try

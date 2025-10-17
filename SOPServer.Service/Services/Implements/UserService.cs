@@ -524,6 +524,186 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<BaseResponseModel> InitiatePasswordResetAsync(string email)
+        {
+            //rate limit
+            var attemptKey = RedisKeyConstants.GetResetPasswordAttemptKey(email);
+            var attempts = await _redisService.IncrementAsync(
+                attemptKey,
+                TimeSpan.FromMinutes(15)
+            );
+
+            if (attempts > 5)
+            {
+                throw new BadRequestException(MessageConstants.OTP_TOO_MANY_ATTEMPTS);
+            }
+
+            var user = await _unitOfWork.UserRepository.GetUserByEmailAsync(email);
+
+            //check user
+            if (user != null && !user.IsDeleted)
+            {
+                if (user.IsLoginWithGoogle)
+                {
+                    return new BaseResponseModel
+                    {
+                        StatusCode = StatusCodes.Status200OK,
+                        Message = MessageConstants.RESET_PASSWORD_REQUEST_SENT
+                    };
+                }
+
+                //otp
+                await _otpService.SendOtpAsync(email, user.DisplayName);
+            }
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.RESET_PASSWORD_REQUEST_SENT
+            };
+        }
+
+        public async Task<BaseResponseModel> VerifyResetOtpAsync(VerifyResetOtpRequestModel model)
+        {
+            //verify otp
+            var otpKey = RedisKeyConstants.GetOtpKey(model.Email);
+            var storedOtp = await _redisService.GetAsync<string>(otpKey);
+
+            if (string.IsNullOrEmpty(storedOtp))
+            {
+                throw new BadRequestException(MessageConstants.OTP_INVALID);
+            }
+
+            if (storedOtp != model.Otp)
+            {
+                throw new BadRequestException(MessageConstants.OTP_INVALID);
+            }
+
+            // check user
+            var user = await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email);
+            if (user == null || user.IsDeleted)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            if (user.IsLoginWithGoogle)
+            {
+                throw new BadRequestException(MessageConstants.USER_MUST_USE_GOOGLE_LOGIN);
+            }
+
+            // tokennnnnn
+            var resetToken = Guid.NewGuid().ToString("N");
+            var resetTokenKey = RedisKeyConstants.GetResetTokenKey(model.Email);
+
+            //save to redis
+            await _redisService.SetAsync(
+                resetTokenKey,
+                resetToken,
+                TimeSpan.FromMinutes(15)
+            );
+
+            //delete otp
+            await _redisService.RemoveAsync(otpKey);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.RESET_PASSWORD_OTP_VERIFIED,
+                Data = new
+                {
+                    ResetToken = resetToken,
+                    ExpiryMinutes = 15
+                }
+            };
+        }
+
+        public async Task<BaseResponseModel> ResetPasswordAsync(ResetPasswordRequestModel model)
+        {
+            // password = password ??
+            if (model.NewPassword != model.ConfirmPassword)
+            {
+                throw new BadRequestException(MessageConstants.PASSWORD_DOES_NOT_MATCH);
+            }
+
+            //verify token
+            var resetTokenKey = RedisKeyConstants.GetResetTokenKey(model.Email);
+            var storedResetToken = await _redisService.GetAsync<string>(resetTokenKey);
+
+            if (string.IsNullOrEmpty(storedResetToken))
+            {
+                throw new BadRequestException(MessageConstants.RESET_TOKEN_INVALID);
+            }
+
+            if (storedResetToken != model.ResetToken)
+            {
+                throw new BadRequestException(MessageConstants.RESET_TOKEN_INVALID);
+            }
+
+            // preventing reuse token
+            var usedTokenKey = RedisKeyConstants.GetUsedResetTokenKey(model.ResetToken);
+            var isUsed = await _redisService.ExistsAsync(usedTokenKey);
+            if (isUsed)
+            {
+                throw new BadRequestException(MessageConstants.RESET_TOKEN_ALREADY_USED);
+            }
+
+            //get that person !!!
+            var user = await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email);
+            if (user == null || user.IsDeleted)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            if (user.IsLoginWithGoogle)
+            {
+                throw new BadRequestException(MessageConstants.USER_MUST_USE_GOOGLE_LOGIN);
+            }
+
+            // update
+            var newPasswordHash = PasswordUtils.HashPassword(model.NewPassword);
+            user.PasswordHash = newPasswordHash;
+            _unitOfWork.UserRepository.UpdateAsync(user);
+            await _unitOfWork.SaveAsync();
+
+            //mark used 
+            await _redisService.SetAsync(
+                usedTokenKey,
+                true,
+                TimeSpan.FromHours(24)
+            );
+
+            await _redisService.RemoveAsync(resetTokenKey);
+
+            // notify
+            try
+            {
+                var resetTime = DateTime.UtcNow.ToString("MMMM dd, yyyy 'at' HH:mm 'UTC'");
+                var emailBody = await _emailTemplateService.GeneratePasswordResetSuccessEmailAsync(new PasswordResetSuccessEmailTemplateModel
+                {
+                    DisplayName = user.DisplayName ?? user.Email,
+                    Email = user.Email,
+                    ResetTime = resetTime
+                });
+
+                await _mailService.SendEmailAsync(new MailRequest
+                {
+                    ToEmail = user.Email,
+                    Subject = "Password Reset Successful - SOP",
+                    Body = emailBody
+                });
+            }
+            catch (Exception)
+            {
+                
+            }
+
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.RESET_PASSWORD_SUCCESS
+            };
+        }
 
     }
 }

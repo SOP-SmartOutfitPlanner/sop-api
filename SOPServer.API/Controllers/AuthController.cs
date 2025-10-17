@@ -73,6 +73,33 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(() => _userService.LoginWithEmailAndPassword(model));
         }
+
+        /// <summary>
+        /// Initiate password reset - sends OTP to email if account exists and uses password login
+        /// </summary>
+        [HttpPost("password/forgot")]
+        public Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestModel model)
+        {
+            return ValidateAndExecute(() => _userService.InitiatePasswordResetAsync(model.Email));
+        }
+
+        /// <summary>
+        /// Verify OTP for password reset - returns reset token
+        /// </summary>
+        [HttpPost("password/verify-otp")]
+        public Task<IActionResult> VerifyResetOtp([FromBody] VerifyResetOtpRequestModel model)
+        {
+            return ValidateAndExecute(() => _userService.VerifyResetOtpAsync(model));
+        }
+
+        /// <summary>
+        /// Reset password using reset token
+        /// </summary>
+        [HttpPost("password/reset")]
+        public Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestModel model)
+        {
+            return ValidateAndExecute(() => _userService.ResetPasswordAsync(model));
+        }
     }
 }
 

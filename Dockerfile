@@ -30,5 +30,5 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 # Copy email templates
-COPY --from=build /src/SOPServer.Service/Templates ./Templates
+COPY --from=build /src/SOPServer.API/Templates ./Templates
 ENTRYPOINT ["dotnet", "SOPServer.API.dll", "--urls=http://0.0.0.0:8386"]

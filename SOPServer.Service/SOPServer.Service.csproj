@@ -17,19 +17,4 @@
     <PackageReference Include="StackExchange.Redis" Version="2.9.25" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="Templates\Emails\*.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Templates\Emails\OtpEmail.html">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Templates\Emails\WelcomeEmail.html">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

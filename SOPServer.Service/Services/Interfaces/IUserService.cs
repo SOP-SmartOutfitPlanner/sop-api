@@ -27,6 +27,8 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> VerifyOtp(VerifyOtpRequestModel model);
         Task<BaseResponseModel> LogoutCurrentAsync(ClaimsPrincipal principal);
         Task<BaseResponseModel> SubmitOnboardingAsync(long userId, OnboardingRequestModel requestModel);
-
+        Task<BaseResponseModel> InitiatePasswordResetAsync(string email);
+        Task<BaseResponseModel> VerifyResetOtpAsync(VerifyResetOtpRequestModel model);
+        Task<BaseResponseModel> ResetPasswordAsync(ResetPasswordRequestModel model);
     }
 }

@@ -1,5 +1,6 @@
 ﻿using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.AuthenModels;
+using SOPServer.Service.BusinessModels.OnboardingModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.UserModels;
 using System;
@@ -25,6 +26,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> ResendOtp(string email);
         Task<BaseResponseModel> VerifyOtp(VerifyOtpRequestModel model);
         Task<BaseResponseModel> LogoutCurrentAsync(ClaimsPrincipal principal);
+        Task<BaseResponseModel> SubmitOnboardingAsync(long userId, OnboardingRequestModel requestModel);
 
     }
 }

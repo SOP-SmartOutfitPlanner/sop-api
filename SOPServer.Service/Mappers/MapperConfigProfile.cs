@@ -3,6 +3,7 @@ using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Service.BusinessModels.CategoryModels;
 using SOPServer.Service.BusinessModels.ItemModels;
+using SOPServer.Service.BusinessModels.OnboardingModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.PostModels;
 using SOPServer.Service.BusinessModels.SeasonModels;
@@ -90,6 +91,12 @@ namespace SOPServer.Service.Mappers
             CreateMap<Pagination<Season>, Pagination<SeasonModel>>().ConvertUsing<PaginationConverter<Season, SeasonModel>>();
             CreateMap<ItemModel, Item>().ReverseMap();
             CreateMap<ItemCreateModel, Item>();
+
+            /////////////////////////////////////////////////////
+            ///                 USER MAPPING                 ///
+            ///////////////////////////////////////////////////
+
+            CreateMap<OnboardingRequestModel, User>();
         }
 
         public class PaginationConverter<TSource, TDestination> : ITypeConverter<Pagination<TSource>, Pagination<TDestination>>

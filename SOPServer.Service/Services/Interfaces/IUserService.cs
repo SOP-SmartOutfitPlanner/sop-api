@@ -19,7 +19,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> RefreshToken(string jwtToken);
         Task<BaseResponseModel> UpdateUser(UpdateUserModel user);
         Task<BaseResponseModel> GetUsers(PaginationParameter paginationParameter);
-        Task<BaseResponseModel> DeleteUser(int id);
+        Task<BaseResponseModel> SoftDeleteUserAsync(long userId);
         Task<BaseResponseModel> UpdateUserAddress(UpdateUserAddressModel userAddress);
         Task<BaseResponseModel> LoginWithEmailAndPassword(LoginRequestModel model);
         Task<BaseResponseModel> RegisterUser(RegisterRequestModel model);

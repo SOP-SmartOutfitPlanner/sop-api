@@ -256,16 +256,18 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> DeleteUser(int id)
+        public async Task<BaseResponseModel> SoftDeleteUserAsync(long userId)
         {
-            var existingUser = await _unitOfWork.UserRepository.GetByIdAsync(id);
+            var existingUser = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            
             if (existingUser == null)
             {
-                return new BaseResponseModel
-                {
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = MessageConstants.USER_NOT_EXIST
-                };
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            if (existingUser.IsDeleted)
+            {
+                throw new BadRequestException(MessageConstants.USER_ALREADY_DELETED);
             }
 
             _unitOfWork.UserRepository.SoftDeleteAsync(existingUser);

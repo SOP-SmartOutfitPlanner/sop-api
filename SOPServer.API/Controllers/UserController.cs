@@ -19,6 +19,7 @@ namespace SOPServer.API.Controllers
             _userService = userService;
         }
 
+        //[Authorize(Roles = "ADMIN")]
         //todo add authorize
         [HttpGet]
         public async Task<IActionResult> GetUsers([FromQuery] PaginationParameter paginationParameter)
@@ -26,6 +27,7 @@ namespace SOPServer.API.Controllers
             return await ValidateAndExecute(() => _userService.GetUsers(paginationParameter));
         }
 
+        //[Authorize]
         //todo add authorize too !!!
         [HttpGet("profile/{userId}")]
         public async Task<IActionResult> GetUserProfile(long userId)
@@ -41,6 +43,15 @@ namespace SOPServer.API.Controllers
             long.TryParse(userIdClaim, out long userId);
 
             return await ValidateAndExecute(() => _userService.SubmitOnboardingAsync(userId, requestModel));
+        }
+
+        //[Authorize(Roles = "ADMIN")]
+        //todo add authorize...
+        //ᓚᘏᗢ
+        [HttpDelete("{userId}")]
+        public async Task<IActionResult> SoftDeleteUser(long userId)
+        {
+            return await ValidateAndExecute(() => _userService.SoftDeleteUserAsync(userId));
         }
     }
 }

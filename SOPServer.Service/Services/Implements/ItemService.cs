@@ -186,37 +186,50 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetSummaryItem(IFormFile file)
+        public async Task<BaseResponseModel> GetAnalyzeItem(IFormFile file)
         {
             if (file == null || file.Length == 0)
-            {
                 throw new BadRequestException(MessageConstants.IMAGE_IS_NOT_VALID);
-            }
 
-            //convert image to base64
-            var base64Image = await ImageUtils.ConvertToBase64Async(file);
+            // 1️⃣ Khởi tạo task song song
+            var convertBase64Task = ImageUtils.ConvertToBase64Async(file);
+            var uploadOriginalTask = UploadFileToMinio(file);
 
-            //validation image
+            // 2️⃣ Chờ cả 2 cùng xong
+            await Task.WhenAll(convertBase64Task, uploadOriginalTask);
+
+            var base64Image = await convertBase64Task;
+            var uploadToMinio = await uploadOriginalTask;
+
+            // 3️⃣ Validation image
             var validation = await _geminiService.ImageValidation(base64Image, file.ContentType);
             if (!validation.IsValid)
-            {
                 throw new BadRequestException(validation.Message);
-            }
 
-            //upload image to firebase storage
-            var uploadToRemoveBg = await UploadFileToMinio(file);
+            // 4️⃣ Remove background (phụ thuộc uploadToMinio)
+            var fileRemoveBackground = await CallRembgAndGetRemovedFile(
+                uploadToMinio.DownloadUrl,
+                uploadToMinio.FileName
+            );
 
-            //call rembg service to remove background and convert to formfile
-            var fileRemoveBackground = await CallRembgAndGetRemovedFile(uploadToRemoveBg.DownloadUrl, uploadToRemoveBg.FileName);
+            // 5️⃣ Song song 2 tác vụ sau khi đã có file remove background:
+            //     - Convert base64 cho file remove background
+            //     - Upload file remove background lên MinIO
+            var convertRemovedBase64Task = ImageUtils.ConvertToBase64Async(fileRemoveBackground);
+            var uploadRemovedFileTask = UploadFileToMinio(fileRemoveBackground);
 
-            //call gemini service to get summary
-            var summaryFromGemini = await _geminiService.ImageGenerateContent(await ImageUtils.ConvertToBase64Async(fileRemoveBackground), fileRemoveBackground.ContentType);
+            await Task.WhenAll(convertRemovedBase64Task, uploadRemovedFileTask);
 
-            //upload image remove background to firebase storage
-            var imageRemBgResponse = await UploadFileToMinio(fileRemoveBackground);
+            var base64Removed = await convertRemovedBase64Task;
+            var imageRemBgResponse = await uploadRemovedFileTask;
 
+            // 6️⃣ Gọi Gemini summary (chờ base64Removed)
+            var summaryFromGemini = await _geminiService.ImageGenerateContent(
+                base64Removed, fileRemoveBackground.ContentType
+            );
+
+            // 7️⃣ Map và trả response
             var itemSummary = _mapper.Map<ItemSummaryModel>(summaryFromGemini);
-
             itemSummary.ImageRemBgURL = imageRemBgResponse.DownloadUrl;
 
             return new BaseResponseModel

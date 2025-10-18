@@ -19,6 +19,7 @@ namespace SOPServer.Repository.Repositories.Implements
         {
             _context = context;
         }
+        
         public async Task<User?> GetUserByEmailAsync(string email)
         {
             return await _context.Users.Where(x => x.Email == email).FirstOrDefaultAsync();
@@ -27,6 +28,16 @@ namespace SOPServer.Repository.Repositories.Implements
         public async Task<int> GetUserCountByMonth(int currentMonth, int currentYear)
         {
             return await _context.Users.Where(x => x.CreatedDate.Month == currentMonth && x.CreatedDate.Year == currentYear && !x.IsDeleted ).CountAsync();
+        }
+
+        public async Task<User?> GetUserProfileByIdAsync(long userId)
+        {
+            return await _context.Users
+                .Include(u => u.Job)
+                .Include(u => u.UserStyles)
+                    .ThenInclude(us => us.Style)
+                .Where(x => x.Id == userId && !x.IsDeleted)
+                .FirstOrDefaultAsync();
         }
     }
 }

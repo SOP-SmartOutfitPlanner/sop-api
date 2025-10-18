@@ -12,5 +12,6 @@ namespace SOPServer.Repository.Repositories.Interfaces
     {
         Task<User?> GetUserByEmailAsync(string email);
         Task<int> GetUserCountByMonth(int currentMonth, int currentYear);
+        Task<User?> GetUserProfileByIdAsync(long userId);
     }
 }

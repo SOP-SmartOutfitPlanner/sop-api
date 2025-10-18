@@ -14,7 +14,7 @@ namespace SOPServer.Service.Services.Interfaces
 {
     public interface IUserService
     {
-        Task<BaseResponseModel> GetUserById(int id);
+        Task<BaseResponseModel> GetUserProfileByIdAsync(long userId);
         Task<BaseResponseModel> LoginWithGoogleOAuth(string credential);
         Task<BaseResponseModel> RefreshToken(string jwtToken);
         Task<BaseResponseModel> UpdateUser(UpdateUserModel user);

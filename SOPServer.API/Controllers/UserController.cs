@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.OnboardingModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
@@ -16,6 +17,20 @@ namespace SOPServer.API.Controllers
         public UserController(IUserService userService) 
         {
             _userService = userService;
+        }
+
+        //todo add authorize
+        [HttpGet]
+        public async Task<IActionResult> GetUsers([FromQuery] PaginationParameter paginationParameter)
+        {
+            return await ValidateAndExecute(() => _userService.GetUsers(paginationParameter));
+        }
+
+        //todo add authorize too !!!
+        [HttpGet("profile/{userId}")]
+        public async Task<IActionResult> GetUserProfile(long userId)
+        {
+            return await ValidateAndExecute(() => _userService.GetUserProfileByIdAsync(userId));
         }
 
         [Authorize]

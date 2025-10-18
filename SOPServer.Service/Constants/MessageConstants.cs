@@ -113,5 +113,8 @@ namespace SOPServer.Service.Constants
         public const string RESET_TOKEN_INVALID = "Reset token is invalid or expired";
         public const string RESET_TOKEN_ALREADY_USED = "Reset token has already been used";
         public const string USER_MUST_USE_GOOGLE_LOGIN = "This account uses Google login. Password reset is not available";
+
+        // User Profile related messages
+        public const string GET_USER_PROFILE_SUCCESS = "Get user profile successfully";
     }
 }

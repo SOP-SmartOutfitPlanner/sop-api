@@ -25,8 +25,6 @@ namespace SOPServer.Service.Constants
         public const string ITEM_UPDATE_SUCCESS = "Item updated successfully";
         public const string ITEM_GET_SUCCESS = "Get item successfully";
 
-
-
         public const string GET_USER_BY_EMAIL_SUCCESS = "Get user by email successfully";
         public const string USER_NOT_EXIST = "User is not exist";
         public const string USER_UPDATE_SUCCESS = "User updated successfully";
@@ -45,9 +43,6 @@ namespace SOPServer.Service.Constants
         public const string ONBOARDING_SUCCESS = "Onboarding data saved successfully";
         public const string INVALID_USER_TOKEN = "Invalid user token";
         public const string ONBOARDING_ALREADY_COMPLETED_MSG = "Onboarding has already been completed";
-
-
-
 
         public const string TOKEN_NOT_VALID = "Token not valid";
         public const string LOGIN_SUCCESS_MESSAGE = "Login successfully";
@@ -114,6 +109,7 @@ namespace SOPServer.Service.Constants
         public const string RESET_TOKEN_INVALID = "Reset token is invalid or expired";
         public const string RESET_TOKEN_ALREADY_USED = "Reset token has already been used";
         public const string USER_MUST_USE_GOOGLE_LOGIN = "This account uses Google login. Password reset is not available";
+        public const string PASSWORD_RESET_SUBJECT_MAIL = "Password Reset Successful - SOP";
 
         // User Profile related messages
         public const string GET_USER_PROFILE_SUCCESS = "Get user profile successfully";

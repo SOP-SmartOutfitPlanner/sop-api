@@ -36,10 +36,10 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _itemService.GetItemById(id));
         }
 
-        [HttpPost("summary")]
+        [HttpPost("analysis")]
         public Task<IActionResult> ValidationImage(IFormFile file)
         {
-            return ValidateAndExecute(async () => await _itemService.GetSummaryItem(file));
+            return ValidateAndExecute(async () => await _itemService.GetAnalyzeItem(file));
         }
 
         [HttpPost]

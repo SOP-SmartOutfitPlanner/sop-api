@@ -42,9 +42,9 @@ namespace SOPServer.Service.Services.Implements
             IMapper mapper,
             IConfiguration configuration,
             IMailService mailService,
-            IOtpService otpService, 
+            IOtpService otpService,
             IRedisService redisService,
-            IEmailTemplateService emailTemplateService) 
+            IEmailTemplateService emailTemplateService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -93,7 +93,7 @@ namespace SOPServer.Service.Services.Implements
                     throw new ForbiddenException(MessageConstants.USER_FORBIDDEN);
                 }
 
-                if(!existUser.IsLoginWithGoogle)
+                if (!existUser.IsLoginWithGoogle)
                 {
                     throw new BadRequestException(MessageConstants.USER_MUST_LOGIN_WITH_PASSWORD);
                 }
@@ -123,16 +123,20 @@ namespace SOPServer.Service.Services.Implements
                 await _unitOfWork.UserRepository.AddAsync(newUser);
                 _unitOfWork.Save();
 
-                var welcomeEmailBody = await _emailTemplateService.GenerateWelcomeEmailAsync(new WelcomeEmailTemplateModel
+                // send welcome email without awaiting (fire-and-forget)
+                _ = Task.Run(async () =>
                 {
-                    DisplayName = newUser.DisplayName ?? newUser.Email
-                });
+                    var welcomeEmailBody = await _emailTemplateService.GenerateWelcomeEmailAsync(new WelcomeEmailTemplateModel
+                    {
+                        DisplayName = newUser.DisplayName ?? newUser.Email
+                    }).ConfigureAwait(false);
 
-                await _mailService.SendEmailAsync(new MailRequest
-                {
-                    ToEmail = newUser.Email,
-                    Subject = MessageConstants.WELCOME_EMAIL_SUBJECT,
-                    Body = welcomeEmailBody
+                    await _mailService.SendEmailAsync(new MailRequest
+                    {
+                        ToEmail = newUser.Email,
+                        Subject = MessageConstants.WELCOME_EMAIL_SUBJECT,
+                        Body = welcomeEmailBody
+                    }).ConfigureAwait(false);
                 });
 
                 var authResult = await IssueAndCacheTokensAsync(newUser);
@@ -259,7 +263,7 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> SoftDeleteUserAsync(long userId)
         {
             var existingUser = await _unitOfWork.UserRepository.GetByIdAsync(userId);
-            
+
             if (existingUser == null)
             {
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
@@ -312,7 +316,7 @@ namespace SOPServer.Service.Services.Implements
         {
             var user = await _unitOfWork.UserRepository.GetUserByEmailAsync(model.Email);
 
-            if(user == null)
+            if (user == null)
             {
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
@@ -322,7 +326,7 @@ namespace SOPServer.Service.Services.Implements
                 throw new BadRequestException(MessageConstants.USER_MUST_LOGIN_WITH_GOOGLE);
             }
 
-            if(!PasswordUtils.VerifyPassword(model.Password, user.PasswordHash))
+            if (!PasswordUtils.VerifyPassword(model.Password, user.PasswordHash))
             {
                 throw new UnauthorizedException(MessageConstants.EMAIL_OR_PASSWORD_INCORRECT);
             }
@@ -332,7 +336,7 @@ namespace SOPServer.Service.Services.Implements
                 throw new ForbiddenException(MessageConstants.USER_FORBIDDEN);
             }
 
-            if(!user.IsVerifiedEmail) 
+            if (!user.IsVerifiedEmail)
             {
                 throw new BadRequestException(MessageConstants.USER_NOT_VERIFY);
             }
@@ -418,16 +422,19 @@ namespace SOPServer.Service.Services.Implements
             _unitOfWork.UserRepository.UpdateAsync(existingUser);
             await _unitOfWork.SaveAsync();
 
-            var welcomeEmailBody = await _emailTemplateService.GenerateWelcomeEmailAsync(new WelcomeEmailTemplateModel
+            _ = Task.Run(async () =>
             {
-                DisplayName = existingUser.DisplayName ?? existingUser.Email
-            });
+                var welcomeEmailBody = await _emailTemplateService.GenerateWelcomeEmailAsync(new WelcomeEmailTemplateModel
+                {
+                    DisplayName = existingUser.DisplayName ?? existingUser.Email
+                }).ConfigureAwait(false);
 
-            await _mailService.SendEmailAsync(new MailRequest
-            {
-                ToEmail = existingUser.Email,
-                Subject = MessageConstants.WELCOME_EMAIL_SUBJECT,
-                Body = welcomeEmailBody
+                await _mailService.SendEmailAsync(new MailRequest
+                {
+                    ToEmail = existingUser.Email,
+                    Subject = MessageConstants.WELCOME_EMAIL_SUBJECT,
+                    Body = welcomeEmailBody
+                }).ConfigureAwait(false);
             });
 
             return otpResult;
@@ -657,29 +664,20 @@ namespace SOPServer.Service.Services.Implements
 
             await _redisService.RemoveAsync(resetTokenKey);
 
-            // notify
-            try
+            var resetTime = DateTime.UtcNow.ToString("MMMM dd, yyyy 'at' HH:mm 'UTC'");
+            var emailBody = await _emailTemplateService.GeneratePasswordResetSuccessEmailAsync(new PasswordResetSuccessEmailTemplateModel
             {
-                var resetTime = DateTime.UtcNow.ToString("MMMM dd, yyyy 'at' HH:mm 'UTC'");
-                var emailBody = await _emailTemplateService.GeneratePasswordResetSuccessEmailAsync(new PasswordResetSuccessEmailTemplateModel
-                {
-                    DisplayName = user.DisplayName ?? user.Email,
-                    Email = user.Email,
-                    ResetTime = resetTime
-                });
+                DisplayName = user.DisplayName ?? user.Email,
+                Email = user.Email,
+                ResetTime = resetTime
+            });
 
-                await _mailService.SendEmailAsync(new MailRequest
-                {
-                    ToEmail = user.Email,
-                    Subject = "Password Reset Successful - SOP",
-                    Body = emailBody
-                });
-            }
-            catch (Exception)
+            await _mailService.SendEmailAsync(new MailRequest
             {
-                
-            }
-
+                ToEmail = user.Email,
+                Subject = MessageConstants.PASSWORD_RESET_SUBJECT_MAIL,
+                Body = emailBody
+            });
 
             return new BaseResponseModel
             {
@@ -691,7 +689,7 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> GetUserProfileByIdAsync(long userId)
         {
             var user = await _unitOfWork.UserRepository.GetUserProfileByIdAsync(userId);
-            
+
             if (user == null)
             {
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);

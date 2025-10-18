@@ -32,6 +32,7 @@ namespace SOPServer.Service.Constants
         public const string USER_UPDATE_SUCCESS = "User updated successfully";
         public const string GET_USER_SUCCESS = "Get list user successfully";
         public const string USER_DELETE_SUCCESS = "User deleted successfully";
+        public const string USER_ALREADY_DELETED = "User has already been deleted";
         public const string USER_ADDRESS_UPDATE_SUCCESS = "User address updated successfully";
         public const string USER_MUST_LOGIN_WITH_GOOGLE = "User must login with google";
         public const string EMAIL_OR_PASSWORD_INCORRECT = "Email or password incorrect";
@@ -113,5 +114,8 @@ namespace SOPServer.Service.Constants
         public const string RESET_TOKEN_INVALID = "Reset token is invalid or expired";
         public const string RESET_TOKEN_ALREADY_USED = "Reset token has already been used";
         public const string USER_MUST_USE_GOOGLE_LOGIN = "This account uses Google login. Password reset is not available";
+
+        // User Profile related messages
+        public const string GET_USER_PROFILE_SUCCESS = "Get user profile successfully";
     }
 }

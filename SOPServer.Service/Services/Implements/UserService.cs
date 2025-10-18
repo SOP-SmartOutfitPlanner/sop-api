@@ -55,26 +55,6 @@ namespace SOPServer.Service.Services.Implements
             _emailTemplateService = emailTemplateService;
         }
 
-        public async Task<BaseResponseModel> GetUserById(int id)
-        {
-            var existingUser = await _unitOfWork.UserRepository.GetByIdAsync(id);
-            if (existingUser == null)
-            {
-                return new BaseResponseModel
-                {
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = MessageConstants.USER_NOT_EXIST
-                };
-            }
-
-            return new BaseResponseModel
-            {
-                StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.GET_USER_BY_EMAIL_SUCCESS,
-                Data = _mapper.Map<UserModel>(existingUser)
-            };
-        }
-
         public async Task<BaseResponseModel> LoginWithGoogleOAuth(string credential)
         {
             string clientId = _configuration["GoogleCredential:ClientId"];
@@ -247,11 +227,14 @@ namespace SOPServer.Service.Services.Implements
             var users = await _unitOfWork.UserRepository.ToPaginationIncludeAsync(
                 paginationParameter,
                 filter: x => !x.IsDeleted && x.Role != Role.ADMIN,
-                //include: query => query.Include(x => x.Role),
+                include: query => query
+                    .Include(u => u.Job)
+                    .Include(u => u.UserStyles)
+                        .ThenInclude(us => us.Style),
                 orderBy: query => query.OrderByDescending(x => x.CreatedDate)
             );
 
-            var userList = _mapper.Map<Pagination<UserModel>>(users);
+            var userList = _mapper.Map<Pagination<UserListModel>>(users);
 
             return new BaseResponseModel
             {
@@ -273,16 +256,18 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> DeleteUser(int id)
+        public async Task<BaseResponseModel> SoftDeleteUserAsync(long userId)
         {
-            var existingUser = await _unitOfWork.UserRepository.GetByIdAsync(id);
+            var existingUser = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            
             if (existingUser == null)
             {
-                return new BaseResponseModel
-                {
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = MessageConstants.USER_NOT_EXIST
-                };
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            if (existingUser.IsDeleted)
+            {
+                throw new BadRequestException(MessageConstants.USER_ALREADY_DELETED);
             }
 
             _unitOfWork.UserRepository.SoftDeleteAsync(existingUser);
@@ -466,8 +451,6 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.LOGGED_OUT
             };
         }
-
-
 
         private async Task<AuthenResultModel> IssueAndCacheTokensAsync(User user)
         {
@@ -702,6 +685,25 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.RESET_PASSWORD_SUCCESS
+            };
+        }
+
+        public async Task<BaseResponseModel> GetUserProfileByIdAsync(long userId)
+        {
+            var user = await _unitOfWork.UserRepository.GetUserProfileByIdAsync(userId);
+            
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            var userProfile = _mapper.Map<UserProfileModel>(user);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_USER_PROFILE_SUCCESS,
+                Data = userProfile
             };
         }
 

@@ -503,6 +503,20 @@ namespace SOPServer.Service.Services.Implements
             _mapper.Map(requestModel, existingUser);
             existingUser.IsFirstTime = false;
 
+            if (requestModel.StyleIds != null && requestModel.StyleIds.Any())
+            {
+                existingUser.UserStyles.Clear();
+
+                foreach (var styleId in requestModel.StyleIds)
+                {
+                    existingUser.UserStyles.Add(new UserStyle
+                    {
+                        UserId = userId,
+                        StyleId = styleId
+                    });
+                }
+            }
+
             _unitOfWork.UserRepository.UpdateAsync(existingUser);
             await _unitOfWork.SaveAsync();
 
@@ -704,6 +718,7 @@ namespace SOPServer.Service.Services.Implements
                 Data = userProfile
             };
         }
+
 
     }
 }

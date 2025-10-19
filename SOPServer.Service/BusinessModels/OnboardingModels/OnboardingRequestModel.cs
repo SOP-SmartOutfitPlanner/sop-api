@@ -16,6 +16,8 @@ namespace SOPServer.Service.BusinessModels.OnboardingModels
         public long? JobId { get; set; }
         public DateOnly? Dob { get; set; }
         public string? Bio { get; set; }
+        public List<long>? StyleIds { get; set; }
+
     }
 }
 

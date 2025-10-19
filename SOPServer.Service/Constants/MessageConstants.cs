@@ -90,8 +90,8 @@ namespace SOPServer.Service.Constants
         public const string USER_ALREADY_REGISTERED_OTP_SENT = "User is already registered. Please check your mail for new OTP";
         public const string OTP_HAS_BEEN_SENT_TO_GMAIL = "OTP has been sent to your gmail";
         public const string REGISTERED_SUCCESS_OTP_SENT = "Successfully registered. Please check your mail for new OTP.";
-        public const string REGISTER_SUCCESS_VI = "Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.";
-        public const string OTP_SENT_VI = "Mã OTP đã được gửi đến email của bạn";
+        public const string REGISTER_SUCCESS_VI = "Registration successful! Please check your email to verify your account.";
+        public const string OTP_SENT_VI = "OTP has been sent to your email";
         public const string INVALID_TOKEN_CLAIMS = "Invalid token claims";
         public const string LOGGED_OUT = "Logged out";
         public const string WELCOME_EMAIL_SUBJECT = "Welcome to Smart Outfit Planner";

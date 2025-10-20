@@ -35,68 +35,27 @@ namespace SOPServer.API.Middlewares
                 var token = authHeader.Substring("Bearer ".Length).Trim();
                 if (!string.IsNullOrEmpty(token))
                 {
-                    try
+                    var handler = new JwtSecurityTokenHandler();
+                    var jwt = handler.ReadJwtToken(token);
+
+                    var jti = jwt.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)?.Value;
+                    var userIdClaim = jwt.Claims.FirstOrDefault(c => c.Type == "UserId" || c.Type == ClaimTypes.NameIdentifier)?.Value;
+
+                    if (!string.IsNullOrEmpty(jti) && !string.IsNullOrEmpty(userIdClaim) && long.TryParse(userIdClaim, out var userId))
                     {
-                        var handler = new JwtSecurityTokenHandler();
-                        var jwt = handler.ReadJwtToken(token);
-
-                        var jti = jwt.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)?.Value;
-                        var userIdClaim = jwt.Claims.FirstOrDefault(c => c.Type == "UserId" || c.Type == ClaimTypes.NameIdentifier)?.Value;
-
-                        if (!string.IsNullOrEmpty(jti) && !string.IsNullOrEmpty(userIdClaim) && long.TryParse(userIdClaim, out var userId))
+                        var redis = context.RequestServices.GetService<IRedisService>();
+                        if (redis != null)
                         {
-                            var redis = context.RequestServices.GetService<IRedisService>();
-                            if (redis != null)
+                            var key = RedisKeyConstants.GetAccessTokenKey(userId, jti);
+                            var exists = await redis.ExistsAsync(key);
+                            if (!exists)
                             {
-                                var key = RedisKeyConstants.GetAccessTokenKey(userId, jti);
-                                var exists = await redis.ExistsAsync(key);
-                                if (!exists)
-                                {
-                                    context.Response.ContentType = "application/json";
-                                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                                context.Response.ContentType = "application/json";
+                                context.Response.StatusCode = StatusCodes.Status403Forbidden;
 
-                                    var response = new BaseResponseModel
-                                    {
-                                        StatusCode = StatusCodes.Status403Forbidden,
-                                        Message = MessageConstants.TOKEN_NOT_VALID
-                                    };
-
-                                    var jsonResponse = JsonConvert.SerializeObject(response, new JsonSerializerSettings
-                                    {
-                                        ContractResolver = new DefaultContractResolver
-                                        {
-                                            NamingStrategy = new CamelCaseNamingStrategy()
-                                        }
-                                    });
-
-                                    await context.Response.WriteAsync(jsonResponse);
-                                    return;
-                                }
+                                throw new ForbiddenException(MessageConstants.TOKEN_NOT_VALID);
                             }
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to parse/validate bearer token");
-                        context.Response.ContentType = "application/json";
-                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
-
-                        var response = new BaseResponseModel
-                        {
-                            StatusCode = StatusCodes.Status403Forbidden,
-                            Message = MessageConstants.TOKEN_NOT_VALID
-                        };
-
-                        var jsonResponse = JsonConvert.SerializeObject(response, new JsonSerializerSettings
-                        {
-                            ContractResolver = new DefaultContractResolver
-                            {
-                                NamingStrategy = new CamelCaseNamingStrategy()
-                            }
-                            });
-
-                        await context.Response.WriteAsync(jsonResponse);
-                        return;
                     }
                 }
             }

@@ -96,6 +96,15 @@ namespace SOPServer.Service.Constants
         public const string LOGGED_OUT = "Logged out";
         public const string WELCOME_EMAIL_SUBJECT = "Welcome to Smart Outfit Planner";
 
+        // Occasion related messages used by OccasionService
+        public const string GET_OCCASION_BY_ID_SUCCESS = "Get occasion by id successfully";
+        public const string GET_LIST_OCCASION_SUCCESS = "Get list occasion successfully";
+        public const string DELETE_OCCASION_SUCCESS = "Occasion deleted successfully";
+        public const string UPDATE_OCCASION_SUCCESS = "Occasion updated successfully";
+        public const string OCCASION_HAS_ITEM = "Occasion has active items and cannot be deleted";
+        public const string OCCASION_CREATE_SUCCESS = "Occasion created successfully";
+        public const string OCCASION_NOT_EXIST = "Occasion is not existed";
+
         // Outfit related messages
         public const string OUTFIT_NOT_FOUND = "Outfit not found";
         public const string OUTFIT_GET_SUCCESS = "Outfit retrieved successfully";

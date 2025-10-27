@@ -3,6 +3,7 @@ using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Service.BusinessModels.CategoryModels;
 using SOPServer.Service.BusinessModels.ItemModels;
+using SOPServer.Service.BusinessModels.OccasionModels;
 using SOPServer.Service.BusinessModels.OnboardingModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.PostModels;
@@ -116,6 +117,13 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.StyleId, opt => opt.MapFrom(src => src.StyleId ?? 0))
                 .ForMember(dest => dest.StyleName, opt => opt.MapFrom(src => src.Style != null ? src.Style.Name : string.Empty))
                 .ForMember(dest => dest.StyleDescription, opt => opt.MapFrom(src => src.Style != null ? src.Style.Description : string.Empty));
+
+            // Occasion mappings
+            CreateMap<Occasion, OccasionModel>();
+            CreateMap<OccasionModel, Occasion>();
+            CreateMap<OccasionUpdateModel, Occasion>();
+            CreateMap<OccasionCreateModel, Occasion>();
+            CreateMap<Pagination<Occasion>, Pagination<OccasionModel>>().ConvertUsing<PaginationConverter<Occasion, OccasionModel>>();
         }
 
         public class PaginationConverter<TSource, TDestination> : ITypeConverter<Pagination<TSource>, Pagination<TDestination>>

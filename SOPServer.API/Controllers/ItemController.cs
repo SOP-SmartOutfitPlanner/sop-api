@@ -68,5 +68,14 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(() => _itemService.AddOccasionsToItemAsync(model));
         }
+
+        /// <summary>
+        /// Remove a specific occasion from an item
+        /// </summary>
+        [HttpDelete("occasions")]
+        public Task<IActionResult> RemoveOccasionFromItem([FromBody] RemoveOccasionFromItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.RemoveOccasionFromItemAsync(model));
+        }
     }
 }

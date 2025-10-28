@@ -355,5 +355,54 @@ namespace SOPServer.Service.Services.Implements
                 Data = response
             };
         }
+
+        public async Task<BaseResponseModel> RemoveOccasionFromItemAsync(RemoveOccasionFromItemModel model)
+        {
+            // Validate item exists
+            var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(model.ItemId,
+      include: query => query.Include(x => x.ItemOccasions.Where(io => !io.IsDeleted))
+   .ThenInclude(io => io.Occasion));
+
+            if (item == null)
+            {
+                throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+            }
+
+            // Validate occasion exists
+            var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(model.OccasionId);
+            if (occasion == null)
+            {
+                throw new NotFoundException(MessageConstants.OCCASION_NOT_EXIST);
+            }
+
+            // Find the item-occasion relationship
+            var itemOccasion = item.ItemOccasions
+                      .FirstOrDefault(io => io.OccasionId == model.OccasionId && !io.IsDeleted);
+
+            if (itemOccasion == null)
+            {
+                throw new NotFoundException(MessageConstants.ITEM_OCCASION_NOT_FOUND);
+            }
+
+            // Soft delete the item-occasion relationship
+            _unitOfWork.ItemOccasionRepository.SoftDeleteAsync(itemOccasion);
+            await _unitOfWork.SaveAsync();
+
+            // Build response
+            var response = new RemoveOccasionFromItemResponseModel
+            {
+                ItemId = item.Id,
+                ItemName = item.Name,
+                RemovedOccasionId = occasion.Id,
+                RemovedOccasionName = occasion.Name
+            };
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.REMOVE_OCCASION_FROM_ITEM_SUCCESS,
+                Data = response
+            };
+        }
     }
 }

@@ -104,6 +104,11 @@ namespace SOPServer.Service.Constants
         public const string OCCASION_HAS_ITEM = "Occasion has active items and cannot be deleted";
         public const string OCCASION_CREATE_SUCCESS = "Occasion created successfully";
         public const string OCCASION_NOT_EXIST = "Occasion is not existed";
+        public const string ADD_OCCASIONS_TO_ITEM_SUCCESS = "Occasions added to item successfully";
+        public const string ITEM_OCCASION_ALREADY_EXISTS = "One or more occasions are already added to this item";
+        public const string REMOVE_OCCASION_FROM_ITEM_SUCCESS = "Occasion removed from item successfully";
+        public const string ITEM_OCCASION_NOT_FOUND = "This occasion is not associated with the item";
+        public const string REPLACE_OCCASIONS_FOR_ITEM_SUCCESS = "Occasions replaced for item successfully";
 
         // Outfit related messages
         public const string OUTFIT_NOT_FOUND = "Outfit not found";

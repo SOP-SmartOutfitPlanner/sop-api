@@ -137,5 +137,10 @@ namespace SOPServer.Service.Constants
         public const string STYLE_HAS_USER = "Style has active users and cannot be deleted";
         public const string STYLE_CREATE_SUCCESS = "Style created successfully";
         public const string STYLE_NOT_EXIST = "Style is not existed";
+        public const string ADD_STYLES_TO_ITEM_SUCCESS = "Styles added to item successfully";
+        public const string ITEM_STYLE_ALREADY_EXISTS = "One or more styles are already added to this item";
+        public const string REMOVE_STYLE_FROM_ITEM_SUCCESS = "Style removed from item successfully";
+        public const string ITEM_STYLE_NOT_FOUND = "This style is not associated with the item";
+        public const string REPLACE_STYLES_FOR_ITEM_SUCCESS = "Styles replaced for item successfully";
     }
 }

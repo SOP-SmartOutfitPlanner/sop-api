@@ -25,5 +25,8 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> AddOccasionsToItemAsync(AddOccasionsToItemModel model);
         Task<BaseResponseModel> RemoveOccasionFromItemAsync(RemoveOccasionFromItemModel model);
         Task<BaseResponseModel> ReplaceOccasionsForItemAsync(ReplaceOccasionsForItemModel model);
+        Task<BaseResponseModel> AddStylesToItemAsync(AddStylesToItemModel model);
+        Task<BaseResponseModel> RemoveStyleFromItemAsync(RemoveStyleFromItemModel model);
+        Task<BaseResponseModel> ReplaceStylesForItemAsync(ReplaceStylesForItemModel model);
     }
 }

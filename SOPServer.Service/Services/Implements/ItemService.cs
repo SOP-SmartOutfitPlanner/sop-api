@@ -283,5 +283,77 @@ namespace SOPServer.Service.Services.Implements
             return fileRemoveBackground;
 
         }
+
+        public async Task<BaseResponseModel> AddOccasionsToItemAsync(AddOccasionsToItemModel model)
+        {
+            // Validate item exists
+            var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(model.ItemId,
+                include: query => query.Include(x => x.ItemOccasions));
+
+            if (item == null)
+            {
+                throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+            }
+
+            // Validate all occasions exist and store them
+            var validOccasions = new List<Occasion>();
+            foreach (var occasionId in model.OccasionIds)
+            {
+                var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(occasionId);
+                if (occasion == null)
+                {
+                    throw new NotFoundException($"{MessageConstants.OCCASION_NOT_EXIST}: {occasionId}");
+                }
+                validOccasions.Add(occasion);
+            }
+
+            // Get existing occasion IDs for this item (non-deleted)
+            var existingOccasionIds = item.ItemOccasions
+                .Where(io => !io.IsDeleted)
+                .Select(io => io.OccasionId ?? 0)
+                .ToList();
+
+            // Find occasions to add (not already associated)
+            var occasionsToAdd = validOccasions
+                .Where(o => !existingOccasionIds.Contains(o.Id))
+                .ToList();
+
+            if (!occasionsToAdd.Any())
+            {
+                throw new BadRequestException(MessageConstants.ITEM_OCCASION_ALREADY_EXISTS);
+            }
+
+            // Add new item-occasion relationships
+            foreach (var occasion in occasionsToAdd)
+            {
+                var itemOccasion = new ItemOccasion
+                {
+                    ItemId = model.ItemId,
+                    OccasionId = occasion.Id
+                };
+                await _unitOfWork.ItemOccasionRepository.AddAsync(itemOccasion);
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            // Build response with added occasions
+            var response = new AddOccasionsToItemResponseModel
+            {
+                ItemId = item.Id,
+                ItemName = item.Name,
+                AddedOccasions = occasionsToAdd.Select(o => new AddedOccasionModel
+                {
+                    Id = o.Id,
+                    Name = o.Name
+                }).ToList()
+            };
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.ADD_OCCASIONS_TO_ITEM_SUCCESS,
+                Data = response
+            };
+        }
     }
 }

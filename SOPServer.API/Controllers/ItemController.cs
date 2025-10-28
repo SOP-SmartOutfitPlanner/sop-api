@@ -77,5 +77,14 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(() => _itemService.RemoveOccasionFromItemAsync(model));
         }
+
+        /// <summary>
+        /// Replace all occasions for an item
+        /// </summary>
+        [HttpPut("occasions")]
+        public Task<IActionResult> ReplaceOccasionsForItem([FromBody] ReplaceOccasionsForItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.ReplaceOccasionsForItemAsync(model));
+        }
     }
 }

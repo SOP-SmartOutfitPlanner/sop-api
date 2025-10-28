@@ -404,5 +404,68 @@ namespace SOPServer.Service.Services.Implements
                 Data = response
             };
         }
+
+        public async Task<BaseResponseModel> ReplaceOccasionsForItemAsync(ReplaceOccasionsForItemModel model)
+        {
+            // Validate item exists
+            var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(model.ItemId,
+              include: query => query.Include(x => x.ItemOccasions));
+
+            if (item == null)
+            {
+                throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+            }
+
+            // Validate all new occasions exist and store them
+            var newOccasions = new List<Occasion>();
+            foreach (var occasionId in model.OccasionIds)
+            {
+                var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(occasionId);
+                if (occasion == null)
+                {
+                    throw new NotFoundException($"{MessageConstants.OCCASION_NOT_EXIST}: {occasionId}");
+                }
+                newOccasions.Add(occasion);
+            }
+
+            // Soft delete all existing item-occasion relationships
+            var existingItemOccasions = item.ItemOccasions.Where(io => !io.IsDeleted).ToList();
+            foreach (var existingItemOccasion in existingItemOccasions)
+            {
+                _unitOfWork.ItemOccasionRepository.SoftDeleteAsync(existingItemOccasion);
+            }
+
+            // Add new item-occasion relationships
+            foreach (var occasion in newOccasions)
+            {
+                var itemOccasion = new ItemOccasion
+                {
+                    ItemId = model.ItemId,
+                    OccasionId = occasion.Id
+                };
+                await _unitOfWork.ItemOccasionRepository.AddAsync(itemOccasion);
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            // Build response with replaced occasions
+            var response = new ReplaceOccasionsForItemResponseModel
+            {
+                ItemId = item.Id,
+                ItemName = item.Name,
+                ReplacedOccasions = newOccasions.Select(o => new AddedOccasionModel
+                {
+                    Id = o.Id,
+                    Name = o.Name
+                }).ToList()
+            };
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.REPLACE_OCCASIONS_FOR_ITEM_SUCCESS,
+                Data = response
+            };
+        }
     }
 }

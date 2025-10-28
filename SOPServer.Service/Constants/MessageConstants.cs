@@ -142,5 +142,12 @@ namespace SOPServer.Service.Constants
         public const string REMOVE_STYLE_FROM_ITEM_SUCCESS = "Style removed from item successfully";
         public const string ITEM_STYLE_NOT_FOUND = "This style is not associated with the item";
         public const string REPLACE_STYLES_FOR_ITEM_SUCCESS = "Styles replaced for item successfully";
+
+        // Season-Item relationship messages
+        public const string ADD_SEASONS_TO_ITEM_SUCCESS = "Seasons added to item successfully";
+        public const string ITEM_SEASON_ALREADY_EXISTS = "One or more seasons are already added to this item";
+        public const string REMOVE_SEASON_FROM_ITEM_SUCCESS = "Season removed from item successfully";
+        public const string ITEM_SEASON_NOT_FOUND = "This season is not associated with the item";
+        public const string REPLACE_SEASONS_FOR_ITEM_SUCCESS = "Seasons replaced for item successfully";
     }
 }

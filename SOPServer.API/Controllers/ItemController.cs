@@ -113,5 +113,32 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(() => _itemService.ReplaceStylesForItemAsync(model));
         }
+
+        /// <summary>
+        /// Add seasons to an item
+        /// </summary>
+        [HttpPost("seasons")]
+        public Task<IActionResult> AddSeasonsToItem([FromBody] AddSeasonsToItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.AddSeasonsToItemAsync(model));
+        }
+
+        /// <summary>
+        /// Remove a specific season from an item
+        /// </summary>
+        [HttpDelete("seasons")]
+        public Task<IActionResult> RemoveSeasonFromItem([FromBody] RemoveSeasonFromItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.RemoveSeasonFromItemAsync(model));
+        }
+
+        /// <summary>
+        /// Replace all seasons for an item
+        /// </summary>
+        [HttpPut("seasons")]
+        public Task<IActionResult> ReplaceSeasonsForItem([FromBody] ReplaceSeasonsForItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.ReplaceSeasonsForItemAsync(model));
+        }
     }
 }

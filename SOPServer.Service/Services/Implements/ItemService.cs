@@ -651,5 +651,189 @@ namespace SOPServer.Service.Services.Implements
                 Data = response
             };
         }
+
+        public async Task<BaseResponseModel> AddSeasonsToItemAsync(AddSeasonsToItemModel model)
+        {
+            // Validate item exists
+            var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(model.ItemId,
+   include: query => query.Include(x => x.ItemSeasons));
+
+            if (item == null)
+            {
+                throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+            }
+
+            // Validate all seasons exist and store them
+            var validSeasons = new List<Season>();
+            foreach (var seasonId in model.SeasonIds)
+            {
+                var season = await _unitOfWork.SeasonRepository.GetByIdAsync(seasonId);
+                if (season == null)
+                {
+                    throw new NotFoundException($"{MessageConstants.SEASON_NOT_EXIST}: {seasonId}");
+                }
+                validSeasons.Add(season);
+            }
+
+            // Get existing season IDs for this item (non-deleted)
+            var existingSeasonIds = item.ItemSeasons
+               .Where(itemSeason => !itemSeason.IsDeleted)
+                   .Select(itemSeason => itemSeason.SeasonId ?? 0)
+                .ToList();
+
+            // Find seasons to add (not already associated)
+            var seasonsToAdd = validSeasons
+               .Where(s => !existingSeasonIds.Contains(s.Id))
+                       .ToList();
+
+            if (!seasonsToAdd.Any())
+            {
+                throw new BadRequestException(MessageConstants.ITEM_SEASON_ALREADY_EXISTS);
+            }
+
+            // Add new item-season relationships
+            foreach (var season in seasonsToAdd)
+            {
+                var itemSeason = new ItemSeason
+                {
+                    ItemId = model.ItemId,
+                    SeasonId = season.Id
+                };
+                await _unitOfWork.ItemSeasonRepository.AddAsync(itemSeason);
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            // Build response with added seasons
+            var response = new AddSeasonsToItemResponseModel
+            {
+                ItemId = item.Id,
+                ItemName = item.Name,
+                AddedSeasons = seasonsToAdd.Select(s => new AddedSeasonModel
+                {
+                    Id = s.Id,
+                    Name = s.Name
+                }).ToList()
+            };
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.ADD_SEASONS_TO_ITEM_SUCCESS,
+                Data = response
+            };
+        }
+
+        public async Task<BaseResponseModel> RemoveSeasonFromItemAsync(RemoveSeasonFromItemModel model)
+        {
+            // Validate item exists
+            var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(model.ItemId,
+             include: query => query.Include(x => x.ItemSeasons.Where(itemSeason => !itemSeason.IsDeleted))
+               .ThenInclude(itemSeason => itemSeason.Season));
+
+            if (item == null)
+            {
+                throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+            }
+
+            // Validate season exists
+            var season = await _unitOfWork.SeasonRepository.GetByIdAsync(model.SeasonId);
+            if (season == null)
+            {
+                throw new NotFoundException(MessageConstants.SEASON_NOT_EXIST);
+            }
+
+            // Find the item-season relationship
+            var itemSeason = item.ItemSeasons
+      .FirstOrDefault(itemSeason => itemSeason.SeasonId == model.SeasonId && !itemSeason.IsDeleted);
+
+            if (itemSeason == null)
+            {
+                throw new NotFoundException(MessageConstants.ITEM_SEASON_NOT_FOUND);
+            }
+
+            // Soft delete the item-season relationship
+            _unitOfWork.ItemSeasonRepository.SoftDeleteAsync(itemSeason);
+            await _unitOfWork.SaveAsync();
+
+            // Build response
+            var response = new RemoveSeasonFromItemResponseModel
+            {
+                ItemId = item.Id,
+                ItemName = item.Name,
+                RemovedSeasonId = season.Id,
+                RemovedSeasonName = season.Name
+            };
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.REMOVE_SEASON_FROM_ITEM_SUCCESS,
+                Data = response
+            };
+        }
+
+        public async Task<BaseResponseModel> ReplaceSeasonsForItemAsync(ReplaceSeasonsForItemModel model)
+        {
+            // Validate item exists
+            var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(model.ItemId,
+                    include: query => query.Include(x => x.ItemSeasons));
+
+            if (item == null)
+            {
+                throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+            }
+
+            // Validate all new seasons exist and store them
+            var newSeasons = new List<Season>();
+            foreach (var seasonId in model.SeasonIds)
+            {
+                var season = await _unitOfWork.SeasonRepository.GetByIdAsync(seasonId);
+                if (season == null)
+                {
+                    throw new NotFoundException($"{MessageConstants.SEASON_NOT_EXIST}: {seasonId}");
+                }
+                newSeasons.Add(season);
+            }
+
+            // Soft delete all existing item-season relationships
+            var existingItemSeasons = item.ItemSeasons.Where(itemSeason => !itemSeason.IsDeleted).ToList();
+            foreach (var existingItemSeason in existingItemSeasons)
+            {
+                _unitOfWork.ItemSeasonRepository.SoftDeleteAsync(existingItemSeason);
+            }
+
+            // Add new item-season relationships
+            foreach (var season in newSeasons)
+            {
+                var itemSeason = new ItemSeason
+                {
+                    ItemId = model.ItemId,
+                    SeasonId = season.Id
+                };
+                await _unitOfWork.ItemSeasonRepository.AddAsync(itemSeason);
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            // Build response with replaced seasons
+            var response = new ReplaceSeasonsForItemResponseModel
+            {
+                ItemId = item.Id,
+                ItemName = item.Name,
+                ReplacedSeasons = newSeasons.Select(s => new AddedSeasonModel
+                {
+                    Id = s.Id,
+                    Name = s.Name
+                }).ToList()
+            };
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.REPLACE_SEASONS_FOR_ITEM_SUCCESS,
+                Data = response
+            };
+        }
     }
 }

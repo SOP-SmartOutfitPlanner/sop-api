@@ -8,6 +8,7 @@ using SOPServer.Service.BusinessModels.OnboardingModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.PostModels;
 using SOPServer.Service.BusinessModels.SeasonModels;
+using SOPServer.Service.BusinessModels.StyleModels;
 using SOPServer.Service.BusinessModels.UserModels;
 using System.Collections.Generic;
 using System.Linq;
@@ -124,6 +125,15 @@ namespace SOPServer.Service.Mappers
             CreateMap<OccasionUpdateModel, Occasion>();
             CreateMap<OccasionCreateModel, Occasion>();
             CreateMap<Pagination<Occasion>, Pagination<OccasionModel>>().ConvertUsing<PaginationConverter<Occasion, OccasionModel>>();
+
+            // Style mappings
+            CreateMap<Style, StyleModel>();
+            CreateMap<StyleModel, Style>();
+            CreateMap<StyleUpdateModel, Style>();
+            CreateMap<StyleCreateModel, Style>();
+            CreateMap<Style, StyleDetailModel>()
+                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.ItemStyles != null ? src.ItemStyles.Select(x => x.Item) : new List<Item>()));
+            CreateMap<Pagination<Style>, Pagination<StyleModel>>().ConvertUsing<PaginationConverter<Style, StyleModel>>();
         }
 
         public class PaginationConverter<TSource, TDestination> : ITypeConverter<Pagination<TSource>, Pagination<TDestination>>

@@ -127,5 +127,15 @@ namespace SOPServer.Service.Constants
 
         // User Profile related messages
         public const string GET_USER_PROFILE_SUCCESS = "Get user profile successfully";
+
+        // Style related messages used by StyleService
+        public const string GET_STYLE_BY_ID_SUCCESS = "Get style by id successfully";
+        public const string GET_LIST_STYLE_SUCCESS = "Get list style successfully";
+        public const string DELETE_STYLE_SUCCESS = "Style deleted successfully";
+        public const string UPDATE_STYLE_SUCCESS = "Style updated successfully";
+        public const string STYLE_HAS_ITEM = "Style has active items and cannot be deleted";
+        public const string STYLE_HAS_USER = "Style has active users and cannot be deleted";
+        public const string STYLE_CREATE_SUCCESS = "Style created successfully";
+        public const string STYLE_NOT_EXIST = "Style is not existed";
     }
 }

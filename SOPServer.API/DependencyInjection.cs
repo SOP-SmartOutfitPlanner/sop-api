@@ -38,6 +38,8 @@ namespace SOPServer.API
 
             services.AddScoped<IOutfitRepository, OutfitRepository>();
 
+            services.AddScoped<IAISettingRepository, AISettingRepository>();
+
             // Services
             services.AddScoped<IGeminiService, GeminiService>();
             services.AddScoped<IItemService, ItemService>();
@@ -50,6 +52,8 @@ namespace SOPServer.API
             services.AddScoped<IOtpService, OtpService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IMinioService, MinioService>();
+
+            services.AddScoped<IAISettingService, AISettingService>();
 
             return services;
         }

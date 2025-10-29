@@ -22,6 +22,8 @@ namespace SOPServer.Repository.UnitOfWork
         IPostHashtagsRepository PostHashtagsRepository { get; }
         IPostImageRepository PostImageRepository { get; }
         IOutfitRepository OutfitRepository { get; }
+        IAISettingRepository AISettingRepository { get; }
+
 
         int Save();
         void Commit();

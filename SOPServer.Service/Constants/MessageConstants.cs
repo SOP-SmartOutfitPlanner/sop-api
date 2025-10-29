@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -151,5 +152,13 @@ namespace SOPServer.Service.Constants
         public const string REMOVE_SEASON_FROM_ITEM_SUCCESS = "Season removed from item successfully";
         public const string ITEM_SEASON_NOT_FOUND = "This season is not associated with the item";
         public const string REPLACE_SEASONS_FOR_ITEM_SUCCESS = "Seasons replaced for item successfully";
+
+        public const string GET_AISETTING_SUCCESS = "Get AI Settings successfully";
+        public const string AISETTING_NOT_EXIST = "AI setting does not exist";
+        public const string AISETTING_ALREADY_EXIST = "AI setting with this type already exists";
+        public const string AISETTING_CREATE_SUCCESSFULLY = "AI setting create successfully";
+        public const string AISETTING_UPDATE_SUCCESSFULLY = "AI setting update successfully";
+        public const string AISETTING_DELETE_SUCCESSFULLY = "AI setting delete successfully";
+
     }
 }

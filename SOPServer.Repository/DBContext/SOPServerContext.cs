@@ -49,6 +49,8 @@ public partial class SOPServerContext : DbContext
     public virtual DbSet<PostHashtags> PostHashtags { get; set; }
     public virtual DbSet<OutfitItems> OutfitItems { get; set; }
     public virtual DbSet<Outfit> Outfits { get; set; }
+    public virtual DbSet<AISetting> AISettings { get; set; }
+
 
 
     //    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -333,6 +335,23 @@ public partial class SOPServerContext : DbContext
             entity.HasOne(d => d.Hashtag).WithMany(p => p.PostHashtags)
                 .HasForeignKey(d => d.HashtagId)
                 .HasConstraintName("FK_PostHashtags_Hashtag");
+        });
+
+        modelBuilder.Entity<AISetting>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.ToTable("AISettings");
+
+            entity.Property(e => e.Name)
+                .HasMaxLength(100)
+                .IsUnicode(true);
+
+            entity.Property(e => e.Value)
+                .HasMaxLength(500)
+                .IsUnicode(true);
+
+            entity.Property(e => e.Type)
+                .HasConversion<int>();
         });
 
         OnModelCreatingPartial(modelBuilder);

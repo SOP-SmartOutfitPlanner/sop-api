@@ -24,6 +24,7 @@ namespace SOPServer.Repository.UnitOfWork
         IPostImageRepository PostImageRepository { get; }
         IOutfitRepository OutfitRepository { get; }
         IAISettingRepository AISettingRepository { get; }
+        IJobRepository JobRepository { get; }
 
 
         int Save();

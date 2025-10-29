@@ -30,6 +30,7 @@ namespace SOPServer.Repository.UnitOfWork
         private IPostImageRepository _postImageRepository;
         private IOutfitRepository _outfitRepository;
         private IAISettingRepository _aiSettingRepository;
+        private IJobRepository _jobRepository;
 
 
 
@@ -155,6 +156,14 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _aiSettingRepository ??= new AISettingRepository(_context);
+            }
+        }
+
+        public IJobRepository JobRepository
+        {
+            get
+            {
+                return _jobRepository ??= new JobRepository(_context);
             }
         }
 

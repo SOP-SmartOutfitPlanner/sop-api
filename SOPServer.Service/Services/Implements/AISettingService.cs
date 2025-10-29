@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using Minio.DataModel.Notification;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
@@ -66,7 +67,7 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.GET_AISETTING_SUCCESS,
-                Data = entity
+                Data = _mapper.Map<AISettingModel>(entity)
             };
         }
 
@@ -89,7 +90,7 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.AISETTING_CREATE_SUCCESSFULLY,
-                Data = result
+                Data = _mapper.Map<AISettingModel>(entity)
             };
         }
 
@@ -113,7 +114,7 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.AISETTING_UPDATE_SUCCESSFULLY,
-                Data = existing
+                Data = _mapper.Map<AISettingModel>(existing)
             };
         }
 

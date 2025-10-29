@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace SOPServer.Service.BusinessModels.AISettingModels
 {
-    public class AISettingModel : BaseEntity
+    public class AISettingModel
     {
         public long Id { get; set; }
         public string Name { get; set; }

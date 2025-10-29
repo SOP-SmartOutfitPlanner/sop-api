@@ -57,6 +57,7 @@ namespace SOPServer.API
             services.AddScoped<IMinioService, MinioService>();
 
             services.AddScoped<IAISettingService, AISettingService>();
+            services.AddScoped<IAISettingRepository, AISettingRepository>();
 
             return services;
         }

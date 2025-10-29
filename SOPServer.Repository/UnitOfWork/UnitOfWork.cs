@@ -29,6 +29,9 @@ namespace SOPServer.Repository.UnitOfWork
         private IPostHashtagsRepository _postHashtagsRepository;
         private IPostImageRepository _postImageRepository;
         private IOutfitRepository _outfitRepository;
+        private IAISettingRepository _aiSettingRepository;
+
+
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -144,6 +147,14 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _outfitRepository ??= new OutfitRepository(_context);
+            }
+        }
+
+        public IAISettingRepository AISettingRepository
+        {
+            get
+            {
+                return _aiSettingRepository ??= new AISettingRepository(_context);
             }
         }
 

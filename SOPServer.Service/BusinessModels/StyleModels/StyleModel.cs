@@ -10,4 +10,10 @@ namespace SOPServer.Service.BusinessModels.StyleModels
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
     }
+
+    public class StyleItemModel
+    {
+        public long Id { get; set; }
+        public string Name { get; set; }
+    }
 }

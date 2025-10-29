@@ -54,12 +54,14 @@ namespace SOPServer.Service.Constants
         // Category related messages used by CategoryService
         public const string GET_CATEGORY_BY_ID_SUCCESS = "Get category by id successfully";
         public const string GET_CATEGORY_BY_PARENTID_SUCCESS = "Get categories by parent id successfully";
+        public const string GET_ROOT_CATEGORIES_SUCCESS = "Get root categories successfully";
         public const string DELETE_CATEGORY_SUCCESS = "Category deleted successfully";
         public const string UPDATE_CATEGORY_SUCCESS = "Category updated successfully";
         public const string CATEGORY_HAS_CHILDREN = "Category has active children and cannot be deleted";
         public const string CATEGORY_CREATE_SUCCESS = "Category created successfully";
         public const string CATEGORY_NOT_EXIST = "Category is not existed";
         public const string CATEGORY_PARENT_NOT_EXIST = "Category is not existed";
+        public const string CATEGORY_MAX_DEPTH_EXCEEDED = "Cannot create category: maximum depth of 2 levels exceeded. Child categories can only be created under root categories";
 
         // Season related messages used by SeasonService
         public const string GET_SEASON_BY_ID_SUCCESS = "Get season by id successfully";

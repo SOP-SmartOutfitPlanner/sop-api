@@ -181,7 +181,7 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddAutoMapper(typeof(Program));
+// Register AutoMapper with all profiles from the Service assembly
 builder.Services.AddAutoMapper(typeof(MapperConfigProfile).Assembly);
 
 builder.Services.AddInfractstructure(builder.Configuration);

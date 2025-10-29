@@ -117,7 +117,8 @@ namespace SOPServer.Service.Services.Implements
             var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(id,
     include: query => query.Include(x => x.Category)
 .Include(x => x.User)
-          .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion));
+   .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+ .Include(x => x.ItemSeasons).ThenInclude(x => x.Season));
             if (item == null)
             {
                 throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
@@ -134,11 +135,12 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> GetItemByUserPaginationAsync(PaginationParameter paginationParameter, long userId)
         {
             var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter,
-                         include: query => query.Include(x => x.Category)
-          .Include(x => x.User)
-               .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion),
-                 filter: x => x.UserId == userId,
-               orderBy: x => x.OrderByDescending(x => x.CreatedDate));
+      include: query => query.Include(x => x.Category)
+        .Include(x => x.User)
+               .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+          .Include(x => x.ItemSeasons).ThenInclude(x => x.Season),
+          filter: x => x.UserId == userId,
+        orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
             var itemModels = _mapper.Map<Pagination<ItemModel>>(items);
 
@@ -165,7 +167,10 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> GetItemPaginationAsync(PaginationParameter paginationParameter)
         {
             var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter,
-                include: query => query.Include(x => x.Category).Include(x => x.User).Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion),
+                      include: query => query.Include(x => x.Category)
+           .Include(x => x.User)
+                       .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+          .Include(x => x.ItemSeasons).ThenInclude(x => x.Season),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
             var itemModels = _mapper.Map<Pagination<ItemModel>>(items);

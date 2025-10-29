@@ -9,8 +9,8 @@ namespace SOPServer.Repository.Enums
     public enum AISettingType
     {
         MODEL_EMBEDDING,
-        MODEL_CHAT,
-        API_CHAT,
+        MODEL_ANALYZING,
+        API_ITEM_ANALYZING,
         API_SUGGESTION,
         API_EMBEDDING,
         VALIDATE_ITEM_PROMPT,

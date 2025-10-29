@@ -8,9 +8,9 @@ namespace SOPServer.API.Controllers
 {
     namespace SOPServer.API.Controllers
     {
-        [Route("api/v1/aisettings")]
+        [Route("api/v1/ai-settings")]
         [ApiController]
-        [Authorize(Roles = "ADMIN")]
+        //
         public class AISettingController : BaseController
         {
             private readonly IAISettingService _aiSettingService;

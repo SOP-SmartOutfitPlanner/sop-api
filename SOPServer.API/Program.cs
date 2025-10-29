@@ -175,6 +175,47 @@ builder.Services
                 {
                     ctx.Fail("Token revoked or expired in session store");
                 }
+            },
+            OnChallenge = async ctx =>
+            {
+                // Ngăn response mặc định của JWT Bearer
+                ctx.HandleResponse();
+
+                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                ctx.Response.ContentType = "application/json";
+
+                var response = new BaseResponseModel
+                {
+                    StatusCode = 401,
+                    Message = string.IsNullOrEmpty(ctx.ErrorDescription) 
+                ? "Unauthorized - Token is missing or invalid" 
+                : ctx.ErrorDescription
+                };
+
+                var jsonResponse = System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                });
+
+                await ctx.Response.WriteAsync(jsonResponse);
+            },
+            OnForbidden = async ctx =>
+            {
+                ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                ctx.Response.ContentType = "application/json";
+
+                var response = new BaseResponseModel
+                {
+                    StatusCode = 403,
+                    Message = "Forbidden - You don't have permission to access this resource"
+                };
+
+                var jsonResponse = System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                });
+
+                await ctx.Response.WriteAsync(jsonResponse);
             }
         };
     });
@@ -230,14 +271,19 @@ app.UseHttpsRedirection();
 
 app.UseCors("app-cors");
 
+// 1. Authentication - Xác thực JWT token
 app.UseAuthentication();
 
+// 2. Kiểm tra token có tồn tại trong Redis không
+app.UseMiddleware<AuthenHandlingMiddleware>();
+
+// 3. Authorization - Phân quyền dựa trên roles
 app.UseAuthorization();
 
-app.MapControllers();
-
+// 4. Exception handling - Bắt và xử lý tất cả exceptions
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-app.UseMiddleware<AuthenHandlingMiddleware>();
+// 5. Map controllers - Route đến endpoints
+app.MapControllers();
 
 app.Run();

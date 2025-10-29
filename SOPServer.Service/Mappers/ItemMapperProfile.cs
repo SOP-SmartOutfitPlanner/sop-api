@@ -4,6 +4,7 @@ using SOPServer.Repository.Entities;
 using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.OccasionModels;
 using SOPServer.Service.BusinessModels.SeasonModels;
+using SOPServer.Service.BusinessModels.StyleModels;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -37,7 +38,18 @@ namespace SOPServer.Service.Mappers
                                 Name = itemSeason.Season.Name
                             })
                             .ToList()
-                        : new List<SeasonItemModel>()));
+                        : new List<SeasonItemModel>()))
+                .ForMember(dest => dest.Styles, opt => opt.MapFrom(src =>
+                    src.ItemStyles != null
+                        ? src.ItemStyles
+                            .Where(itemStyle => !itemStyle.IsDeleted && itemStyle.Style != null)
+                            .Select(itemStyle => new StyleItemModel
+                            {
+                                Id = itemStyle.Style.Id,
+                                Name = itemStyle.Style.Name
+                            })
+                            .ToList()
+                        : new List<StyleItemModel>()));
 
             CreateMap<ItemModel, Item>()
                 .ForMember(dest => dest.User, opt => opt.Ignore())

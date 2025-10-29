@@ -1,5 +1,6 @@
 ﻿using SOPServer.Service.BusinessModels.OccasionModels;
 using SOPServer.Service.BusinessModels.SeasonModels;
+using SOPServer.Service.BusinessModels.StyleModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,6 +45,8 @@ namespace SOPServer.Service.BusinessModels.ItemModels
         public List<OccasionItemModel> Occasions { get; set; }
 
         public List<SeasonItemModel> Seasons { get; set; }
+
+        public List<StyleItemModel> Styles { get; set; }
     }
 
     public class ItemCreateModel

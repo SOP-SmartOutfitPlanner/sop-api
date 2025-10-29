@@ -8,6 +8,7 @@ using SOPServer.Service.BusinessModels.OnboardingModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.PostModels;
 using SOPServer.Service.BusinessModels.SeasonModels;
+using SOPServer.Service.BusinessModels.StyleModels;
 using SOPServer.Service.BusinessModels.UserModels;
 using System.Collections.Generic;
 using System.Linq;
@@ -68,9 +69,9 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.UserDisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : "Unknown"))
                 .ForMember(dest => dest.IsFavorite, opt => opt.MapFrom(src => src.isFavorite))
                 .ForMember(dest => dest.IsUsed, opt => opt.MapFrom(src => src.isUsed))
-                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => 
-                    src.OutfitItems != null 
-                        ? src.OutfitItems.Where(oi => oi.Item != null).Select(oi => oi.Item).ToList() 
+                .ForMember(dest => dest.Items, opt => opt.MapFrom(src =>
+                    src.OutfitItems != null
+                        ? src.OutfitItems.Where(oi => oi.Item != null).Select(oi => oi.Item).ToList()
                         : new List<Item>()));
 
             CreateMap<Item, OutfitItemModel>()
@@ -104,7 +105,7 @@ namespace SOPServer.Service.Mappers
             CreateMap<User, UserListModel>()
                 .ForMember(dest => dest.JobName, opt => opt.MapFrom(src => src.Job != null ? src.Job.Name : null))
                 .ForMember(dest => dest.UserStyles, opt => opt.MapFrom(src => src.UserStyles != null ? src.UserStyles.ToList() : new List<UserStyle>()));
-            
+
             CreateMap<Pagination<User>, Pagination<UserListModel>>().ConvertUsing<PaginationConverter<User, UserListModel>>();
 
             // User Profile mapping
@@ -124,6 +125,15 @@ namespace SOPServer.Service.Mappers
             CreateMap<OccasionUpdateModel, Occasion>();
             CreateMap<OccasionCreateModel, Occasion>();
             CreateMap<Pagination<Occasion>, Pagination<OccasionModel>>().ConvertUsing<PaginationConverter<Occasion, OccasionModel>>();
+
+            // Style mappings
+            CreateMap<Style, StyleModel>();
+            CreateMap<StyleModel, Style>();
+            CreateMap<StyleUpdateModel, Style>();
+            CreateMap<StyleCreateModel, Style>();
+            CreateMap<Style, StyleDetailModel>()
+                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.ItemStyles != null ? src.ItemStyles.Select(x => x.Item) : new List<Item>()));
+            CreateMap<Pagination<Style>, Pagination<StyleModel>>().ConvertUsing<PaginationConverter<Style, StyleModel>>();
         }
 
         public class PaginationConverter<TSource, TDestination> : ITypeConverter<Pagination<TSource>, Pagination<TDestination>>

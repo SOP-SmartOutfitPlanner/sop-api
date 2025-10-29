@@ -127,5 +127,27 @@ namespace SOPServer.Service.Constants
 
         // User Profile related messages
         public const string GET_USER_PROFILE_SUCCESS = "Get user profile successfully";
+
+        // Style related messages used by StyleService
+        public const string GET_STYLE_BY_ID_SUCCESS = "Get style by id successfully";
+        public const string GET_LIST_STYLE_SUCCESS = "Get list style successfully";
+        public const string DELETE_STYLE_SUCCESS = "Style deleted successfully";
+        public const string UPDATE_STYLE_SUCCESS = "Style updated successfully";
+        public const string STYLE_HAS_ITEM = "Style has active items and cannot be deleted";
+        public const string STYLE_HAS_USER = "Style has active users and cannot be deleted";
+        public const string STYLE_CREATE_SUCCESS = "Style created successfully";
+        public const string STYLE_NOT_EXIST = "Style is not existed";
+        public const string ADD_STYLES_TO_ITEM_SUCCESS = "Styles added to item successfully";
+        public const string ITEM_STYLE_ALREADY_EXISTS = "One or more styles are already added to this item";
+        public const string REMOVE_STYLE_FROM_ITEM_SUCCESS = "Style removed from item successfully";
+        public const string ITEM_STYLE_NOT_FOUND = "This style is not associated with the item";
+        public const string REPLACE_STYLES_FOR_ITEM_SUCCESS = "Styles replaced for item successfully";
+
+        // Season-Item relationship messages
+        public const string ADD_SEASONS_TO_ITEM_SUCCESS = "Seasons added to item successfully";
+        public const string ITEM_SEASON_ALREADY_EXISTS = "One or more seasons are already added to this item";
+        public const string REMOVE_SEASON_FROM_ITEM_SUCCESS = "Season removed from item successfully";
+        public const string ITEM_SEASON_NOT_FOUND = "This season is not associated with the item";
+        public const string REPLACE_SEASONS_FOR_ITEM_SUCCESS = "Seasons replaced for item successfully";
     }
 }

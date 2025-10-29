@@ -11,4 +11,10 @@ namespace SOPServer.Service.BusinessModels.SeasonModels
         public long Id { get; set; }
         public string Name { get; set; }
     }
+
+    public class SeasonItemModel
+    {
+        public long Id { get; set; }
+        public string Name { get; set; }
+    }
 }

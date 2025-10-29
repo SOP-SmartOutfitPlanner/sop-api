@@ -88,7 +88,7 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
         public GeminiService(IOptions<GeminiSettings> geminiSettings)
         {
             var googleAi = new GoogleAi(geminiSettings.Value.APIKey);
-            _generativeModel = googleAi.CreateGenerativeModel("models/gemini-2.5-flash");
+            _generativeModel = googleAi.CreateGenerativeModel(geminiSettings.Value.ModelID);
         }
 
         public async Task<ItemModelAI?> ImageGenerateContent(string base64Image, string mimeType)

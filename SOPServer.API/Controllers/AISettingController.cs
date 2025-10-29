@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.AISettingModels;
 using SOPServer.Service.Services.Interfaces;
@@ -9,6 +10,7 @@ namespace SOPServer.API.Controllers
     {
         [Route("api/v1/aisettings")]
         [ApiController]
+        [Authorize(Roles = "ADMIN")]
         public class AISettingController : BaseController
         {
             private readonly IAISettingService _aiSettingService;

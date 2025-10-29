@@ -23,6 +23,7 @@ namespace SOPServer.Repository.UnitOfWork
         private IItemSeasonRepository _itemSeasonRepository;
         private IItemStyleRepository _itemStyleRepository;
         private IUserRepository _userRepository;
+        private IStyleRepository _styleRepository;
         private IPostRepository _postRepository;
         private IHashtagRepository _hashtagRepository;
         private IPostHashtagsRepository _postHashtagsRepository;
@@ -90,6 +91,14 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _itemStyleRepository ??= new ItemStyleRepository(_context);
+            }
+        }
+
+        public IStyleRepository StyleRepository
+        {
+            get
+            {
+                return _styleRepository ??= new StyleRepository(_context);
             }
         }
 

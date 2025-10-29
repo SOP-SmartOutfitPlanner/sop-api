@@ -14,6 +14,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> GetCategoryPaginationAsync(PaginationParameter paginationParameter);
         Task<BaseResponseModel> GetCategoryByIdAsync(long id);
         Task<BaseResponseModel> GetCategoriesByParentIdAsync(long parentId, PaginationParameter paginationParameter);
+        Task<BaseResponseModel> GetRootCategoriesPaginationAsync(PaginationParameter paginationParameter);
         Task<BaseResponseModel> DeleteCategoryByIdAsync(long id);
         Task<BaseResponseModel> UpdateCategoryByIdAsync(CategoryUpdateModel model);
         Task<BaseResponseModel> CreateCategoryAsync(CategoryCreateModel model);

@@ -72,6 +72,7 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> CreateAsync(AISettingRequestModel model)
         {
+
             var existed = await _unitOfWork.AISettingRepository.GetByTypeAsync(model.Type);
             if (existed != null)
             {

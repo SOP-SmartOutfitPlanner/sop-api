@@ -36,6 +36,12 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _categoryService.GetCategoriesByParentIdAsync(parentId, paginationParameter));
         }
 
+        [HttpGet("root")]
+        public Task<IActionResult> GetRootCategories([FromQuery] PaginationParameter paginationParameter)
+        {
+            return ValidateAndExecute(async () => await _categoryService.GetRootCategoriesPaginationAsync(paginationParameter));
+        }
+
         [HttpPost]
         public Task<IActionResult> CreateCategory(CategoryCreateModel model)
         {

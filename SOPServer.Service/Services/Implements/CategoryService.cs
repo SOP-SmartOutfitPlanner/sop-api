@@ -75,7 +75,7 @@ namespace SOPServer.Service.Services.Implements
         {
             var categories = await _unitOfWork.CategoryRepository.ToPaginationIncludeAsync(paginationParameter,
                 include: query => query.Include(x => x.Parent),
-                filter: x => x.ParentId == parentId,
+              filter: x => x.ParentId == parentId,
                 orderBy: q => q.OrderByDescending(x => x.CreatedDate));
 
             var models = _mapper.Map<Pagination<CategoryModel>>(categories);
@@ -84,6 +84,34 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.GET_CATEGORY_BY_PARENTID_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = models,
+                    MetaData = new
+                    {
+                        models.TotalCount,
+                        models.PageSize,
+                        models.CurrentPage,
+                        models.TotalPages,
+                        models.HasNext,
+                        models.HasPrevious
+                    }
+                }
+            };
+        }
+
+        public async Task<BaseResponseModel> GetRootCategoriesPaginationAsync(PaginationParameter paginationParameter)
+        {
+            var categories = await _unitOfWork.CategoryRepository.ToPaginationIncludeAsync(paginationParameter,
+ filter: x => x.ParentId == null,
+          orderBy: q => q.OrderByDescending(x => x.CreatedDate));
+
+            var models = _mapper.Map<Pagination<CategoryModel>>(categories);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_ROOT_CATEGORIES_SUCCESS,
                 Data = new ModelPaging
                 {
                     Data = models,

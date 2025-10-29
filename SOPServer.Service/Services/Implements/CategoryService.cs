@@ -138,6 +138,12 @@ namespace SOPServer.Service.Services.Implements
                 {
                     throw new NotFoundException(MessageConstants.CATEGORY_PARENT_NOT_EXIST);
                 }
+
+                // Validate that parent is a root category (no grandparent allowed)
+                if (parent.ParentId.HasValue)
+                {
+                    throw new BadRequestException(MessageConstants.CATEGORY_MAX_DEPTH_EXCEEDED);
+                }
             }
 
             var entity = _mapper.Map<Category>(model);
@@ -190,6 +196,22 @@ namespace SOPServer.Service.Services.Implements
             if (category == null)
             {
                 throw new NotFoundException(MessageConstants.CATEGORY_NOT_EXIST);
+            }
+
+            // if ParentId is being updated, validate the new parent
+            if (model.ParentId.HasValue)
+            {
+                var parent = await _unitOfWork.CategoryRepository.GetByIdAsync(model.ParentId.Value);
+                if (parent == null)
+                {
+                    throw new NotFoundException(MessageConstants.CATEGORY_PARENT_NOT_EXIST);
+                }
+
+                // Validate that parent is a root category (no grandparent allowed)
+                if (parent.ParentId.HasValue)
+                {
+                    throw new BadRequestException(MessageConstants.CATEGORY_MAX_DEPTH_EXCEEDED);
+                }
             }
 
             // map changes

@@ -61,6 +61,7 @@ namespace SOPServer.Service.Constants
         public const string CATEGORY_CREATE_SUCCESS = "Category created successfully";
         public const string CATEGORY_NOT_EXIST = "Category is not existed";
         public const string CATEGORY_PARENT_NOT_EXIST = "Category is not existed";
+        public const string CATEGORY_MAX_DEPTH_EXCEEDED = "Cannot create category: maximum depth of 2 levels exceeded. Child categories can only be created under root categories";
 
         // Season related messages used by SeasonService
         public const string GET_SEASON_BY_ID_SUCCESS = "Get season by id successfully";

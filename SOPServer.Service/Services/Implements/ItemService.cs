@@ -114,7 +114,10 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> GetItemById(long id)
         {
-            var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(id, include: query => query.Include(x => x.Category).Include(x => x.User));
+            var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(id,
+    include: query => query.Include(x => x.Category)
+.Include(x => x.User)
+          .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion));
             if (item == null)
             {
                 throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
@@ -123,7 +126,7 @@ namespace SOPServer.Service.Services.Implements
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.ITEM_NOT_EXISTED,
+                Message = MessageConstants.ITEM_GET_SUCCESS,
                 Data = _mapper.Map<ItemModel>(item)
             };
         }
@@ -131,9 +134,11 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> GetItemByUserPaginationAsync(PaginationParameter paginationParameter, long userId)
         {
             var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter,
-                include: query => query.Include(x => x.Category).Include(x => x.User),
-                filter: x => x.UserId == userId,
-                orderBy: x => x.OrderByDescending(x => x.CreatedDate));
+                         include: query => query.Include(x => x.Category)
+          .Include(x => x.User)
+               .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion),
+                 filter: x => x.UserId == userId,
+               orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
             var itemModels = _mapper.Map<Pagination<ItemModel>>(items);
 

@@ -13,4 +13,10 @@ namespace SOPServer.Service.BusinessModels.OccasionModels
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
     }
+
+    public class OccasionItemModel
+    {
+        public long Id { get; set; }
+        public string Name { get; set; }
+    }
 }

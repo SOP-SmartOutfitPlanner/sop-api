@@ -160,7 +160,7 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> GetItemPaginationAsync(PaginationParameter paginationParameter)
         {
             var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter,
-                include: query => query.Include(x => x.Category).Include(x => x.User),
+                include: query => query.Include(x => x.Category).Include(x => x.User).Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
             var itemModels = _mapper.Map<Pagination<ItemModel>>(items);

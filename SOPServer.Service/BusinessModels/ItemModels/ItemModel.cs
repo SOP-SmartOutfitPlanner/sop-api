@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SOPServer.Service.BusinessModels.OccasionModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -38,6 +39,8 @@ namespace SOPServer.Service.BusinessModels.ItemModels
         public string Fabric { get; set; }
 
         public string Tag { get; set; }
+
+        public List<OccasionItemModel> Occasions { get; set; }
     }
 
     public class ItemCreateModel

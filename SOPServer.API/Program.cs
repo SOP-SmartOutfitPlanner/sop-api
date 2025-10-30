@@ -13,6 +13,7 @@ using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
 using StackExchange.Redis;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -153,7 +154,7 @@ builder.Services
             ValidAudience    = cfg["JWT:ValidAudience"],
             ValidateLifetime = true,
             ClockSkew        = TimeSpan.Zero,
-            RoleClaimType = "role"
+            RoleClaimType = ClaimTypes.Role
         };
 
         options.Events = new JwtBearerEvents

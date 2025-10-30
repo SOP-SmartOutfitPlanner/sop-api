@@ -7,7 +7,7 @@ namespace SOPServer.API.Controllers
 {
     [Route("api/v1/jobs")]
     [ApiController]
-    [Authorize(Roles = "USER")]
+    [Authorize]
     public class JobController : BaseController
     {
         private readonly IJobService _jobService;
@@ -36,12 +36,14 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpPut("{id:long}")]
+        [Authorize(Roles = "ADMIN")]
         public Task<IActionResult> Update(long id, [FromBody] JobRequestModel model)
         {
             return ValidateAndExecute(async () => await _jobService.UpdateAsync(id, model));
         }
 
         [HttpDelete("{id:long}")]
+        [Authorize(Roles = "ADMIN")]
         public Task<IActionResult> Delete(long id)
         {
             return ValidateAndExecute(async () => await _jobService.DeleteAsync(id));

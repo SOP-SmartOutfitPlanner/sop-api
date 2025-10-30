@@ -31,18 +31,23 @@ namespace SOPServer.API.Middlewares
         {
             // Check if the endpoint requires authorization
             var endpoint = context.GetEndpoint();
-            if (endpoint != null)
+            
+            // If endpoint is null or doesn't require authorization, skip Redis check
+            if (endpoint == null)
             {
-                var authorizeMetadata = endpoint.Metadata.GetMetadata<IAuthorizeData>();
-                var allowAnonymousMetadata = endpoint.Metadata.GetMetadata<IAllowAnonymous>();
-                
-                // Skip Redis token check if endpoint allows anonymous access
-                // or if no authorization is required
-                if (allowAnonymousMetadata != null || authorizeMetadata == null)
-                {
-                    await _next(context);
-                    return;
-                }
+                await _next(context);
+                return;
+            }
+
+            var authorizeMetadata = endpoint.Metadata.GetMetadata<IAuthorizeData>();
+            var allowAnonymousMetadata = endpoint.Metadata.GetMetadata<IAllowAnonymous>();
+            
+            // Skip Redis token check if endpoint allows anonymous access
+            // or if no authorization is required
+            if (allowAnonymousMetadata != null || authorizeMetadata == null)
+            {
+                await _next(context);
+                return;
             }
 
             // Check Authorization header for Bearer token

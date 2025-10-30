@@ -32,7 +32,7 @@ namespace SOPServer.API.Middlewares
             // Check if the endpoint requires authorization
             var endpoint = context.GetEndpoint();
             
-            // If endpoint is null or doesn't require authorization, skip Redis check
+            // If endpoint is null, skip Redis check (edge case)
             if (endpoint == null)
             {
                 await _next(context);

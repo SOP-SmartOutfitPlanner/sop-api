@@ -18,9 +18,9 @@ namespace SOPServer.API.Middlewares
     public class AuthenHandlingMiddleware
     {
         private readonly RequestDelegate _next;
-        private readonly ILogger<ExceptionHandlingMiddleware> _logger;
+        private readonly ILogger<AuthenHandlingMiddleware> _logger;
 
-        public AuthenHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+        public AuthenHandlingMiddleware(RequestDelegate next, ILogger<AuthenHandlingMiddleware> logger)
         {
             _next = next;
             _logger = logger;
@@ -50,9 +50,7 @@ namespace SOPServer.API.Middlewares
                             var exists = await redis.ExistsAsync(key);
                             if (!exists)
                             {
-                                context.Response.ContentType = "application/json";
-                                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-
+                                // Không set StatusCode ở đây, để ExceptionHandlingMiddleware xử lý
                                 throw new ForbiddenException(MessageConstants.TOKEN_NOT_VALID);
                             }
                         }

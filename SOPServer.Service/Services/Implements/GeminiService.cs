@@ -3,6 +3,7 @@ using GenerativeAI.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using SOPServer.Repository.Enums;
+using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.GeminiModels;
 using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.ResultModels;
@@ -20,6 +21,7 @@ namespace SOPServer.Service.Services.Implements
 {
     public class GeminiService : IGeminiService
     {
+        private readonly IUnitOfWork _unitOfWork;
         private readonly GenerativeModel _generativeModel;
 
         private readonly HashSet<string> _allowedMime = new(StringComparer.OrdinalIgnoreCase)
@@ -85,18 +87,45 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
 ";
 
 
-        public GeminiService(IOptions<GeminiSettings> geminiSettings)
+        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork)
         {
-            var googleAi = new GoogleAi(geminiSettings.Value.APIKey);
-            _generativeModel = googleAi.CreateGenerativeModel(geminiSettings.Value.ModelID);
+            _unitOfWork = unitOfWork;
+
+            var apiKey = GetAISettingValue(AISettingType.API_ITEM_ANALYZING);
+            var modelId = GetAISettingValue(AISettingType.MODEL_ANALYZING);
+
+            var googleAi = new GoogleAi(apiKey);
+            _generativeModel = googleAi.CreateGenerativeModel(modelId);
+        }
+
+        private string GetAISettingValue(AISettingType type)
+        {
+            var setting = _unitOfWork.AISettingRepository
+                                    .GetByTypeAsync(type)
+                                    .GetAwaiter()
+                                    .GetResult();
+
+            if (setting == null)
+            {
+                throw new InvalidOperationException($"AI Setting '{type}' not found in database");
+            }
+
+            if (string.IsNullOrWhiteSpace(setting.Value))
+            {
+                throw new InvalidOperationException($"AI Setting '{type}' has no value configured");
+            }
+
+            return setting.Value;
         }
 
         public async Task<ItemModelAI?> ImageGenerateContent(string base64Image, string mimeType)
         {
+            var descriptionPrompt = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.DESCRIPTION_ITEM_PROMPT);
+
             var request = new GenerateContentRequest();
             request.AddInlineData(base64Image, mimeType);
             request.UseJsonMode<ItemModelAI>();
-            request.AddText(_promptDescription);
+            request.AddText(descriptionPrompt.Value);
 
             return await _generativeModel.GenerateObjectAsync<ItemModelAI>(request);
         }
@@ -108,10 +137,12 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
                 throw new NotFoundException(MessageConstants.MIMETYPE_NOT_VALID);
             }
 
+            var validatePrompt = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.VALIDATE_ITEM_PROMPT);
+
             string? rawMessage = string.Empty;
 
             var request = new GenerateContentRequest();
-            request.AddText(_promptValidation.Trim());
+            request.AddText(validatePrompt.Value);
             request.AddInlineData(base64Image, mimeType);
             request.UseJsonMode<ImageValidation>();
 

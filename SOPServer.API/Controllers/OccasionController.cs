@@ -40,7 +40,6 @@ namespace SOPServer.API.Controllers
         /// Create new occasion (Admin only)
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "ADMIN")]
         public Task<IActionResult> CreateOccasion([FromBody] OccasionCreateModel model)
         {
             return ValidateAndExecute(() => _occasionService.CreateOccasionAsync(model));
@@ -50,7 +49,6 @@ namespace SOPServer.API.Controllers
         /// Update occasion (Admin only)
         /// </summary>
         [HttpPut]
-        [Authorize(Roles = "ADMIN")]
         public Task<IActionResult> UpdateOccasion([FromBody] OccasionUpdateModel model)
         {
             return ValidateAndExecute(() => _occasionService.UpdateOccasionByIdAsync(model));
@@ -60,7 +58,6 @@ namespace SOPServer.API.Controllers
         /// Delete occasion (Admin only)
         /// </summary>
         [HttpDelete("{id}")]
-        [Authorize(Roles = "ADMIN")] 
         public Task<IActionResult> DeleteOccasion(long id)
         {
             return ValidateAndExecute(() => _occasionService.DeleteOccasionByIdAsync(id));

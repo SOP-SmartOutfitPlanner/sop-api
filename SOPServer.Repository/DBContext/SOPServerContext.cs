@@ -347,7 +347,7 @@ public partial class SOPServerContext : DbContext
                 .IsUnicode(true);
 
             entity.Property(e => e.Value)
-                .HasMaxLength(500)
+                .HasMaxLength(int.MaxValue)
                 .IsUnicode(true);
 
             entity.Property(e => e.Type)

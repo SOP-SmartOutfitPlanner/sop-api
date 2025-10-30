@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using System;
@@ -23,7 +22,7 @@ namespace SOPServer.Service.Utils
             {
                 authClaims.Add(new Claim(ClaimTypes.Email, user.Email));
                 authClaims.Add(new Claim(JwtRegisteredClaimNames.Jti, tokenId));
-                authClaims.Add(new Claim(ClaimTypes.Role, role.ToString()));
+                authClaims.Add(new Claim("role", role.ToString()));
                 authClaims.Add(new Claim("UserId", user.Id.ToString()));
                 authClaims.Add(new Claim("FirstTime", user.IsFirstTime.ToString()));
             }

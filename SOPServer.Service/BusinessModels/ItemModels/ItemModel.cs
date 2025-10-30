@@ -40,8 +40,6 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public string Fabric { get; set; }
 
-        public string Tag { get; set; }
-
         public List<OccasionItemModel> Occasions { get; set; }
 
         public List<SeasonItemModel> Seasons { get; set; }
@@ -77,8 +75,6 @@ namespace SOPServer.Service.BusinessModels.ItemModels
         public string Pattern { get; set; }
 
         public string Fabric { get; set; }
-
-        public string Tag { get; set; }
     }
 
     public class ItemModelAI

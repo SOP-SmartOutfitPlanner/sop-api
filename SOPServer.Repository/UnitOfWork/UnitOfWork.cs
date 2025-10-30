@@ -31,6 +31,8 @@ namespace SOPServer.Repository.UnitOfWork
         private IOutfitRepository _outfitRepository;
         private IAISettingRepository _aiSettingRepository;
         private IJobRepository _jobRepository;
+        private ILikePostRepository _likePostRepository;
+        private ICommentPostRepository _commentPostRepository;
 
 
 
@@ -164,6 +166,22 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _jobRepository ??= new JobRepository(_context);
+            }
+        }
+
+        public ILikePostRepository LikePostRepository
+        {
+            get
+            {
+                return _likePostRepository ??= new LikePostRepository(_context);
+            }
+        }
+
+        public ICommentPostRepository CommentPostRepository
+        {
+            get
+            {
+                return _commentPostRepository ??= new CommentPostRepository(_context);
             }
         }
 

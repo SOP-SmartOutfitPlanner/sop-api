@@ -11,4 +11,6 @@ public partial class Post : BaseEntity
     public string Body { get; set; }   
     public virtual ICollection<PostImage> PostImages { get; set; } = new List<PostImage>();
     public virtual ICollection<PostHashtags> PostHashtags { get; set; } = new List<PostHashtags>();
+    public virtual ICollection<LikePost> LikePosts { get; set; } = new List<LikePost>();
+    public virtual ICollection<CommentPost> CommentPosts { get; set; } = new List<CommentPost>();
 }

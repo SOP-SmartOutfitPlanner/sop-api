@@ -55,4 +55,8 @@ public partial class User : BaseEntity
     public virtual ICollection<OutfitUsageHistory> OutfitUsageHistories { get; set; } = new List<OutfitUsageHistory>();
 
     public virtual ICollection<UserOccasion> UserOccasions { get; set; } = new List<UserOccasion>();
+
+    public virtual ICollection<LikePost> LikePosts { get; set; } = new List<LikePost>();
+
+    public virtual ICollection<CommentPost> CommentPosts { get; set; } = new List<CommentPost>();
 }

@@ -53,6 +53,7 @@ namespace SOPServer.Service.Constants
         public const string UPLOAD_FILE_SUCCESS = "File uploaded successfully";
 
         // Category related messages used by CategoryService
+        public const string GET_LIST_CATEGORY_SUCCESS = "Get list categories successfully";
         public const string GET_CATEGORY_BY_ID_SUCCESS = "Get category by id successfully";
         public const string GET_CATEGORY_BY_PARENTID_SUCCESS = "Get categories by parent id successfully";
         public const string GET_ROOT_CATEGORIES_SUCCESS = "Get root categories successfully";

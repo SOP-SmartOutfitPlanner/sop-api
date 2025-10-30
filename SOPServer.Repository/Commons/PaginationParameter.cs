@@ -29,5 +29,8 @@ namespace SOPServer.Repository.Commons
                 _pageSize = value > maxPageSize ? maxPageSize : value;
             }
         }
+
+        [FromQuery(Name = "take-all")]
+        public bool TakeAll { get; set; } = false;
     }
 }

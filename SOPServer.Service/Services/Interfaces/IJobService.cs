@@ -10,7 +10,7 @@ namespace SOPServer.Service.Services.Interfaces
 {
     public interface IJobService
     {
-        Task<BaseResponseModel> GetAllAsync();
+        Task<BaseResponseModel> GetAllAsync(string? search = null);
         Task<BaseResponseModel> GetByIdAsync(long id);
         Task<BaseResponseModel> CreateAsync(JobRequestModel model);
         Task<BaseResponseModel> UpdateAsync(long id, JobRequestModel model);

@@ -18,9 +18,9 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpGet]
-        public Task<IActionResult> GetAll()
+        public Task<IActionResult> GetAll([FromQuery] string? q = null)
         {
-            return ValidateAndExecute(async () => await _jobService.GetAllAsync());
+            return ValidateAndExecute(async () => await _jobService.GetAllAsync(q));
         }
 
         [HttpGet("{id:long}")]

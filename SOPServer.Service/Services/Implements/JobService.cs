@@ -26,9 +26,19 @@ namespace SOPServer.Service.Services.Implements
             _mapper = mapper;
         }
 
-        public async Task<BaseResponseModel> GetAllAsync()
+        public async Task<BaseResponseModel> GetAllAsync(string? search = null)
         {
-            var list = await _unitOfWork.JobRepository.GetAllAsync();
+            IEnumerable<Job> list;
+
+            if (string.IsNullOrWhiteSpace(search))
+            {
+                list = await _unitOfWork.JobRepository.GetAllAsync();
+            }
+            else
+            {
+                list = await _unitOfWork.JobRepository.SearchByNameAsync(search);
+            }
+
             var result = _mapper.Map<IEnumerable<JobModel>>(list);
 
             return new BaseResponseModel

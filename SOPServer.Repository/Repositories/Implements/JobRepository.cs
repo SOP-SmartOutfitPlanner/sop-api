@@ -23,5 +23,12 @@ namespace SOPServer.Repository.Repositories.Implements
         {
             return await _context.Jobs.FirstOrDefaultAsync(x => x.Name == name);
         }
+
+        public async Task<IEnumerable<Job>> SearchByNameAsync(string search)
+        {
+            return await _context.Jobs
+                .Where(x => x.Name.Contains(search))
+                .ToListAsync();
+        }
     }
 }

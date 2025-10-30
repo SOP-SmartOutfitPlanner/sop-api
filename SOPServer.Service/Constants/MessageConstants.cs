@@ -175,5 +175,19 @@ namespace SOPServer.Service.Constants
         public const string JOB_UPDATE_SUCCESS = "Job updated successfully";
         public const string JOB_DELETE_SUCCESS = "Job deleted successfully";
 
+        // LikePost related messages
+        public const string LIKE_POST_SUCCESS = "Like post successfully";
+        public const string UNLIKE_POST_SUCCESS = "Unlike post successfully";
+        public const string ALREADY_LIKE_POST = "You have already liked this post";
+        public const string LIKE_POST_NOT_FOUND = "Like not found";
+
+        // CommentPost related messages
+        public const string COMMENT_CREATE_SUCCESS = "Comment created successfully";
+        public const string COMMENT_DELETE_SUCCESS = "Comment deleted successfully";
+        public const string COMMENT_NOT_FOUND = "Comment not found";
+        public const string COMMENT_GET_SUCCESS = "Get comment successfully";
+        public const string GET_LIST_COMMENT_SUCCESS = "Get list comment successfully";
+        public const string PARENT_COMMENT_NOT_FOUND = "Parent comment not found";
+        public const string COMMENT_CANNOT_REPLY_MORE_THAN_ONE_LEVEL = "Cannot reply to a reply comment";
     }
 }

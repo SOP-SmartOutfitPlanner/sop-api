@@ -32,5 +32,8 @@ namespace SOPServer.Repository.Commons
 
         [FromQuery(Name = "take-all")]
         public bool TakeAll { get; set; } = false;
+
+        [FromQuery(Name = "q")]
+        public string? Q { get; set; }
     }
 }

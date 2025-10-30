@@ -1,12 +1,15 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using SOPServer.Repository.Commons;
+using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Implements
@@ -22,10 +25,10 @@ namespace SOPServer.Service.Services.Implements
             _mapper = mapper;
         }
 
-        public async Task<BaseResponseModel> GetOutfitByIdAsync(long id)
+        public async Task<BaseResponseModel> GetOutfitByIdAsync(long id, long userId)
         {
             var outfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
-                id, 
+                id,
                 include: query => query
                     .Include(o => o.User)
                     .Include(o => o.OutfitItems)
@@ -37,6 +40,12 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.OUTFIT_NOT_FOUND);
             }
 
+            // Check if the outfit belongs to the current user
+            if (outfit.UserId != userId)
+            {
+                throw new ForbiddenException(MessageConstants.OUTFIT_ACCESS_DENIED);
+            }
+
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
@@ -45,7 +54,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> ToggleOutfitFavoriteAsync(long id)
+        public async Task<BaseResponseModel> ToggleOutfitFavoriteAsync(long id, long userId)
         {
             var outfit = await _unitOfWork.OutfitRepository.GetByIdAsync(id);
 
@@ -54,8 +63,14 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.OUTFIT_NOT_FOUND);
             }
 
+            // Check if the outfit belongs to the current user
+            if (outfit.UserId != userId)
+            {
+                throw new ForbiddenException(MessageConstants.OUTFIT_ACCESS_DENIED);
+            }
+
             // Toggle the favorite status
-            outfit.isFavorite = !outfit.isFavorite;
+            outfit.IsFavorite = !outfit.IsFavorite;
             _unitOfWork.OutfitRepository.UpdateAsync(outfit);
             await _unitOfWork.SaveAsync();
 
@@ -71,7 +86,206 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> MarkOutfitAsUsedAsync(long id)
+        public async Task<BaseResponseModel> GetAllOutfitPaginationAsync(PaginationParameter paginationParameter)
+        {
+            var outfits = await _unitOfWork.OutfitRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query.Include(x => x.User)
+                    .Include(x => x.OutfitItems)
+                        .ThenInclude(oi => oi.Item),
+                filter: string.IsNullOrWhiteSpace(paginationParameter.Q)
+                    ? null
+                    : x => (x.Name != null && x.Name.Contains(paginationParameter.Q)) ||
+                           (x.Description != null && x.Description.Contains(paginationParameter.Q)),
+                orderBy: x => x.OrderByDescending(x => x.CreatedDate));
+
+            var outfitModels = _mapper.Map<Pagination<OutfitModel>>(outfits);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_OUTFIT_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = outfitModels,
+                    MetaData = new
+                    {
+                        outfitModels.TotalCount,
+                        outfitModels.PageSize,
+                        outfitModels.CurrentPage,
+                        outfitModels.TotalPages,
+                        outfitModels.HasNext,
+                        outfitModels.HasPrevious
+                    }
+                }
+            };
+        }
+
+        public async Task<BaseResponseModel> GetOutfitByUserPaginationAsync(PaginationParameter paginationParameter, long userId, bool? isFavorite, bool? isSaved)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            var outfits = await _unitOfWork.OutfitRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query.Include(x => x.User)
+                    .Include(x => x.OutfitItems)
+                        .ThenInclude(oi => oi.Item),
+                filter: x => x.UserId == userId &&
+                           (string.IsNullOrWhiteSpace(paginationParameter.Q) ||
+                            (x.Name != null && x.Name.Contains(paginationParameter.Q)) ||
+                            (x.Description != null && x.Description.Contains(paginationParameter.Q))) &&
+                           (!isFavorite.HasValue || x.IsFavorite == isFavorite.Value) &&
+                           (!isSaved.HasValue || x.IsSaved == isSaved.Value),
+                orderBy: x => x.OrderByDescending(x => x.CreatedDate));
+
+            var outfitModels = _mapper.Map<Pagination<OutfitModel>>(outfits);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_OUTFIT_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = outfitModels,
+                    MetaData = new
+                    {
+                        outfitModels.TotalCount,
+                        outfitModels.PageSize,
+                        outfitModels.CurrentPage,
+                        outfitModels.TotalPages,
+                        outfitModels.HasNext,
+                        outfitModels.HasPrevious
+                    }
+                }
+            };
+        }
+
+        public async Task<BaseResponseModel> CreateOutfitAsync(long userId, OutfitCreateModel model)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            if (model.ItemIds != null && model.ItemIds.Any())
+            {
+                var sortedItemIds = model.ItemIds.OrderBy(id => id).ToList();
+
+                var existingOutfits = await _unitOfWork.OutfitRepository.ToPaginationIncludeAsync(
+                    new PaginationParameter { TakeAll = true },
+                    include: query => query.Include(o => o.OutfitItems),
+                    filter: o => o.UserId == userId);
+
+                foreach (var existingOutfit in existingOutfits)
+                {
+                    var existingItemIds = existingOutfit.OutfitItems
+                        .Where(oi => oi.ItemId.HasValue)
+                        .Select(oi => oi.ItemId.Value)
+                        .OrderBy(id => id)
+                        .ToList();
+
+                    if (existingItemIds.Count == sortedItemIds.Count &&
+                        existingItemIds.SequenceEqual(sortedItemIds))
+                    {
+                        throw new BadRequestException(MessageConstants.OUTFIT_DUPLICATE_ITEMS);
+                    }
+                }
+            }
+
+            var outfit = new Outfit
+            {
+                UserId = userId,
+                Name = model.Name,
+                Description = model.Description,
+                IsFavorite = false,
+                IsSaved = false
+            };
+
+            await _unitOfWork.OutfitRepository.AddAsync(outfit);
+            await _unitOfWork.SaveAsync();
+
+            var createdOutfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
+                outfit.Id,
+                include: query => query
+                    .Include(o => o.User)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.Category));
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status201Created,
+                Message = MessageConstants.OUTFIT_CREATE_SUCCESS,
+                Data = _mapper.Map<OutfitDetailedModel>(createdOutfit)
+            };
+        }
+
+        public async Task<BaseResponseModel> UpdateOutfitAsync(long id, long userId, OutfitUpdateModel model)
+        {
+            var outfit = await _unitOfWork.OutfitRepository.GetByIdAsync(id);
+            if (outfit == null)
+            {
+                throw new NotFoundException(MessageConstants.OUTFIT_NOT_FOUND);
+            }
+
+            // Check if the outfit belongs to the current user
+            if (outfit.UserId != userId)
+            {
+                throw new ForbiddenException(MessageConstants.OUTFIT_ACCESS_DENIED);
+            }
+
+            outfit.Name = model.Name;
+            outfit.Description = model.Description;
+
+            _unitOfWork.OutfitRepository.UpdateAsync(outfit);
+            await _unitOfWork.SaveAsync();
+
+            var updatedOutfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
+                id,
+                include: query => query
+                    .Include(o => o.User)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.Category));
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.OUTFIT_UPDATE_SUCCESS,
+                Data = _mapper.Map<OutfitDetailedModel>(updatedOutfit)
+            };
+        }
+
+        public async Task<BaseResponseModel> DeleteOutfitAsync(long id, long userId)
+        {
+            var outfit = await _unitOfWork.OutfitRepository.GetByIdAsync(id);
+            if (outfit == null)
+            {
+                throw new NotFoundException(MessageConstants.OUTFIT_NOT_FOUND);
+            }
+
+            // Check if the outfit belongs to the current user
+            if (outfit.UserId != userId)
+            {
+                throw new ForbiddenException(MessageConstants.OUTFIT_ACCESS_DENIED);
+            }
+
+            _unitOfWork.OutfitRepository.SoftDeleteAsync(outfit);
+            await _unitOfWork.SaveAsync();
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.OUTFIT_DELETE_SUCCESS
+            };
+        }
+
+        public async Task<BaseResponseModel> ToggleOutfitSaveAsync(long id, long userId)
         {
             var outfit = await _unitOfWork.OutfitRepository.GetByIdAsync(id);
 
@@ -80,9 +294,14 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.OUTFIT_NOT_FOUND);
             }
 
-            // Create outfit usage history instead of using isUsed flag
-            // This functionality should be implemented when OutfitUsageHistory service is ready
-            // For now, just return the outfit
+            // Check if the outfit belongs to the current user
+            if (outfit.UserId != userId)
+            {
+                throw new ForbiddenException(MessageConstants.OUTFIT_ACCESS_DENIED);
+            }
+
+            // Toggle the save status
+            outfit.IsSaved = !outfit.IsSaved;
             _unitOfWork.OutfitRepository.UpdateAsync(outfit);
             await _unitOfWork.SaveAsync();
 
@@ -93,7 +312,7 @@ namespace SOPServer.Service.Services.Implements
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.OUTFIT_MARK_USED_SUCCESS,
+                Message = MessageConstants.OUTFIT_TOGGLE_SAVE_SUCCESS,
                 Data = _mapper.Map<OutfitModel>(updatedOutfit)
             };
         }

@@ -116,8 +116,14 @@ namespace SOPServer.Service.Constants
         // Outfit related messages
         public const string OUTFIT_NOT_FOUND = "Outfit not found";
         public const string OUTFIT_GET_SUCCESS = "Outfit retrieved successfully";
+        public const string OUTFIT_CREATE_SUCCESS = "Outfit created successfully";
+        public const string OUTFIT_UPDATE_SUCCESS = "Outfit updated successfully";
+        public const string OUTFIT_DELETE_SUCCESS = "Outfit deleted successfully";
+        public const string GET_LIST_OUTFIT_SUCCESS = "Get list outfit successfully";
         public const string OUTFIT_TOGGLE_FAVORITE_SUCCESS = "Outfit favorite status toggled successfully";
-        public const string OUTFIT_MARK_USED_SUCCESS = "Outfit marked as used successfully";
+        public const string OUTFIT_TOGGLE_SAVE_SUCCESS = "Outfit save status toggled successfully";
+        public const string OUTFIT_DUPLICATE_ITEMS = "An outfit with the same combination of items already exists";
+        public const string OUTFIT_ACCESS_DENIED = "You don't have permission to access this outfit";
 
         // Reset Password related messages
         public const string RESET_PASSWORD_REQUEST_SENT = "If the email exists, a password reset OTP has been sent";

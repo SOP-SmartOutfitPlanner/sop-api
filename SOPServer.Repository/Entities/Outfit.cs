@@ -10,7 +10,10 @@ using System.Threading.Tasks;
 public partial class Outfit : BaseEntity
 {
     public long UserId { get; set; }
-    public bool isFavorite { get; set; }
+    public string? Name { get; set; }
+    public string? Description { get; set; }
+    public bool IsFavorite { get; set; }
+    public bool IsSaved { get; set; }
     public OutfitCreatedBy CreatedBy { get; set; }
     public virtual User User { get; set; }
     public virtual ICollection<OutfitItems> OutfitItems { get; set; } = new List<OutfitItems>();

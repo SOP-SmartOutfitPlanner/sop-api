@@ -345,7 +345,10 @@ public partial class SOPServerContext : DbContext
 
             entity.ToTable("Outfit");
 
-            entity.Property(e => e.isFavorite)
+            entity.Property(e => e.IsFavorite)
+                .HasDefaultValue(false);
+
+            entity.Property(e => e.IsSaved)
                 .HasDefaultValue(false);
 
             entity.Property(e => e.CreatedBy)

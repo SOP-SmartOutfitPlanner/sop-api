@@ -49,4 +49,10 @@ public partial class User : BaseEntity
     public virtual ICollection<UserStyle> UserStyles { get; set; } = new List<UserStyle>();
 
     public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
+
+    public virtual ICollection<Outfit> Outfits { get; set; } = new List<Outfit>();
+
+    public virtual ICollection<OutfitUsageHistory> OutfitUsageHistories { get; set; } = new List<OutfitUsageHistory>();
+
+    public virtual ICollection<UserOccasion> UserOccasions { get; set; } = new List<UserOccasion>();
 }

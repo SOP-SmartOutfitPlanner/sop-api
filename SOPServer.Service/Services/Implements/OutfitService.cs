@@ -80,7 +80,9 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.OUTFIT_NOT_FOUND);
             }
 
-            outfit.isUsed = true;
+            // Create outfit usage history instead of using isUsed flag
+            // This functionality should be implemented when OutfitUsageHistory service is ready
+            // For now, just return the outfit
             _unitOfWork.OutfitRepository.UpdateAsync(outfit);
             await _unitOfWork.SaveAsync();
 

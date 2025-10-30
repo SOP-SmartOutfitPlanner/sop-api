@@ -11,16 +11,16 @@ namespace SOPServer.Service.Mappers
         public OutfitMapperProfile()
         {
             CreateMap<Outfit, OutfitModel>()
-                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId ?? 0))
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
                 .ForMember(dest => dest.UserDisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : "Unknown"))
                 .ForMember(dest => dest.IsFavorite, opt => opt.MapFrom(src => src.isFavorite))
-                .ForMember(dest => dest.IsUsed, opt => opt.MapFrom(src => src.isUsed));
+                .ForMember(dest => dest.IsUsed, opt => opt.MapFrom(src => src.OutfitUsageHistories != null && src.OutfitUsageHistories.Any()));
 
             CreateMap<Outfit, OutfitDetailedModel>()
-                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId ?? 0))
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
                 .ForMember(dest => dest.UserDisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : "Unknown"))
                 .ForMember(dest => dest.IsFavorite, opt => opt.MapFrom(src => src.isFavorite))
-                .ForMember(dest => dest.IsUsed, opt => opt.MapFrom(src => src.isUsed))
+                .ForMember(dest => dest.IsUsed, opt => opt.MapFrom(src => src.OutfitUsageHistories != null && src.OutfitUsageHistories.Any()))
                 .ForMember(dest => dest.Items, opt => opt.MapFrom(src =>
                     src.OutfitItems != null
                         ? src.OutfitItems.Where(oi => oi.Item != null).Select(oi => oi.Item).ToList()

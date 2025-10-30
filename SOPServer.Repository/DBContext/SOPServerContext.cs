@@ -47,13 +47,20 @@ public partial class SOPServerContext : DbContext
     public virtual DbSet<Hashtag> Hashtags { get; set; }
 
     public virtual DbSet<PostHashtags> PostHashtags { get; set; }
+    
     public virtual DbSet<OutfitItems> OutfitItems { get; set; }
+    
     public virtual DbSet<Outfit> Outfits { get; set; }
+    
     public virtual DbSet<OutfitUsageHistory> OutfitUsageHistories { get; set; }
+    
     public virtual DbSet<UserOccasion> UserOccasions { get; set; }
+    
     public virtual DbSet<AISetting> AISettings { get; set; }
 
+    public virtual DbSet<LikePost> LikePosts { get; set; }
 
+    public virtual DbSet<CommentPost> CommentPosts { get; set; }
 
     //    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     //#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -451,6 +458,52 @@ public partial class SOPServerContext : DbContext
 
             entity.Property(e => e.Type)
                 .HasConversion<int>();
+        });
+
+        modelBuilder.Entity<LikePost>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__LikePost__3214EC07");
+
+            entity.ToTable("LikePost");
+
+            entity.HasOne(d => d.Post).WithMany(p => p.LikePosts)
+                .HasForeignKey(d => d.PostId)
+                .HasConstraintName("FK_LikePost_Post")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.User).WithMany(p => p.LikePosts)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_LikePost_User")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(e => new { e.PostId, e.UserId })
+                .IsUnique()
+                .HasDatabaseName("IX_LikePost_PostId_UserId");
+        });
+
+        modelBuilder.Entity<CommentPost>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__CommentPost__3214EC07");
+
+            entity.ToTable("CommentPost");
+
+            entity.Property(e => e.Comment)
+                .IsUnicode(true);
+
+            entity.HasOne(d => d.Post).WithMany(p => p.CommentPosts)
+                .HasForeignKey(d => d.PostId)
+                .HasConstraintName("FK_CommentPost_Post")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.User).WithMany(p => p.CommentPosts)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_CommentPost_User")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.ParentComment).WithMany(p => p.Replies)
+                .HasForeignKey(d => d.ParentCommentId)
+                .HasConstraintName("FK_CommentPost_ParentComment")
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         OnModelCreatingPartial(modelBuilder);

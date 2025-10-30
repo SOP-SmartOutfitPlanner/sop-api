@@ -39,6 +39,9 @@ namespace SOPServer.API
             services.AddScoped<IHashtagRepository, HashtagRepository>();
             services.AddScoped<IPostHashtagsRepository, PostHashtagsRepository>();
 
+            services.AddScoped<ILikePostRepository, LikePostRepository>();
+            services.AddScoped<ICommentPostRepository, CommentPostRepository>();
+
             services.AddScoped<IOutfitRepository, OutfitRepository>();
 
             services.AddScoped<IAISettingRepository, AISettingRepository>();

@@ -127,9 +127,10 @@ builder.Services.AddHttpClient("SOPHttpClient", client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
-// Clear the default claim type mappings to prevent JWT claim type transformation
-// This ensures "role" claim stays as "role" instead of being mapped to the full URI
-JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+// Remove the "role" claim type mapping to prevent transformation to full URI
+// This ensures "role" claim stays as "role" for role-based authorization to work
+// We keep other default mappings to preserve standard claim behavior
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Remove("role");
 
 builder.Services
     .AddAuthentication(options =>

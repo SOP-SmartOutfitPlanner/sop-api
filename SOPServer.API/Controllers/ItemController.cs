@@ -59,5 +59,86 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _itemService.DeleteItemByIdAsync(id));
         }
+
+        /// <summary>
+        /// Add occasions to an item
+        /// </summary>
+        [HttpPost("occasions")]
+        public Task<IActionResult> AddOccasionsToItem([FromBody] AddOccasionsToItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.AddOccasionsToItemAsync(model));
+        }
+
+        /// <summary>
+        /// Remove a specific occasion from an item
+        /// </summary>
+        [HttpDelete("occasions")]
+        public Task<IActionResult> RemoveOccasionFromItem([FromBody] RemoveOccasionFromItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.RemoveOccasionFromItemAsync(model));
+        }
+
+        /// <summary>
+        /// Replace all occasions for an item
+        /// </summary>
+        [HttpPut("occasions")]
+        public Task<IActionResult> ReplaceOccasionsForItem([FromBody] ReplaceOccasionsForItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.ReplaceOccasionsForItemAsync(model));
+        }
+
+        /// <summary>
+        /// Add styles to an item
+        /// </summary>
+        [HttpPost("styles")]
+        public Task<IActionResult> AddStylesToItem([FromBody] AddStylesToItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.AddStylesToItemAsync(model));
+        }
+
+        /// <summary>
+        /// Remove a specific style from an item
+        /// </summary>
+        [HttpDelete("styles")]
+        public Task<IActionResult> RemoveStyleFromItem([FromBody] RemoveStyleFromItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.RemoveStyleFromItemAsync(model));
+        }
+
+        /// <summary>
+        /// Replace all styles for an item
+        /// </summary>
+        [HttpPut("styles")]
+        public Task<IActionResult> ReplaceStylesForItem([FromBody] ReplaceStylesForItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.ReplaceStylesForItemAsync(model));
+        }
+
+        /// <summary>
+        /// Add seasons to an item
+        /// </summary>
+        [HttpPost("seasons")]
+        public Task<IActionResult> AddSeasonsToItem([FromBody] AddSeasonsToItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.AddSeasonsToItemAsync(model));
+        }
+
+        /// <summary>
+        /// Remove a specific season from an item
+        /// </summary>
+        [HttpDelete("seasons")]
+        public Task<IActionResult> RemoveSeasonFromItem([FromBody] RemoveSeasonFromItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.RemoveSeasonFromItemAsync(model));
+        }
+
+        /// <summary>
+        /// Replace all seasons for an item
+        /// </summary>
+        [HttpPut("seasons")]
+        public Task<IActionResult> ReplaceSeasonsForItem([FromBody] ReplaceSeasonsForItemModel model)
+        {
+            return ValidateAndExecute(() => _itemService.ReplaceSeasonsForItemAsync(model));
+        }
     }
 }

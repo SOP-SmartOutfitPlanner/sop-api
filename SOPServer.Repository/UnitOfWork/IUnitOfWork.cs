@@ -11,17 +11,21 @@ namespace SOPServer.Repository.UnitOfWork
     {
         IItemRepository ItemRepository { get; }
         ICategoryRepository CategoryRepository { get; }
-
+        IOccasionRepository OccasionRepository { get; }
         ISeasonRepository SeasonRepository { get; }
         IItemOccasionRepository ItemOccasionRepository { get; }
         IItemSeasonRepository ItemSeasonRepository { get; }
         IItemStyleRepository ItemStyleRepository { get; }
         IUserRepository UserRepository { get; }
+        IStyleRepository StyleRepository { get; }
         IPostRepository PostRepository { get; }
         IHashtagRepository HashtagRepository { get; }
         IPostHashtagsRepository PostHashtagsRepository { get; }
         IPostImageRepository PostImageRepository { get; }
         IOutfitRepository OutfitRepository { get; }
+        IAISettingRepository AISettingRepository { get; }
+        IJobRepository JobRepository { get; }
+
 
         int Save();
         void Commit();

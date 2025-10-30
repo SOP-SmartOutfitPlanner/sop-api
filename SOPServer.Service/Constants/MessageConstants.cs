@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -54,12 +55,14 @@ namespace SOPServer.Service.Constants
         // Category related messages used by CategoryService
         public const string GET_CATEGORY_BY_ID_SUCCESS = "Get category by id successfully";
         public const string GET_CATEGORY_BY_PARENTID_SUCCESS = "Get categories by parent id successfully";
+        public const string GET_ROOT_CATEGORIES_SUCCESS = "Get root categories successfully";
         public const string DELETE_CATEGORY_SUCCESS = "Category deleted successfully";
         public const string UPDATE_CATEGORY_SUCCESS = "Category updated successfully";
         public const string CATEGORY_HAS_CHILDREN = "Category has active children and cannot be deleted";
         public const string CATEGORY_CREATE_SUCCESS = "Category created successfully";
         public const string CATEGORY_NOT_EXIST = "Category is not existed";
         public const string CATEGORY_PARENT_NOT_EXIST = "Category is not existed";
+        public const string CATEGORY_MAX_DEPTH_EXCEEDED = "Cannot create category: maximum depth of 2 levels exceeded. Child categories can only be created under root categories";
 
         // Season related messages used by SeasonService
         public const string GET_SEASON_BY_ID_SUCCESS = "Get season by id successfully";
@@ -96,11 +99,31 @@ namespace SOPServer.Service.Constants
         public const string LOGGED_OUT = "Logged out";
         public const string WELCOME_EMAIL_SUBJECT = "Welcome to Smart Outfit Planner";
 
+        // Occasion related messages used by OccasionService
+        public const string GET_OCCASION_BY_ID_SUCCESS = "Get occasion by id successfully";
+        public const string GET_LIST_OCCASION_SUCCESS = "Get list occasion successfully";
+        public const string DELETE_OCCASION_SUCCESS = "Occasion deleted successfully";
+        public const string UPDATE_OCCASION_SUCCESS = "Occasion updated successfully";
+        public const string OCCASION_HAS_ITEM = "Occasion has active items and cannot be deleted";
+        public const string OCCASION_CREATE_SUCCESS = "Occasion created successfully";
+        public const string OCCASION_NOT_EXIST = "Occasion is not existed";
+        public const string ADD_OCCASIONS_TO_ITEM_SUCCESS = "Occasions added to item successfully";
+        public const string ITEM_OCCASION_ALREADY_EXISTS = "One or more occasions are already added to this item";
+        public const string REMOVE_OCCASION_FROM_ITEM_SUCCESS = "Occasion removed from item successfully";
+        public const string ITEM_OCCASION_NOT_FOUND = "This occasion is not associated with the item";
+        public const string REPLACE_OCCASIONS_FOR_ITEM_SUCCESS = "Occasions replaced for item successfully";
+
         // Outfit related messages
         public const string OUTFIT_NOT_FOUND = "Outfit not found";
         public const string OUTFIT_GET_SUCCESS = "Outfit retrieved successfully";
+        public const string OUTFIT_CREATE_SUCCESS = "Outfit created successfully";
+        public const string OUTFIT_UPDATE_SUCCESS = "Outfit updated successfully";
+        public const string OUTFIT_DELETE_SUCCESS = "Outfit deleted successfully";
+        public const string GET_LIST_OUTFIT_SUCCESS = "Get list outfit successfully";
         public const string OUTFIT_TOGGLE_FAVORITE_SUCCESS = "Outfit favorite status toggled successfully";
-        public const string OUTFIT_MARK_USED_SUCCESS = "Outfit marked as used successfully";
+        public const string OUTFIT_TOGGLE_SAVE_SUCCESS = "Outfit save status toggled successfully";
+        public const string OUTFIT_DUPLICATE_ITEMS = "An outfit with the same combination of items already exists";
+        public const string OUTFIT_ACCESS_DENIED = "You don't have permission to access this outfit";
 
         // Reset Password related messages
         public const string RESET_PASSWORD_REQUEST_SENT = "If the email exists, a password reset OTP has been sent";
@@ -113,5 +136,44 @@ namespace SOPServer.Service.Constants
 
         // User Profile related messages
         public const string GET_USER_PROFILE_SUCCESS = "Get user profile successfully";
+
+        // Style related messages used by StyleService
+        public const string GET_STYLE_BY_ID_SUCCESS = "Get style by id successfully";
+        public const string GET_LIST_STYLE_SUCCESS = "Get list style successfully";
+        public const string DELETE_STYLE_SUCCESS = "Style deleted successfully";
+        public const string UPDATE_STYLE_SUCCESS = "Style updated successfully";
+        public const string STYLE_HAS_ITEM = "Style has active items and cannot be deleted";
+        public const string STYLE_HAS_USER = "Style has active users and cannot be deleted";
+        public const string STYLE_CREATE_SUCCESS = "Style created successfully";
+        public const string STYLE_NOT_EXIST = "Style is not existed";
+        public const string ADD_STYLES_TO_ITEM_SUCCESS = "Styles added to item successfully";
+        public const string ITEM_STYLE_ALREADY_EXISTS = "One or more styles are already added to this item";
+        public const string REMOVE_STYLE_FROM_ITEM_SUCCESS = "Style removed from item successfully";
+        public const string ITEM_STYLE_NOT_FOUND = "This style is not associated with the item";
+        public const string REPLACE_STYLES_FOR_ITEM_SUCCESS = "Styles replaced for item successfully";
+
+        // Season-Item relationship messages
+        public const string ADD_SEASONS_TO_ITEM_SUCCESS = "Seasons added to item successfully";
+        public const string ITEM_SEASON_ALREADY_EXISTS = "One or more seasons are already added to this item";
+        public const string REMOVE_SEASON_FROM_ITEM_SUCCESS = "Season removed from item successfully";
+        public const string ITEM_SEASON_NOT_FOUND = "This season is not associated with the item";
+        public const string REPLACE_SEASONS_FOR_ITEM_SUCCESS = "Seasons replaced for item successfully";
+
+        public const string GET_AISETTING_SUCCESS = "Get AI Settings successfully";
+        public const string AISETTING_NOT_EXIST = "AI setting does not exist";
+        public const string AISETTING_ALREADY_EXIST = "AI setting with this type already exists";
+        public const string AISETTING_CREATE_SUCCESSFULLY = "AI setting create successfully";
+        public const string AISETTING_UPDATE_SUCCESSFULLY = "AI setting update successfully";
+        public const string AISETTING_DELETE_SUCCESSFULLY = "AI setting delete successfully";
+
+        // Job related messages
+        public const string GET_JOB_SUCCESS = "Get job successfully";
+        public const string GET_LIST_JOB_SUCCESS = "Get list job successfully";
+        public const string JOB_NOT_EXIST = "Job does not exist";
+        public const string JOB_ALREADY_EXIST = "Job with this name already exists";
+        public const string JOB_CREATE_SUCCESS = "Job created successfully";
+        public const string JOB_UPDATE_SUCCESS = "Job updated successfully";
+        public const string JOB_DELETE_SUCCESS = "Job deleted successfully";
+
     }
 }

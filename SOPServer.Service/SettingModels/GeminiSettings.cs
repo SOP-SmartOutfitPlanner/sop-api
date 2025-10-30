@@ -9,5 +9,6 @@ namespace SOPServer.Service.SettingModels
     public class GeminiSettings
     {
         public string APIKey { get; set; }
+        public string ModelID { get; set; } = "models/gemini-2.5-flash";
     }
 }

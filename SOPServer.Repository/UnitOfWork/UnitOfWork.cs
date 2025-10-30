@@ -17,16 +17,22 @@ namespace SOPServer.Repository.UnitOfWork
         private IDbContextTransaction _transaction;
         private IItemRepository _itemRepository;
         private ICategoryRepository _categoryRepository;
+        private IOccasionRepository _occasionRepository;
         private ISeasonRepository _seasonRepository;
         private IItemOccasionRepository _itemOccasionRepository;
         private IItemSeasonRepository _itemSeasonRepository;
         private IItemStyleRepository _itemStyleRepository;
         private IUserRepository _userRepository;
+        private IStyleRepository _styleRepository;
         private IPostRepository _postRepository;
         private IHashtagRepository _hashtagRepository;
         private IPostHashtagsRepository _postHashtagsRepository;
         private IPostImageRepository _postImageRepository;
         private IOutfitRepository _outfitRepository;
+        private IAISettingRepository _aiSettingRepository;
+        private IJobRepository _jobRepository;
+
+
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -57,6 +63,14 @@ namespace SOPServer.Repository.UnitOfWork
             }
         }
 
+        public IOccasionRepository OccasionRepository
+        {
+            get
+            {
+                return _occasionRepository ??= new OccasionRepository(_context);
+            }
+        }
+
         public IItemOccasionRepository ItemOccasionRepository
         {
             get
@@ -78,6 +92,14 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _itemStyleRepository ??= new ItemStyleRepository(_context);
+            }
+        }
+
+        public IStyleRepository StyleRepository
+        {
+            get
+            {
+                return _styleRepository ??= new StyleRepository(_context);
             }
         }
 
@@ -126,6 +148,22 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _outfitRepository ??= new OutfitRepository(_context);
+            }
+        }
+
+        public IAISettingRepository AISettingRepository
+        {
+            get
+            {
+                return _aiSettingRepository ??= new AISettingRepository(_context);
+            }
+        }
+
+        public IJobRepository JobRepository
+        {
+            get
+            {
+                return _jobRepository ??= new JobRepository(_context);
             }
         }
 

@@ -57,7 +57,8 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<bool> ExistsAsync(string key)
         {
-            return await _cache.GetStringAsync(key) != null;
+            var value = await _cache.GetAsync(key);
+            return value != null;
         }
 
         public async Task<long> IncrementAsync(string key, TimeSpan? expiry = null)

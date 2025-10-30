@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using System;

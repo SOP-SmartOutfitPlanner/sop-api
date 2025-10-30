@@ -18,6 +18,9 @@ namespace SOPServer.API
             services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<ICategoryService, CategoryService>();
 
+            services.AddScoped<IOccasionRepository, OccasionRepository>();
+            services.AddScoped<IOccasionService, OccasionService>();
+
             services.AddScoped<ISeasonRepository, SeasonRepository>();
             services.AddScoped<ISeasonService, SeasonService>();
 
@@ -28,12 +31,19 @@ namespace SOPServer.API
             services.AddScoped<IItemStyleRepository, ItemStyleRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
 
+            services.AddScoped<IStyleRepository, StyleRepository>();
+            services.AddScoped<IStyleService, StyleService>();
+
             services.AddScoped<IPostImageRepository, PostImageRepository>();
             services.AddScoped<IPostRepository, PostRepository>();
             services.AddScoped<IHashtagRepository, HashtagRepository>();
             services.AddScoped<IPostHashtagsRepository, PostHashtagsRepository>();
 
             services.AddScoped<IOutfitRepository, OutfitRepository>();
+
+            services.AddScoped<IAISettingRepository, AISettingRepository>();
+
+            services.AddScoped<IJobRepository, JobRepository>();
 
             // Services
             services.AddScoped<IGeminiService, GeminiService>();
@@ -47,6 +57,11 @@ namespace SOPServer.API
             services.AddScoped<IOtpService, OtpService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IMinioService, MinioService>();
+
+            services.AddScoped<IAISettingService, AISettingService>();
+            services.AddScoped<IAISettingRepository, AISettingRepository>();
+
+            services.AddScoped<IJobService, JobService>();
 
             return services;
         }

@@ -9,8 +9,10 @@ namespace SOPServer.Service.BusinessModels.OutfitModels
         public long Id { get; set; }
         public long UserId { get; set; }
         public string UserDisplayName { get; set; }
+        public string? Name { get; set; }
+        public string? Description { get; set; }
         public bool IsFavorite { get; set; }
-        public bool IsUsed { get; set; }
+        public bool IsSaved { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
     }
@@ -20,8 +22,10 @@ namespace SOPServer.Service.BusinessModels.OutfitModels
         public long Id { get; set; }
         public long UserId { get; set; }
         public string UserDisplayName { get; set; }
+        public string? Name { get; set; }
+        public string? Description { get; set; }
         public bool IsFavorite { get; set; }
-        public bool IsUsed { get; set; }
+        public bool IsSaved { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
         public List<OutfitItemModel> Items { get; set; } = new List<OutfitItemModel>();

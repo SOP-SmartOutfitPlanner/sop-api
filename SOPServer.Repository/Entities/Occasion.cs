@@ -10,4 +10,6 @@ public partial class Occasion : BaseEntity
     public string Name { get; set; }
 
     public virtual ICollection<ItemOccasion> ItemOccasions { get; set; } = new List<ItemOccasion>();
+
+    public virtual ICollection<UserOccasion> UserOccasions { get; set; } = new List<UserOccasion>();
 }

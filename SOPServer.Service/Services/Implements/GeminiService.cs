@@ -2,19 +2,26 @@
 using GenerativeAI.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
+using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.GeminiModels;
 using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.ResultModels;
+using SOPServer.Service.BusinessModels.OccasionModels;
+using SOPServer.Service.BusinessModels.SeasonModels;
+using SOPServer.Service.BusinessModels.StyleModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
+using AutoMapper;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Implements
@@ -23,6 +30,7 @@ namespace SOPServer.Service.Services.Implements
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly GenerativeModel _generativeModel;
+        private readonly IMapper _mapper;
 
         private readonly HashSet<string> _allowedMime = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -87,9 +95,10 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
 ";
 
 
-        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork)
+        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
 
             var apiKey = GetAISettingValue(AISettingType.API_ITEM_ANALYZING);
             var modelId = GetAISettingValue(AISettingType.MODEL_ANALYZING);
@@ -122,10 +131,37 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
         {
             var descriptionPrompt = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.DESCRIPTION_ITEM_PROMPT);
 
+            var styles = await _unitOfWork.StyleRepository.GetAllAsync();
+            var occasions = await _unitOfWork.OccasionRepository.GetAllAsync();
+            var seasons = await _unitOfWork.SeasonRepository.GetAllAsync();
+
+            //get and map
+            var stylesModel = styles.Select(s => new StyleItemModel { Id = s.Id, Name = s.Name }).ToList();
+            var occasionsModel = occasions.Select(o => new OccasionItemModel { Id = o.Id, Name = o.Name }).ToList();
+            var seasonsModel = seasons.Select(s => new SeasonItemModel { Id = s.Id, Name = s.Name }).ToList();
+
+            //json rules
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            };
+
+            //mapped to json
+            var stylesJson = JsonSerializer.Serialize(stylesModel, jsonOptions);
+            var occasionsJson = JsonSerializer.Serialize(occasionsModel, jsonOptions);
+            var seasonsJson = JsonSerializer.Serialize(seasonsModel, jsonOptions);
+
+            string finalPrompt = descriptionPrompt.Value;
+            finalPrompt = finalPrompt.Replace("{{styles}}", stylesJson);
+            finalPrompt = finalPrompt.Replace("{{occasions}}", occasionsJson);
+            finalPrompt = finalPrompt.Replace("{{seasons}}", seasonsJson);
+
             var request = new GenerateContentRequest();
             request.AddInlineData(base64Image, mimeType);
             request.UseJsonMode<ItemModelAI>();
-            request.AddText(descriptionPrompt.Value);
+            request.AddText(finalPrompt);
+
 
             return await _generativeModel.GenerateObjectAsync<ItemModelAI>(request);
         }

@@ -9,7 +9,7 @@ namespace SOPServer.API.Controllers
 {
     [Route("api/v1/outfits")]
     [ApiController]
-    [Authorize(Roles = "USER,STYLIST")]
+    [Authorize(Roles = "USER,STYLIST,ADMIN")]
     public class OutfitController : BaseController
     {
         private readonly IOutfitService _outfitService;

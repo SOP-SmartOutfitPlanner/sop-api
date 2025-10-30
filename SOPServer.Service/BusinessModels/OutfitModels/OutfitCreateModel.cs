@@ -13,5 +13,6 @@ namespace SOPServer.Service.BusinessModels.OutfitModels
     {
         public string? Name { get; set; }
         public string? Description { get; set; }
+        public List<long>? ItemIds { get; set; }
     }
 }

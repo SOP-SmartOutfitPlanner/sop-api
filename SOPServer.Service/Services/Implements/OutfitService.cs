@@ -178,6 +178,16 @@ namespace SOPServer.Service.Services.Implements
 
             if (model.ItemIds != null && model.ItemIds.Any())
             {
+                // Validate that all items exist
+                foreach (var itemId in model.ItemIds)
+                {
+                    var item = await _unitOfWork.ItemRepository.GetByIdAsync(itemId);
+                    if (item == null)
+                    {
+                        throw new NotFoundException($"Item with ID {itemId} not found");
+                    }
+                }
+
                 var sortedItemIds = model.ItemIds.OrderBy(id => id).ToList();
 
                 var existingOutfits = await _unitOfWork.OutfitRepository.ToPaginationIncludeAsync(
@@ -188,7 +198,7 @@ namespace SOPServer.Service.Services.Implements
                 foreach (var existingOutfit in existingOutfits)
                 {
                     var existingItemIds = existingOutfit.OutfitItems
-                        .Where(oi => oi.ItemId.HasValue)
+                        .Where(oi => oi.ItemId.HasValue && !oi.IsDeleted)
                         .Select(oi => oi.ItemId.Value)
                         .OrderBy(id => id)
                         .ToList();

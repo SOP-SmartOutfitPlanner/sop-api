@@ -160,5 +160,14 @@ namespace SOPServer.Service.Constants
         public const string AISETTING_UPDATE_SUCCESSFULLY = "AI setting update successfully";
         public const string AISETTING_DELETE_SUCCESSFULLY = "AI setting delete successfully";
 
+        // Job related messages
+        public const string GET_JOB_SUCCESS = "Get job successfully";
+        public const string GET_LIST_JOB_SUCCESS = "Get list job successfully";
+        public const string JOB_NOT_EXIST = "Job does not exist";
+        public const string JOB_ALREADY_EXIST = "Job with this name already exists";
+        public const string JOB_CREATE_SUCCESS = "Job created successfully";
+        public const string JOB_UPDATE_SUCCESS = "Job updated successfully";
+        public const string JOB_DELETE_SUCCESS = "Job deleted successfully";
+
     }
 }

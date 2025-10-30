@@ -108,9 +108,6 @@ public partial class SOPServerContext : DbContext
             entity.Property(e => e.Pattern)
                 .HasMaxLength(255)
                 .IsUnicode(true);
-            entity.Property(e => e.Tag)
-                .HasMaxLength(255)
-                .IsUnicode(true);
             entity.Property(e => e.WeatherSuitable)
                 .HasMaxLength(255)
                 .IsUnicode(true);

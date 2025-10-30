@@ -230,14 +230,14 @@ app.UseHttpsRedirection();
 
 app.UseCors("app-cors");
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 app.UseAuthentication();
+
+app.UseMiddleware<AuthenHandlingMiddleware>();
 
 app.UseAuthorization();
 
 app.MapControllers();
-
-app.UseMiddleware<ExceptionHandlingMiddleware>();
-
-app.UseMiddleware<AuthenHandlingMiddleware>();
 
 app.Run();

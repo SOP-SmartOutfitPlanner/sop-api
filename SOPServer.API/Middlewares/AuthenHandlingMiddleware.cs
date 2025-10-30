@@ -1,8 +1,4 @@
-﻿using System;
-using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
-using System.Security.Claims;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,6 +8,11 @@ using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
+using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace SOPServer.API.Middlewares
 {
@@ -28,6 +29,17 @@ namespace SOPServer.API.Middlewares
 
         public async Task InvokeAsync(HttpContext context)
         {
+            var endpoint = context.GetEndpoint();
+            if (endpoint == null) { await _next(context); return; }
+
+            var authorizeMetadata = endpoint.Metadata.GetMetadata<IAuthorizeData>();
+            var allowAnonymousMetadata = endpoint.Metadata.GetMetadata<IAllowAnonymous>();
+
+            if (allowAnonymousMetadata != null || authorizeMetadata == null)
+            {
+                await _next(context); // Skip Redis for public endpoints
+                return;
+            }
             // Check Authorization header for Bearer token
             var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
             if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))

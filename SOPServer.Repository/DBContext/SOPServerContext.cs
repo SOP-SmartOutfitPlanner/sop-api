@@ -49,6 +49,8 @@ public partial class SOPServerContext : DbContext
     public virtual DbSet<PostHashtags> PostHashtags { get; set; }
     public virtual DbSet<OutfitItems> OutfitItems { get; set; }
     public virtual DbSet<Outfit> Outfits { get; set; }
+    public virtual DbSet<OutfitUsageHistory> OutfitUsageHistories { get; set; }
+    public virtual DbSet<UserOccasion> UserOccasions { get; set; }
     public virtual DbSet<AISetting> AISettings { get; set; }
 
 
@@ -104,9 +106,6 @@ public partial class SOPServerContext : DbContext
                 .HasMaxLength(255)
                 .IsUnicode(true);
             entity.Property(e => e.Pattern)
-                .HasMaxLength(255)
-                .IsUnicode(true);
-            entity.Property(e => e.Tag)
                 .HasMaxLength(255)
                 .IsUnicode(true);
             entity.Property(e => e.WeatherSuitable)
@@ -335,6 +334,106 @@ public partial class SOPServerContext : DbContext
             entity.HasOne(d => d.Hashtag).WithMany(p => p.PostHashtags)
                 .HasForeignKey(d => d.HashtagId)
                 .HasConstraintName("FK_PostHashtags_Hashtag");
+        });
+
+        modelBuilder.Entity<Outfit>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Outfit__3214EC07");
+
+            entity.ToTable("Outfit");
+
+            entity.Property(e => e.IsFavorite)
+                .HasDefaultValue(false);
+
+            entity.Property(e => e.IsSaved)
+                .HasDefaultValue(false);
+
+            entity.Property(e => e.CreatedBy)
+                .HasConversion<int>();
+
+            entity.HasOne(d => d.User).WithMany(p => p.Outfits)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_Outfit_User");
+        });
+
+        modelBuilder.Entity<OutfitItems>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__OutfitIt__3214EC07");
+
+            entity.ToTable("OutfitItems");
+
+            entity.HasOne(d => d.Outfit).WithMany(p => p.OutfitItems)
+                .HasForeignKey(d => d.OutfitId)
+                .HasConstraintName("FK_OutfitItems_Outfit");
+
+            entity.HasOne(d => d.Item).WithMany(p => p.OutfitItems)
+                .HasForeignKey(d => d.ItemId)
+                .HasConstraintName("FK_OutfitItems_Item");
+        });
+
+        modelBuilder.Entity<OutfitUsageHistory>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__OutfitUs__3214EC07");
+
+            entity.ToTable("OutfitUsageHistory");
+
+            entity.Property(e => e.DateUsed)
+                .HasColumnType("datetime2");
+
+            entity.Property(e => e.CreatedBy)
+                .HasConversion<int>();
+
+            entity.HasOne(d => d.User).WithMany(p => p.OutfitUsageHistories)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_OutfitUsageHistory_User")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Outfit).WithMany(p => p.OutfitUsageHistories)
+                .HasForeignKey(d => d.OutfitId)
+                .HasConstraintName("FK_OutfitUsageHistory_Outfit")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.UserOccasion).WithMany(p => p.OutfitUsageHistories)
+                .HasForeignKey(d => d.UserOccassionId)
+                .HasConstraintName("FK_OutfitUsageHistory_UserOccasion")
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<UserOccasion>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__UserOcca__3214EC07");
+
+            entity.ToTable("UserOccasion");
+
+            entity.Property(e => e.Name)
+                .HasMaxLength(255)
+                .IsUnicode(true);
+
+            entity.Property(e => e.Description)
+                .HasMaxLength(500)
+                .IsUnicode(true);
+
+            entity.Property(e => e.DateOccasion)
+                .HasColumnType("datetime2");
+
+            entity.Property(e => e.StartTime)
+                .HasColumnType("datetime2");
+
+            entity.Property(e => e.EndTime)
+                .HasColumnType("datetime2");
+
+            entity.Property(e => e.WeatherSnapshot)
+                .HasConversion<int>();
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserOccasions)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_UserOccasion_User")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Occasion).WithMany(p => p.UserOccasions)
+                .HasForeignKey(d => d.OccasionId)
+                .HasConstraintName("FK_UserOccasion_Occasion")
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<AISetting>(entity =>

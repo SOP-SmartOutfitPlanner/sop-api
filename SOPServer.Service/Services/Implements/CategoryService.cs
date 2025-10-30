@@ -38,7 +38,7 @@ namespace SOPServer.Service.Services.Implements
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.GET_LIST_ITEM_SUCCESS,
+                Message = MessageConstants.GET_LIST_CATEGORY_SUCCESS,
                 Data = new ModelPaging
                 {
                     Data = models,

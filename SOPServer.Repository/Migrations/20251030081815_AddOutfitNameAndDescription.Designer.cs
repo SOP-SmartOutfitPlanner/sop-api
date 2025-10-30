@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SOPServer.Repository.DBContext;
 
@@ -11,9 +12,11 @@ using SOPServer.Repository.DBContext;
 namespace SOPServer.Repository.Migrations
 {
     [DbContext(typeof(SOPServerContext))]
-    partial class SOPServerContextModelSnapshot : ModelSnapshot
+    [Migration("20251030081815_AddOutfitNameAndDescription")]
+    partial class AddOutfitNameAndDescription
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -42,16 +45,6 @@ namespace SOPServer.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("IsFavorite")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<bool>("IsSaved")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
@@ -60,6 +53,11 @@ namespace SOPServer.Repository.Migrations
 
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
+
+                    b.Property<bool>("isFavorite")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.HasKey("Id")
                         .HasName("PK__Outfit__3214EC07");
@@ -225,6 +223,11 @@ namespace SOPServer.Repository.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("Pattern")
+                        .HasMaxLength(255)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Tag")
                         .HasMaxLength(255)
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(255)");

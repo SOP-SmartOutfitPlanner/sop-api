@@ -168,6 +168,19 @@ builder.Services
                     ctx.Fail("Invalid token claims");
                     return;
                 }
+                
+                // Log all claims for debugging
+                var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogInformation("=== Token Claims ===");
+                if (ctx.Principal != null)
+                {
+                    foreach (var claim in ctx.Principal.Claims)
+                    {
+                        logger.LogInformation($"Claim Type: {claim.Type}, Value: {claim.Value}");
+                    }
+                }
+                logger.LogInformation("===================");
+                
                 var redis = ctx.HttpContext.RequestServices.GetRequiredService<IRedisService>();
                 var key = RedisKeyConstants.GetAccessTokenKey(long.Parse(userIdStr), jti);
                 var exists = await redis.ExistsAsync(key);
@@ -201,6 +214,26 @@ builder.Services
             },
             OnForbidden = async ctx =>
             {
+                var logger = ctx.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning("=== OnForbidden Event Triggered ===");
+                if (ctx.Principal != null)
+                {
+                    logger.LogWarning("User is authenticated");
+                    var roleClaim = ctx.Principal.FindFirst("role");
+                    logger.LogWarning($"Role claim: {roleClaim?.Value ?? "NULL"}");
+                    
+                    // Check all role-related claims
+                    foreach (var claim in ctx.Principal.Claims.Where(c => c.Type.ToLower().Contains("role")))
+                    {
+                        logger.LogWarning($"Role-related claim - Type: {claim.Type}, Value: {claim.Value}");
+                    }
+                }
+                else
+                {
+                    logger.LogWarning("User is NOT authenticated (Principal is null)");
+                }
+                logger.LogWarning("===================================");
+                
                 ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
                 ctx.Response.ContentType = "application/json";
 

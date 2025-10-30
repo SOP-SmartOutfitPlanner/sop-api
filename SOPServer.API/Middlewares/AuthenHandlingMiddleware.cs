@@ -3,6 +3,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -28,6 +29,22 @@ namespace SOPServer.API.Middlewares
 
         public async Task InvokeAsync(HttpContext context)
         {
+            // Check if the endpoint requires authorization
+            var endpoint = context.GetEndpoint();
+            if (endpoint != null)
+            {
+                var authorizeMetadata = endpoint.Metadata.GetMetadata<IAuthorizeData>();
+                var allowAnonymousMetadata = endpoint.Metadata.GetMetadata<IAllowAnonymous>();
+                
+                // Skip Redis token check if endpoint allows anonymous access
+                // or if no authorization is required
+                if (allowAnonymousMetadata != null || authorizeMetadata == null)
+                {
+                    await _next(context);
+                    return;
+                }
+            }
+
             // Check Authorization header for Bearer token
             var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
             if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))

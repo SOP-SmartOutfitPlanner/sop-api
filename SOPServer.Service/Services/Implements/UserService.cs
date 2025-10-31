@@ -519,12 +519,15 @@ namespace SOPServer.Service.Services.Implements
 
             _unitOfWork.UserRepository.UpdateAsync(existingUser);
             await _unitOfWork.SaveAsync();
+            var userProfile = _mapper.Map<UserProfileModel>(existingUser);
+
 
             return new BaseResponseModel
             {
                 StatusCode = 200,
                 Message = MessageConstants.ONBOARDING_SUCCESS,
-                Data = existingUser
+                Data = userProfile,
+
             };
         }
 

@@ -32,9 +32,9 @@ public partial class User : BaseEntity
 
     public Gender Gender { get; set; }
 
-    public string? PreferedColor { get; set; }
+    public List<string>? PreferedColor { get; set; }
 
-    public string? AvoidedColor { get; set; }
+    public List<string>? AvoidedColor { get; set; }
 
     public string? Location { get; set; }
 

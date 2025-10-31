@@ -33,6 +33,7 @@ namespace SOPServer.Repository.UnitOfWork
         private IJobRepository _jobRepository;
         private ILikePostRepository _likePostRepository;
         private ICommentPostRepository _commentPostRepository;
+        private IFollowerRepository _followerRepository;
 
 
 
@@ -182,6 +183,14 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _commentPostRepository ??= new CommentPostRepository(_context);
+            }
+        }
+
+        public IFollowerRepository FollowerRepository
+        {
+            get
+            {
+                return _followerRepository ??= new FollowerRepository(_context);
             }
         }
 

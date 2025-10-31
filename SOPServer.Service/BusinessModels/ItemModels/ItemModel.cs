@@ -79,7 +79,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
     public class ItemModelAI
     {
-        public List<ColorModel> Color { get; set; }
+        public List<ColorModel> Colors { get; set; }
         public string AiDescription { get; set; }
         public string WeatherSuitable { get; set; }
         public string Condition { get; set; }
@@ -93,7 +93,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
     public class ItemSummaryModel
     {
-        public List<ColorModel> Color { get; set; }
+        public List<ColorModel> Colors { get; set; }
         public string AiDescription { get; set; }
         public string WeatherSuitable { get; set; }
         public string Condition { get; set; }

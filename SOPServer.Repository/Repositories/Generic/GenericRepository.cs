@@ -157,5 +157,14 @@ namespace SOPServer.Repository.Repositories.Generic
             query = query.Where(e => !e.IsDeleted);
             return await query.FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
         }
+
+        /// <summary>
+        /// Gets queryable for advanced filtering and querying scenarios.
+        /// Returns non-deleted entities by default.
+        /// </summary>
+        public IQueryable<TEntity> GetQueryable()
+        {
+            return _dbSet.Where(e => !e.IsDeleted);
+        }
     }
 }

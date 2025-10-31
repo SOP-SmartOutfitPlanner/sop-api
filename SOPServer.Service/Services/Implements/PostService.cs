@@ -638,12 +638,6 @@ namespace SOPServer.Service.Services.Implements
             return orderedPosts;
         }
 
-        [Obsolete("Use GetNewsFeedAsync instead")]
-        public Task<BaseResponseModel> GetNewFeed(PaginationParameter paginationParameter, long userId)
-        {
-            return GetNewsFeedAsync(paginationParameter, userId);
-        }
-
         public async Task<BaseResponseModel> GetPostByUserIdAsync(PaginationParameter paginationParameter, long userId)
         {
             // Validate user exists

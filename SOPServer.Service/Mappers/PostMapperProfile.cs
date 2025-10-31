@@ -1,5 +1,7 @@
 using AutoMapper;
+using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
+using SOPServer.Service.BusinessModels.CategoryModels;
 using SOPServer.Service.BusinessModels.PostModels;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +28,10 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.IsLikedByUser, opt => opt.Ignore()) // Set manually in service
                 .ForMember(dest => dest.AuthorAvatarUrl, opt => opt.MapFrom(src => src.User != null ? src.User.AvtUrl : null))
                 .ForMember(dest => dest.RankingScore, opt => opt.Ignore()); // Set manually in service
+
+
+            CreateMap<Pagination<Post>, Pagination<PostModel>>()
+                .ConvertUsing<PaginationConverter<Post, PostModel>>();
         }
     }
 }

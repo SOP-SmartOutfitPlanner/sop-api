@@ -11,5 +11,6 @@ namespace SOPServer.Service.BusinessModels.LikePostModels
         public long Id { get; set; }
         public long PostId { get; set; }
         public long UserId { get; set; }
+        public bool IsDeleted { get; set; }
     }
 }

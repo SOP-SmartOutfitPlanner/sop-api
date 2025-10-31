@@ -235,13 +235,13 @@ public partial class SOPServerContext : DbContext
             entity.Property(e => e.PreferedColor)
                   .HasConversion(
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
-                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null))
+                    v => string.IsNullOrWhiteSpace(v) ? null : JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null))
                   .HasColumnType("nvarchar(max)");
 
             entity.Property(e => e.AvoidedColor)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
-                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null))
+                    v => string.IsNullOrWhiteSpace(v) ? null : JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null))
                 .HasColumnType("nvarchar(max)");
 
             entity.Property(e => e.AvtUrl)

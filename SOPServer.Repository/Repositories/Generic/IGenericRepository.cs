@@ -42,5 +42,11 @@ namespace SOPServer.Repository.Repositories.Generic
         Task<TEntity?> GetByIdIncludeAsync(long id,
             Func<IQueryable<TEntity>, IQueryable<TEntity>>? include = null,
             Expression<Func<TEntity, bool>> filter = null);
+
+        /// <summary>
+        /// Gets queryable for advanced filtering and querying scenarios.
+        /// Returns non-deleted entities by default.
+        /// </summary>
+        IQueryable<TEntity> GetQueryable();
     }
 }

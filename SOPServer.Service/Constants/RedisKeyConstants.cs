@@ -17,5 +17,13 @@ namespace SOPServer.Service.Constants
         public static string GetResetPasswordAttemptKey(string email) => $"reset_password_attempt:{email}";
         public static string GetResetTokenKey(string email) => $"reset_token:{email}";
         public static string GetUsedResetTokenKey(string resetToken) => $"used_reset_token:{resetToken}";
+
+        // Newsfeed-related keys (used by NewsfeedRedisHelper)
+        public static string GetFeedCandidatesKey(long userId) => $"feed:candidates:{userId}";
+        public static string GetPostMetricsKey(long postId) => $"post:{postId}:metrics";
+        public static string GetSeenPostsKey(long userId, string sessionId) => $"seen:{userId}:{sessionId}";
+        public static string GetFeedVersionKey(long userId) => $"feed:ver:{userId}";
+        public static string GetRankedWindowKey(long userId) => $"feed:window:{userId}";
+        public static string GetAuthorCountKey(long userId) => $"feed:author_count:{userId}";
     }
 }

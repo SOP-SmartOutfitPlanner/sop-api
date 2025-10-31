@@ -97,10 +97,10 @@ namespace SOPServer.Service.Services.Implements
                 include: query => query.Include(x => x.User)
                     .Include(x => x.OutfitItems)
                         .ThenInclude(oi => oi.Item),
-                filter: string.IsNullOrWhiteSpace(paginationParameter.Q)
+                filter: string.IsNullOrWhiteSpace(paginationParameter.Search)
                     ? null
-                    : x => (x.Name != null && x.Name.Contains(paginationParameter.Q)) ||
-                           (x.Description != null && x.Description.Contains(paginationParameter.Q)),
+                    : x => (x.Name != null && x.Name.Contains(paginationParameter.Search)) ||
+                           (x.Description != null && x.Description.Contains(paginationParameter.Search)),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
             var outfitModels = _mapper.Map<Pagination<OutfitModel>>(outfits);
@@ -139,9 +139,9 @@ namespace SOPServer.Service.Services.Implements
                     .Include(x => x.OutfitItems)
                         .ThenInclude(oi => oi.Item),
                 filter: x => x.UserId == userId &&
-                           (string.IsNullOrWhiteSpace(paginationParameter.Q) ||
-                            (x.Name != null && x.Name.Contains(paginationParameter.Q)) ||
-                            (x.Description != null && x.Description.Contains(paginationParameter.Q))) &&
+                           (string.IsNullOrWhiteSpace(paginationParameter.Search) ||
+                            (x.Name != null && x.Name.Contains(paginationParameter.Search)) ||
+                            (x.Description != null && x.Description.Contains(paginationParameter.Search))) &&
                            (!isFavorite.HasValue || x.IsFavorite == isFavorite.Value) &&
                            (!isSaved.HasValue || x.IsSaved == isSaved.Value),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));

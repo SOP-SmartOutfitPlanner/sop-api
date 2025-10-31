@@ -45,17 +45,33 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> UpdateItemAsync(long id, ItemCreateModel model)
         {
-            var entity = await _unitOfWork.ItemRepository.GetByIdAsync(id);
+            var entity = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(id,
+                    include: query => query
+               .Include(x => x.ItemOccasions)
+         .Include(x => x.ItemSeasons)
+            .Include(x => x.ItemStyles));
+
             if (entity == null) throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
 
-            if (await _unitOfWork.ItemRepository.ExistsByNameAsync(model.Name, model.UserId, id))
-                throw new BadRequestException(MessageConstants.ITEM_ALREADY_EXISTS);
+            //if (await _unitOfWork.ItemRepository.ExistsByNameAsync(model.Name, model.UserId, id))
+            //    throw new BadRequestException(MessageConstants.ITEM_ALREADY_EXISTS);
 
             _mapper.Map(model, entity);
             _unitOfWork.ItemRepository.UpdateAsync(entity);
             await _unitOfWork.SaveAsync();
 
-            var data = _mapper.Map<ItemModel>(entity);
+            // Update relationships if provided
+            await UpdateItemRelationshipsAsync(id, model.StyleIds, model.OccasionIds, model.SeasonIds);
+
+            var updatedItem = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(id,
+   include: query => query
+   .Include(x => x.Category)
+        .Include(x => x.User)
+   .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+      .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+          .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
+
+            var data = _mapper.Map<ItemModel>(updatedItem);
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
@@ -83,7 +99,16 @@ namespace SOPServer.Service.Services.Implements
             await _unitOfWork.ItemRepository.AddAsync(newItem);
             _unitOfWork.Save();
 
-            var newItemInclude = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(newItem.Id, include: query => query.Include(x => x.Category).Include(x => x.User));
+            // Add relationships if provided
+            await AddItemRelationshipsAsync(newItem.Id, model.StyleIds, model.OccasionIds, model.SeasonIds);
+
+            var newItemInclude = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(newItem.Id,
+                   include: query => query
+               .Include(x => x.Category)
+                  .Include(x => x.User)
+                .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+      .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+        .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
 
             return new BaseResponseModel
             {
@@ -790,7 +815,7 @@ namespace SOPServer.Service.Services.Implements
         {
             // Validate item exists
             var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(model.ItemId,
-                    include: query => query.Include(x => x.ItemSeasons));
+        include: query => query.Include(x => x.ItemSeasons));
 
             if (item == null)
             {
@@ -847,6 +872,179 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.REPLACE_SEASONS_FOR_ITEM_SUCCESS,
                 Data = response
             };
+        }
+
+        // Helper method to add relationships during item creation
+        private async Task AddItemRelationshipsAsync(long itemId, List<long> styleIds, List<long> occasionIds, List<long> seasonIds)
+        {
+            // Add styles
+            if (styleIds != null && styleIds.Any())
+            {
+                foreach (var styleId in styleIds)
+                {
+                    var style = await _unitOfWork.StyleRepository.GetByIdAsync(styleId);
+                    if (style == null)
+                    {
+                        throw new NotFoundException($"{MessageConstants.STYLE_NOT_EXIST}: {styleId}");
+                    }
+
+                    var itemStyle = new ItemStyle
+                    {
+                        ItemId = itemId,
+                        StyleId = styleId
+                    };
+                    await _unitOfWork.ItemStyleRepository.AddAsync(itemStyle);
+                }
+            }
+
+            // Add occasions
+            if (occasionIds != null && occasionIds.Any())
+            {
+                foreach (var occasionId in occasionIds)
+                {
+                    var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(occasionId);
+                    if (occasion == null)
+                    {
+                        throw new NotFoundException($"{MessageConstants.OCCASION_NOT_EXIST}: {occasionId}");
+                    }
+
+                    var itemOccasion = new ItemOccasion
+                    {
+                        ItemId = itemId,
+                        OccasionId = occasionId
+                    };
+                    await _unitOfWork.ItemOccasionRepository.AddAsync(itemOccasion);
+                }
+            }
+
+            // Add seasons
+            if (seasonIds != null && seasonIds.Any())
+            {
+                foreach (var seasonId in seasonIds)
+                {
+                    var season = await _unitOfWork.SeasonRepository.GetByIdAsync(seasonId);
+                    if (season == null)
+                    {
+                        throw new NotFoundException($"{MessageConstants.SEASON_NOT_EXIST}: {seasonId}");
+                    }
+
+                    var itemSeason = new ItemSeason
+                    {
+                        ItemId = itemId,
+                        SeasonId = seasonId
+                    };
+                    await _unitOfWork.ItemSeasonRepository.AddAsync(itemSeason);
+                }
+            }
+
+            if ((styleIds != null && styleIds.Any()) || (occasionIds != null && occasionIds.Any()) || (seasonIds != null && seasonIds.Any()))
+            {
+                await _unitOfWork.SaveAsync();
+            }
+        }
+
+        // Helper method to update relationships during item update
+        private async Task UpdateItemRelationshipsAsync(long itemId, List<long> styleIds, List<long> occasionIds, List<long> seasonIds)
+        {
+            var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(itemId,
+             include: query => query
+      .Include(x => x.ItemStyles)
+     .Include(x => x.ItemOccasions)
+    .Include(x => x.ItemSeasons));
+
+            if (item == null)
+            {
+                throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+            }
+
+            // Update styles if provided
+            if (styleIds != null)
+            {
+                // Soft delete existing styles
+                var existingItemStyles = item.ItemStyles.Where(ist => !ist.IsDeleted).ToList();
+                foreach (var existingItemStyle in existingItemStyles)
+                {
+                    _unitOfWork.ItemStyleRepository.SoftDeleteAsync(existingItemStyle);
+                }
+
+                // Add new styles
+                foreach (var styleId in styleIds)
+                {
+                    var style = await _unitOfWork.StyleRepository.GetByIdAsync(styleId);
+                    if (style == null)
+                    {
+                        throw new NotFoundException($"{MessageConstants.STYLE_NOT_EXIST}: {styleId}");
+                    }
+
+                    var itemStyle = new ItemStyle
+                    {
+                        ItemId = itemId,
+                        StyleId = styleId
+                    };
+                    await _unitOfWork.ItemStyleRepository.AddAsync(itemStyle);
+                }
+            }
+
+            // Update occasions if provided
+            if (occasionIds != null)
+            {
+                // Soft delete existing occasions
+                var existingItemOccasions = item.ItemOccasions.Where(io => !io.IsDeleted).ToList();
+                foreach (var existingItemOccasion in existingItemOccasions)
+                {
+                    _unitOfWork.ItemOccasionRepository.SoftDeleteAsync(existingItemOccasion);
+                }
+
+                // Add new occasions
+                foreach (var occasionId in occasionIds)
+                {
+                    var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(occasionId);
+                    if (occasion == null)
+                    {
+                        throw new NotFoundException($"{MessageConstants.OCCASION_NOT_EXIST}: {occasionId}");
+                    }
+
+                    var itemOccasion = new ItemOccasion
+                    {
+                        ItemId = itemId,
+                        OccasionId = occasionId
+                    };
+                    await _unitOfWork.ItemOccasionRepository.AddAsync(itemOccasion);
+                }
+            }
+
+            // Update seasons if provided
+            if (seasonIds != null)
+            {
+                // Soft delete existing seasons
+                var existingItemSeasons = item.ItemSeasons.Where(itemSeason => !itemSeason.IsDeleted).ToList();
+                foreach (var existingItemSeason in existingItemSeasons)
+                {
+                    _unitOfWork.ItemSeasonRepository.SoftDeleteAsync(existingItemSeason);
+                }
+
+                // Add new seasons
+                foreach (var seasonId in seasonIds)
+                {
+                    var season = await _unitOfWork.SeasonRepository.GetByIdAsync(seasonId);
+                    if (season == null)
+                    {
+                        throw new NotFoundException($"{MessageConstants.SEASON_NOT_EXIST}: {seasonId}");
+                    }
+
+                    var itemSeason = new ItemSeason
+                    {
+                        ItemId = itemId,
+                        SeasonId = seasonId
+                    };
+                    await _unitOfWork.ItemSeasonRepository.AddAsync(itemSeason);
+                }
+            }
+
+            if ((styleIds != null && styleIds.Any()) || (occasionIds != null && occasionIds.Any()) || (seasonIds != null && seasonIds.Any()))
+            {
+                await _unitOfWork.SaveAsync();
+            }
         }
     }
 }

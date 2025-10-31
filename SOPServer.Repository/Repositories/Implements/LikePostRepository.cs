@@ -19,7 +19,7 @@ namespace SOPServer.Repository.Repositories.Implements
         public async Task<LikePost?> GetByUserAndPost(long userId, long postId)
         {
             return await _context.LikePosts
-                .FirstOrDefaultAsync(lp => lp.UserId == userId && lp.PostId == postId && !lp.IsDeleted);
+                .FirstOrDefaultAsync(lp => lp.UserId == userId && lp.PostId == postId);
         }
     }
 }

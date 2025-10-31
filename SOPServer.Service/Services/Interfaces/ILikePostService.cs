@@ -11,6 +11,5 @@ namespace SOPServer.Service.Services.Interfaces
     public interface ILikePostService
     {
         Task<BaseResponseModel> CreateLikePost(CreateLikePostModel model);
-        Task<BaseResponseModel> DeleteLikePost(int id);
     }
 }

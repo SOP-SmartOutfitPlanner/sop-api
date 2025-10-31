@@ -1,4 +1,5 @@
-﻿using SOPServer.Service.BusinessModels.OccasionModels;
+﻿using SOPServer.Service.BusinessModels.CategoryModels;
+using SOPServer.Service.BusinessModels.OccasionModels;
 using SOPServer.Service.BusinessModels.SeasonModels;
 using SOPServer.Service.BusinessModels.StyleModels;
 using System;
@@ -75,6 +76,11 @@ namespace SOPServer.Service.BusinessModels.ItemModels
         public string Pattern { get; set; }
 
         public string Fabric { get; set; }
+
+        // Optional relationship IDs
+        public List<long> StyleIds { get; set; } = new List<long>();
+        public List<long> OccasionIds { get; set; } = new List<long>();
+        public List<long> SeasonIds { get; set; } = new List<long>();
     }
 
     public class ItemModelAI
@@ -85,6 +91,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
         public string Condition { get; set; }
         public string Pattern { get; set; }
         public string Fabric { get; set; }
+        public CategoryItemModel Category { get; set; }
         public List<StyleItemModel> Styles { get; set; }
         public List<OccasionItemModel> Occasions { get; set; }
         public List<SeasonItemModel> Seasons { get; set; }
@@ -100,6 +107,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
         public string Pattern { get; set; }
         public string Fabric { get; set; }
         public string ImageRemBgURL { get; set; }
+        public CategoryItemModel Category { get; set; }
         public List<StyleItemModel> Styles { get; set; }
         public List<OccasionItemModel> Occasions { get; set; }
         public List<SeasonItemModel> Seasons { get; set; }

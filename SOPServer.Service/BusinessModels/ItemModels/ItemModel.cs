@@ -79,30 +79,30 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
     public class ItemModelAI
     {
-        public ColorModel Color { get; set; }
+        public List<ColorModel> Colors { get; set; }
         public string AiDescription { get; set; }
         public string WeatherSuitable { get; set; }
         public string Condition { get; set; }
         public string Pattern { get; set; }
         public string Fabric { get; set; }
-        public StyleItemModel Style { get; set; }
-        public OccasionItemModel Occasion { get; set; }
-        public SeasonItemModel Season { get; set; }
+        public List<StyleItemModel> Styles { get; set; }
+        public List<OccasionItemModel> Occasions { get; set; }
+        public List<SeasonItemModel> Seasons { get; set; }
 
     }
 
     public class ItemSummaryModel
     {
-        public ColorModel Color { get; set; }
+        public List<ColorModel> Colors { get; set; }
         public string AiDescription { get; set; }
         public string WeatherSuitable { get; set; }
         public string Condition { get; set; }
         public string Pattern { get; set; }
         public string Fabric { get; set; }
         public string ImageRemBgURL { get; set; }
-        public StyleItemModel Style { get; set; }
-        public OccasionItemModel Occasion { get; set; }
-        public SeasonItemModel Season { get; set; }
+        public List<StyleItemModel> Styles { get; set; }
+        public List<OccasionItemModel> Occasions { get; set; }
+        public List<SeasonItemModel> Seasons { get; set; }
     }
     public class ColorModel
     {

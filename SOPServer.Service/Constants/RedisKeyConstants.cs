@@ -17,5 +17,11 @@ namespace SOPServer.Service.Constants
         public static string GetResetPasswordAttemptKey(string email) => $"reset_password_attempt:{email}";
         public static string GetResetTokenKey(string email) => $"reset_token:{email}";
         public static string GetUsedResetTokenKey(string resetToken) => $"used_reset_token:{resetToken}";
+        
+        // AI/Gemini cache keys
+        public const string AllStylesKey = "ai:styles:all";
+        public const string AllOccasionsKey = "ai:occasions:all";
+        public const string AllSeasonsKey = "ai:seasons:all";
+        public static string GetAIPromptKey(string promptType) => $"ai:prompt:{promptType}";
     }
 }

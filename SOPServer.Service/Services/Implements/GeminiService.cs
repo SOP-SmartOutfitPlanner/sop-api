@@ -31,11 +31,14 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly GenerativeModel _generativeModel;
         private readonly IMapper _mapper;
+        private readonly IRedisService _redisService;
 
         private readonly HashSet<string> _allowedMime = new(StringComparer.OrdinalIgnoreCase)
     {
         "image/jpeg", "image/png", "image/webp", "image/gif"
     };
+        private static readonly TimeSpan CacheTTL = TimeSpan.FromHours(1);
+
         private readonly string _promptValidation = @"
 You are a fashion image validator. Analyze the given image and return a JSON object that matches the following C# class:
 
@@ -95,10 +98,11 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
 ";
 
 
-        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IMapper mapper)
+        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IMapper mapper, IRedisService redisService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _redisService = redisService;
 
             var apiKey = GetAISettingValue(AISettingType.API_ITEM_ANALYZING);
             var modelId = GetAISettingValue(AISettingType.MODEL_ANALYZING);
@@ -129,16 +133,19 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
 
         public async Task<ItemModelAI?> ImageGenerateContent(string base64Image, string mimeType)
         {
-            var descriptionPrompt = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.DESCRIPTION_ITEM_PROMPT);
+            // Try to get cached data first, fetch from DB in parallel if not cached
+            var promptTask = GetOrFetchPromptAsync(AISettingType.DESCRIPTION_ITEM_PROMPT);
+            var stylesTask = GetOrFetchStylesAsync();
+            var occasionsTask = GetOrFetchOccasionsAsync();
+            var seasonsTask = GetOrFetchSeasonsAsync();
 
-            var styles = await _unitOfWork.StyleRepository.GetAllAsync();
-            var occasions = await _unitOfWork.OccasionRepository.GetAllAsync();
-            var seasons = await _unitOfWork.SeasonRepository.GetAllAsync();
+            // Wait for all data to be available
+            await Task.WhenAll(promptTask, stylesTask, occasionsTask, seasonsTask);
 
-            //get and map
-            var stylesModel = styles.Select(s => new StyleItemModel { Id = s.Id, Name = s.Name }).ToList();
-            var occasionsModel = occasions.Select(o => new OccasionItemModel { Id = o.Id, Name = o.Name }).ToList();
-            var seasonsModel = seasons.Select(s => new SeasonItemModel { Id = s.Id, Name = s.Name }).ToList();
+            var descriptionPromptValue = await promptTask;
+            var stylesModel = await stylesTask;
+            var occasionsModel = await occasionsTask;
+            var seasonsModel = await seasonsTask;
 
             //json rules
             var jsonOptions = new JsonSerializerOptions
@@ -152,7 +159,7 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
             var occasionsJson = JsonSerializer.Serialize(occasionsModel, jsonOptions);
             var seasonsJson = JsonSerializer.Serialize(seasonsModel, jsonOptions);
 
-            string finalPrompt = descriptionPrompt.Value;
+            string finalPrompt = descriptionPromptValue;
             finalPrompt = finalPrompt.Replace("{{styles}}", stylesJson);
             finalPrompt = finalPrompt.Replace("{{occasions}}", occasionsJson);
             finalPrompt = finalPrompt.Replace("{{seasons}}", seasonsJson);
@@ -173,16 +180,92 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
                 throw new NotFoundException(MessageConstants.MIMETYPE_NOT_VALID);
             }
 
-            var validatePrompt = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.VALIDATE_ITEM_PROMPT);
+            var validatePromptValue = await GetOrFetchPromptAsync(AISettingType.VALIDATE_ITEM_PROMPT);
 
             string? rawMessage = string.Empty;
 
             var request = new GenerateContentRequest();
-            request.AddText(validatePrompt.Value);
+            request.AddText(validatePromptValue);
             request.AddInlineData(base64Image, mimeType);
             request.UseJsonMode<ImageValidation>();
 
             return await _generativeModel.GenerateObjectAsync<ImageValidation>(request);
+        }
+
+        private async Task<T> GetOrCacheAsync<T>(string cacheKey, Func<Task<T>> fetchFunc, Func<T, bool> isValidFunc)
+        {
+            var cachedValue = await _redisService.GetAsync<T>(cacheKey);
+
+            if (cachedValue != null && isValidFunc(cachedValue))
+            {
+                return cachedValue;
+            }
+
+            var value = await fetchFunc();
+
+            await _redisService.SetAsync(cacheKey, value, CacheTTL);
+
+            return value;
+        }
+
+        private async Task<string> GetOrFetchPromptAsync(AISettingType promptType)
+        {
+            var cacheKey = RedisKeyConstants.GetAIPromptKey(promptType.ToString());
+
+            return await GetOrCacheAsync(
+                cacheKey,
+                async () =>
+                {
+                    var promptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(promptType);
+                    
+                    if (promptSetting == null || string.IsNullOrWhiteSpace(promptSetting.Value))
+                    {
+                        throw new InvalidOperationException($"AI Setting '{promptType}' not found or has no value configured");
+                    }
+
+                    return promptSetting.Value;
+                },
+                value => !string.IsNullOrEmpty(value)
+            );
+        }
+
+        private async Task<List<StyleItemModel>> GetOrFetchStylesAsync()
+        {
+            return await GetOrCacheAsync(
+                RedisKeyConstants.AllStylesKey,
+                async () =>
+                {
+                    var styles = await _unitOfWork.StyleRepository.GetAllAsync();
+                    return styles.Select(s => new StyleItemModel { Id = s.Id, Name = s.Name }).ToList();
+                },
+                list => list != null && list.Any()
+            );
+        }
+
+        private async Task<List<OccasionItemModel>> GetOrFetchOccasionsAsync()
+        {
+            return await GetOrCacheAsync(
+                RedisKeyConstants.AllOccasionsKey,
+                async () =>
+                {
+                    var occasions = await _unitOfWork.OccasionRepository.GetAllAsync();
+                    return occasions.Select(o => new OccasionItemModel { Id = o.Id, Name = o.Name }).ToList();
+                },
+                list => list != null && list.Any()
+            );
+        }
+
+        private async Task<List<SeasonItemModel>> GetOrFetchSeasonsAsync()
+        {
+            return await GetOrCacheAsync(
+                RedisKeyConstants.AllSeasonsKey,
+                async () =>
+                {
+                    var seasons = await _unitOfWork.SeasonRepository.GetAllAsync();
+                    return seasons.Select(s => new SeasonItemModel { Id = s.Id, Name = s.Name }).ToList();
+                },
+                list => list != null && list.Any()
+            );
         }
     }
 

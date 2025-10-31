@@ -31,6 +31,7 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly GenerativeModel _generativeModel;
         private readonly IMapper _mapper;
+        private readonly IRedisService _redisService;
 
         private readonly HashSet<string> _allowedMime = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -95,10 +96,11 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
 ";
 
 
-        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IMapper mapper)
+        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IMapper mapper, IRedisService redisService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _redisService = redisService;
 
             var apiKey = GetAISettingValue(AISettingType.API_ITEM_ANALYZING);
             var modelId = GetAISettingValue(AISettingType.MODEL_ANALYZING);
@@ -129,16 +131,19 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
 
         public async Task<ItemModelAI?> ImageGenerateContent(string base64Image, string mimeType)
         {
-            var descriptionPrompt = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.DESCRIPTION_ITEM_PROMPT);
+            // Try to get cached data first, fetch from DB in parallel if not cached
+            var promptTask = GetOrFetchPromptAsync(AISettingType.DESCRIPTION_ITEM_PROMPT);
+            var stylesTask = GetOrFetchStylesAsync();
+            var occasionsTask = GetOrFetchOccasionsAsync();
+            var seasonsTask = GetOrFetchSeasonsAsync();
 
-            var styles = await _unitOfWork.StyleRepository.GetAllAsync();
-            var occasions = await _unitOfWork.OccasionRepository.GetAllAsync();
-            var seasons = await _unitOfWork.SeasonRepository.GetAllAsync();
+            // Wait for all data to be available
+            await Task.WhenAll(promptTask, stylesTask, occasionsTask, seasonsTask);
 
-            //get and map
-            var stylesModel = styles.Select(s => new StyleItemModel { Id = s.Id, Name = s.Name }).ToList();
-            var occasionsModel = occasions.Select(o => new OccasionItemModel { Id = o.Id, Name = o.Name }).ToList();
-            var seasonsModel = seasons.Select(s => new SeasonItemModel { Id = s.Id, Name = s.Name }).ToList();
+            var descriptionPromptValue = await promptTask;
+            var stylesModel = await stylesTask;
+            var occasionsModel = await occasionsTask;
+            var seasonsModel = await seasonsTask;
 
             //json rules
             var jsonOptions = new JsonSerializerOptions
@@ -152,7 +157,7 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
             var occasionsJson = JsonSerializer.Serialize(occasionsModel, jsonOptions);
             var seasonsJson = JsonSerializer.Serialize(seasonsModel, jsonOptions);
 
-            string finalPrompt = descriptionPrompt.Value;
+            string finalPrompt = descriptionPromptValue;
             finalPrompt = finalPrompt.Replace("{{styles}}", stylesJson);
             finalPrompt = finalPrompt.Replace("{{occasions}}", occasionsJson);
             finalPrompt = finalPrompt.Replace("{{seasons}}", seasonsJson);
@@ -173,16 +178,89 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
                 throw new NotFoundException(MessageConstants.MIMETYPE_NOT_VALID);
             }
 
-            var validatePrompt = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.VALIDATE_ITEM_PROMPT);
+            var validatePromptValue = await GetOrFetchPromptAsync(AISettingType.VALIDATE_ITEM_PROMPT);
 
             string? rawMessage = string.Empty;
 
             var request = new GenerateContentRequest();
-            request.AddText(validatePrompt.Value);
+            request.AddText(validatePromptValue);
             request.AddInlineData(base64Image, mimeType);
             request.UseJsonMode<ImageValidation>();
 
             return await _generativeModel.GenerateObjectAsync<ImageValidation>(request);
+        }
+
+        private async Task<string> GetOrFetchPromptAsync(AISettingType promptType)
+        {
+            var cacheKey = RedisKeyConstants.GetAIPromptKey(promptType.ToString());
+            var cachedPrompt = await _redisService.GetAsync<string>(cacheKey);
+
+            if (!string.IsNullOrEmpty(cachedPrompt))
+            {
+                return cachedPrompt;
+            }
+
+            var promptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(promptType);
+            var promptValue = promptSetting?.Value ?? string.Empty;
+
+            // Cache for 1 hour
+            await _redisService.SetAsync(cacheKey, promptValue, TimeSpan.FromHours(1));
+
+            return promptValue;
+        }
+
+        private async Task<List<StyleItemModel>> GetOrFetchStylesAsync()
+        {
+            var cachedStyles = await _redisService.GetAsync<List<StyleItemModel>>(RedisKeyConstants.AllStylesKey);
+
+            if (cachedStyles != null && cachedStyles.Any())
+            {
+                return cachedStyles;
+            }
+
+            var styles = await _unitOfWork.StyleRepository.GetAllAsync();
+            var stylesModel = styles.Select(s => new StyleItemModel { Id = s.Id, Name = s.Name }).ToList();
+
+            // Cache for 1 hour
+            await _redisService.SetAsync(RedisKeyConstants.AllStylesKey, stylesModel, TimeSpan.FromHours(1));
+
+            return stylesModel;
+        }
+
+        private async Task<List<OccasionItemModel>> GetOrFetchOccasionsAsync()
+        {
+            var cachedOccasions = await _redisService.GetAsync<List<OccasionItemModel>>(RedisKeyConstants.AllOccasionsKey);
+
+            if (cachedOccasions != null && cachedOccasions.Any())
+            {
+                return cachedOccasions;
+            }
+
+            var occasions = await _unitOfWork.OccasionRepository.GetAllAsync();
+            var occasionsModel = occasions.Select(o => new OccasionItemModel { Id = o.Id, Name = o.Name }).ToList();
+
+            // Cache for 1 hour
+            await _redisService.SetAsync(RedisKeyConstants.AllOccasionsKey, occasionsModel, TimeSpan.FromHours(1));
+
+            return occasionsModel;
+        }
+
+        private async Task<List<SeasonItemModel>> GetOrFetchSeasonsAsync()
+        {
+            var cachedSeasons = await _redisService.GetAsync<List<SeasonItemModel>>(RedisKeyConstants.AllSeasonsKey);
+
+            if (cachedSeasons != null && cachedSeasons.Any())
+            {
+                return cachedSeasons;
+            }
+
+            var seasons = await _unitOfWork.SeasonRepository.GetAllAsync();
+            var seasonsModel = seasons.Select(s => new SeasonItemModel { Id = s.Id, Name = s.Name }).ToList();
+
+            // Cache for 1 hour
+            await _redisService.SetAsync(RedisKeyConstants.AllSeasonsKey, seasonsModel, TimeSpan.FromHours(1));
+
+            return seasonsModel;
         }
     }
 

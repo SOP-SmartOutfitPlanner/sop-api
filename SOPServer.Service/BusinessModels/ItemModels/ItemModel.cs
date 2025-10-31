@@ -75,6 +75,11 @@ namespace SOPServer.Service.BusinessModels.ItemModels
         public string Pattern { get; set; }
 
         public string Fabric { get; set; }
+
+        // Optional relationship IDs
+        public List<long> StyleIds { get; set; } = new List<long>();
+        public List<long> OccasionIds { get; set; } = new List<long>();
+        public List<long> SeasonIds { get; set; } = new List<long>();
     }
 
     public class ItemModelAI

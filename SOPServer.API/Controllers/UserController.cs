@@ -6,6 +6,8 @@ using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Services.Implements;
 using SOPServer.Service.Services.Interfaces;
+using SOPServer.Service.Utils;
+using System.Security.Claims;
 
 namespace SOPServer.API.Controllers
 {
@@ -35,6 +37,14 @@ namespace SOPServer.API.Controllers
             return await ValidateAndExecute(() => _userService.GetUserProfileByIdAsync(userId));
         }
 
+        /// <summary>
+        /// Submit onboarding information for first-time user setup
+        /// </summary>
+        /// <remarks>
+        /// **Auth Required** 
+        ///
+        /// **Note:** UserId is extracted from JWT token automatically
+        /// </remarks>
         [Authorize]
         [HttpPost("onboarding")]
         public async Task<IActionResult> Submit([FromBody] OnboardingRequestModel requestModel)

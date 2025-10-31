@@ -7,9 +7,12 @@ using System.Threading.Tasks;
 
 namespace SOPServer.API.Controllers
 {
+    /// <summary>
+    /// Outfit management endpoints for creating, viewing, updating, and managing user outfits
+    /// </summary>
     [Route("api/v1/outfits")]
     [ApiController]
-    [Authorize(Roles = "USER,STYLIST")]
+    [Authorize(Roles = "USER,STYLIST,ADMIN")]
     public class OutfitController : BaseController
     {
         private readonly IOutfitService _outfitService;
@@ -20,8 +23,16 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
-        /// Get all outfits with pagination and search (admin only)
+        /// Get all outfits with pagination and search
         /// </summary>
+        /// <remarks>
+        /// **Roles:** ADMIN only
+        ///
+        /// **Query Parameters:**
+        /// - `page-index`: Page number (default: 1)
+        /// - `page-size`: Items per page (default: 10)
+        /// - `q`: Search in name or description (optional)
+        /// </remarks>
         [HttpGet]
         [Authorize(Roles = "ADMIN")]
         public Task<IActionResult> GetAllOutfits([FromQuery] PaginationParameter paginationParameter)
@@ -30,8 +41,18 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
-        /// Get outfits by user with pagination and search (from authenticated user)
+        /// Get user's outfits with pagination, search, and filters
         /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Query Parameters:**
+        /// - `page-index`: Page number (default: 1)
+        /// - `page-size`: Items per page (default: 10)
+        /// - `q`: Search in name or description (optional)
+        /// - `is-favorite`: Filter by favorite status (optional)
+        /// - `is-saved`: Filter by saved status (optional)
+        /// </remarks>
         [HttpGet("user")]
         public Task<IActionResult> GetOutfitsByUser(
             [FromQuery] PaginationParameter paginationParameter,
@@ -44,8 +65,13 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
-        /// Get outfit by ID
+        /// Get outfit by ID with item details
         /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Note:** Users can only access their own outfits
+        /// </remarks>
         [HttpGet("{id}")]
         public Task<IActionResult> GetOutfitById(long id)
         {
@@ -57,6 +83,16 @@ namespace SOPServer.API.Controllers
         /// <summary>
         /// Create a new outfit
         /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Request Body:**
+        /// - `name`: Outfit name (optional)
+        /// - `description`: Outfit description (optional)
+        /// - `itemIds`: Array of item IDs (optional, prevents duplicates)
+        ///
+        /// **Note:** UserId is extracted from JWT token automatically
+        /// </remarks>
         [HttpPost]
         public Task<IActionResult> CreateOutfit([FromBody] OutfitCreateModel model)
         {
@@ -66,8 +102,17 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
-        /// Update an outfit
+        /// Update outfit name and description
         /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Request Body:**
+        /// - `name`: New outfit name (optional)
+        /// - `description`: New outfit description (optional)
+        ///
+        /// **Note:** Users can only update their own outfits
+        /// </remarks>
         [HttpPut("{id}")]
         public Task<IActionResult> UpdateOutfit(long id, [FromBody] OutfitUpdateModel model)
         {
@@ -77,8 +122,13 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
-        /// Delete an outfit
+        /// Delete outfit (soft delete)
         /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Note:** Users can only delete their own outfits
+        /// </remarks>
         [HttpDelete("{id}")]
         public Task<IActionResult> DeleteOutfit(long id)
         {
@@ -90,6 +140,9 @@ namespace SOPServer.API.Controllers
         /// <summary>
         /// Toggle outfit favorite status
         /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        /// </remarks>
         [HttpPut("{id}/favorite")]
         public Task<IActionResult> ToggleOutfitFavorite(long id)
         {
@@ -99,8 +152,11 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
-        /// Toggle outfit save status
+        /// Toggle outfit saved status
         /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        /// </remarks>
         [HttpPut("{id}/save")]
         public Task<IActionResult> ToggleOutfitSave(long id)
         {

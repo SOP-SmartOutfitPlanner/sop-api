@@ -11,6 +11,9 @@ namespace SOPServer.API
     {
         public static IServiceCollection AddInfractstructure(this IServiceCollection services, IConfiguration config)
         {
+            // ========== CONFIGURATION SETTINGS ==========
+            services.Configure<NewsfeedSettings>(config.GetSection("NewsfeedSettings"));
+
             // ========== UNIT OF WORK ==========
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 

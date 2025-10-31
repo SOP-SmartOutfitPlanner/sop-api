@@ -200,5 +200,10 @@ namespace SOPServer.Service.Constants
         public const string GET_FOLLOWING_COUNT_SUCCESS = "Get following count successfully";
         public const string CHECK_FOLLOWING_STATUS_SUCCESS = "Check following status successfully";
         public const string CANNOT_FOLLOW_YOURSELF = "You cannot follow yourself";
+
+        // Newsfeed related messages
+        public const string NEWSFEED_GET_SUCCESS = "Newsfeed retrieved successfully";
+        public const string NEWSFEED_EMPTY = "No posts available in your feed";
+        public const string NEWSFEED_REFRESH_SUCCESS = "Newsfeed refreshed successfully";
     }
 }

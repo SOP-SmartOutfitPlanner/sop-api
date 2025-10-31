@@ -15,6 +15,7 @@ namespace SOPServer.Service.BusinessModels.OutfitModels
         public bool IsSaved { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
+        public List<OutfitItemModel> Items { get; set; } = new List<OutfitItemModel>();
     }
 
     public class OutfitDetailedModel

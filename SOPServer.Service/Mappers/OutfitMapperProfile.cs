@@ -25,7 +25,11 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.IsFavorite, opt => opt.MapFrom(src => src.IsFavorite))
                 .ForMember(dest => dest.IsSaved, opt => opt.MapFrom(src => src.IsSaved))
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-                .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description));
+                .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
+                .ForMember(dest => dest.Items, opt => opt.MapFrom(src =>
+                    src.OutfitItems != null && src.OutfitItems.Any()
+                        ? src.OutfitItems.Where(oi => oi.Item != null && !oi.IsDeleted).Select(oi => oi.Item).ToList()
+                        : new List<Item>()));
 
             CreateMap<Outfit, OutfitDetailedModel>()
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))

@@ -50,5 +50,18 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => 
                 await _postService.GetNewsFeedAsync(paginationParameter, userId, sessionId));
         }
+
+        /// <summary>
+        /// Gets all posts by a specific user with pagination.
+        /// </summary>
+        /// <param name="paginationParameter">Pagination parameters (pageIndex, pageSize)</param>
+        /// <param name="userId">User ID whose posts to retrieve</param>
+        [HttpGet("user/{userId}")]
+        public Task<IActionResult> GetPostByUserId(
+            [FromQuery] PaginationParameter paginationParameter, 
+            long userId)
+        {
+            return ValidateAndExecute(async () => await _postService.GetPostByUserIdAsync(paginationParameter, userId));
+        }
     }
 }

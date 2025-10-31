@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -126,6 +126,7 @@ namespace SOPServer.Service.Services.Implements
                     .Include(p => p.PostImages)
                     .Include(p => p.PostHashtags)
                         .ThenInclude(ph => ph.Hashtag)
+                    .Include(p => p.LikePosts)
             );
 
             var postModel = _mapper.Map<PostModel>(createdPost);
@@ -166,6 +167,7 @@ namespace SOPServer.Service.Services.Implements
                     .Include(p => p.PostImages)
                     .Include(p => p.PostHashtags)
                         .ThenInclude(ph => ph.Hashtag)
+                    .Include(p => p.LikePosts)
             );
 
             if (post == null)
@@ -514,7 +516,7 @@ namespace SOPServer.Service.Services.Implements
                 .Select(s => (s.PostId, s.Score))
                 .ToList();
 
-            // Apply ?-greedy exploration (inject trending posts)
+            // Apply ε-greedy exploration (inject trending posts)
             if (_random.NextDouble() < _newsfeedSettings.ExploreRate && ranked.Count > 10)
             {
                 // Swap a few top posts with lower-ranked posts for exploration
@@ -640,6 +642,51 @@ namespace SOPServer.Service.Services.Implements
         public Task<BaseResponseModel> GetNewFeed(PaginationParameter paginationParameter, long userId)
         {
             return GetNewsFeedAsync(paginationParameter, userId);
+        }
+
+        public async Task<BaseResponseModel> GetPostByUserIdAsync(PaginationParameter paginationParameter, long userId)
+        {
+            // Validate user exists
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Get posts by userId with pagination and all related data
+            var posts = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query
+                    .Include(p => p.User)
+                    .Include(p => p.PostImages)
+                    .Include(p => p.PostHashtags)
+                        .ThenInclude(ph => ph.Hashtag)
+                    .Include(p => p.LikePosts),
+                filter: p => p.UserId == userId,
+                orderBy: q => q.OrderByDescending(p => p.CreatedDate)
+            );
+
+            // Map to PostModel
+            var postModels = _mapper.Map<Pagination<PostModel>>(posts);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_POST_BY_USER_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = postModels,
+                    MetaData = new
+                    {
+                        postModels.TotalCount,
+                        postModels.PageSize,
+                        postModels.CurrentPage,
+                        postModels.TotalPages,
+                        postModels.HasNext,
+                        postModels.HasPrevious
+                    }
+                }
+            };
         }
     }
 }

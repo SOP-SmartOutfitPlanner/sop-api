@@ -20,5 +20,6 @@ namespace SOPServer.Service.Services.Interfaces
         /// <param name="sessionId">Optional session ID for seen posts tracking</param>
         /// <returns>Paginated newsfeed with ranked posts</returns>
         Task<BaseResponseModel> GetNewsFeedAsync(PaginationParameter paginationParameter, long userId, string? sessionId = null);
+        Task<BaseResponseModel> GetPostByUserIdAsync(PaginationParameter paginationParameter, long userId);
     }
 }

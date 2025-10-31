@@ -1,21 +1,22 @@
-﻿using GenerativeAI;
+﻿using AutoMapper;
+using GenerativeAI;
 using GenerativeAI.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
+using SOPServer.Service.BusinessModels.CategoryModels;
 using SOPServer.Service.BusinessModels.GeminiModels;
 using SOPServer.Service.BusinessModels.ItemModels;
-using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.OccasionModels;
+using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.SeasonModels;
 using SOPServer.Service.BusinessModels.StyleModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
-using AutoMapper;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -134,11 +135,13 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
             var styles = await _unitOfWork.StyleRepository.GetAllAsync();
             var occasions = await _unitOfWork.OccasionRepository.GetAllAsync();
             var seasons = await _unitOfWork.SeasonRepository.GetAllAsync();
+            var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
 
             //get and map
-            var stylesModel = styles.Select(s => new StyleItemModel { Id = s.Id, Name = s.Name }).ToList();
-            var occasionsModel = occasions.Select(o => new OccasionItemModel { Id = o.Id, Name = o.Name }).ToList();
-            var seasonsModel = seasons.Select(s => new SeasonItemModel { Id = s.Id, Name = s.Name }).ToList();
+            var stylesModel = styles.Select(s => new StyleItemModel { Id = s.Id, Name = s.Name });
+            var occasionsModel = occasions.Select(o => new OccasionItemModel { Id = o.Id, Name = o.Name });
+            var seasonsModel = seasons.Select(s => new SeasonItemModel { Id = s.Id, Name = s.Name });
+            var categoryModel = categories.Select(c => new CategoryItemModel { Id = c.Id, Name = c.Name });
 
             //json rules
             var jsonOptions = new JsonSerializerOptions
@@ -151,11 +154,13 @@ Only return a valid JSON object. Do not include any explanations, comments, or e
             var stylesJson = JsonSerializer.Serialize(stylesModel, jsonOptions);
             var occasionsJson = JsonSerializer.Serialize(occasionsModel, jsonOptions);
             var seasonsJson = JsonSerializer.Serialize(seasonsModel, jsonOptions);
+            var categoriesJson = JsonSerializer.Serialize(categoryModel, jsonOptions);
 
             string finalPrompt = descriptionPrompt.Value;
             finalPrompt = finalPrompt.Replace("{{styles}}", stylesJson);
             finalPrompt = finalPrompt.Replace("{{occasions}}", occasionsJson);
             finalPrompt = finalPrompt.Replace("{{seasons}}", seasonsJson);
+            finalPrompt = finalPrompt.Replace("{{categories}}", categoriesJson);
 
             var request = new GenerateContentRequest();
             request.AddInlineData(base64Image, mimeType);

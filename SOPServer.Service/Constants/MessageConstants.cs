@@ -190,5 +190,20 @@ namespace SOPServer.Service.Constants
         public const string GET_LIST_COMMENT_SUCCESS = "Get list comment successfully";
         public const string PARENT_COMMENT_NOT_FOUND = "Parent comment not found";
         public const string COMMENT_CANNOT_REPLY_MORE_THAN_ONE_LEVEL = "Cannot reply to a reply comment";
+
+        // Follower related messages
+        public const string FOLLOW_USER_SUCCESS = "Follow user successfully";
+        public const string UNFOLLOW_USER_SUCCESS = "Unfollow user successfully";
+        public const string ALREADY_FOLLOWING = "You are already following this user";
+        public const string FOLLOWER_NOT_FOUND = "Follower relationship not found";
+        public const string GET_FOLLOWER_COUNT_SUCCESS = "Get follower count successfully";
+        public const string GET_FOLLOWING_COUNT_SUCCESS = "Get following count successfully";
+        public const string CHECK_FOLLOWING_STATUS_SUCCESS = "Check following status successfully";
+        public const string CANNOT_FOLLOW_YOURSELF = "You cannot follow yourself";
+
+        // Newsfeed related messages
+        public const string NEWSFEED_GET_SUCCESS = "Newsfeed retrieved successfully";
+        public const string NEWSFEED_EMPTY = "No posts available in your feed";
+        public const string NEWSFEED_REFRESH_SUCCESS = "Newsfeed refreshed successfully";
     }
 }

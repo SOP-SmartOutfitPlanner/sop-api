@@ -26,16 +26,5 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _likePostService.CreateLikePost(model));
         }
-
-        /// <summary>
-        /// Delete a like from a post (unlike)
-        /// </summary>
-        /// <param name="id">Like post ID</param>
-        /// <returns>Success message</returns>
-        [HttpDelete("{id}")]
-        public Task<IActionResult> DeleteLikePost(int id)
-        {
-            return ValidateAndExecute(async () => await _likePostService.DeleteLikePost(id));
-        }
     }
 }

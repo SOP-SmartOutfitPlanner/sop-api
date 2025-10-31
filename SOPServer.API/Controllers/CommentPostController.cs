@@ -50,5 +50,11 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _commentPostService.DeleteCommentPost(id));
         }
+
+        [HttpGet("post/{id}")]
+        public Task<IActionResult> GetCommentsParentByPostId([FromQuery] PaginationParameter paginationParameter, long id)
+        {
+            return ValidateAndExecute(async () => await _commentPostService.GetCommentParentByPostId(paginationParameter, id));
+        }
     }
 }

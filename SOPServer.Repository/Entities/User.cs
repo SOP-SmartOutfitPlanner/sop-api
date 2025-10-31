@@ -59,4 +59,8 @@ public partial class User : BaseEntity
     public virtual ICollection<LikePost> LikePosts { get; set; } = new List<LikePost>();
 
     public virtual ICollection<CommentPost> CommentPosts { get; set; } = new List<CommentPost>();
+
+    public virtual ICollection<Follower> Followers { get; set; } = new List<Follower>();
+
+    public virtual ICollection<Follower> Following { get; set; } = new List<Follower>();
 }

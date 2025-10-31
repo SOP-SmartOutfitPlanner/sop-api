@@ -62,6 +62,8 @@ public partial class SOPServerContext : DbContext
 
     public virtual DbSet<CommentPost> CommentPosts { get; set; }
 
+    public virtual DbSet<Follower> Followers { get; set; }
+
     //    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     //#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
     //        => optionsBuilder.UseSqlServer("Data Source=.;Initial Catalog=SOPServer;User ID=sa;Password=sa123456");
@@ -504,6 +506,27 @@ public partial class SOPServerContext : DbContext
                 .HasForeignKey(d => d.ParentCommentId)
                 .HasConstraintName("FK_CommentPost_ParentComment")
                 .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<Follower>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Follower__3214EC07");
+
+            entity.ToTable("Follower");
+
+            entity.HasOne(d => d.FollowerUser).WithMany(p => p.Followers)
+                .HasForeignKey(d => d.FollowerId)
+                .HasConstraintName("FK_Follower_FollowerUser")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.FollowingUser).WithMany(p => p.Following)
+                .HasForeignKey(d => d.FollowingId)
+                .HasConstraintName("FK_Follower_FollowingUser")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(e => new { e.FollowerId, e.FollowingId })
+                .IsUnique()
+                .HasDatabaseName("IX_Follower_FollowerId_FollowingId");
         });
 
         OnModelCreatingPartial(modelBuilder);

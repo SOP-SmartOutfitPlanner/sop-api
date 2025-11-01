@@ -34,6 +34,7 @@ namespace SOPServer.Repository.UnitOfWork
         private ILikePostRepository _likePostRepository;
         private ICommentPostRepository _commentPostRepository;
         private IFollowerRepository _followerRepository;
+        private IUserOccasionRepository _userOccasionRepository;
 
 
 
@@ -191,6 +192,14 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _followerRepository ??= new FollowerRepository(_context);
+            }
+        }
+
+        public IUserOccasionRepository UserOccasionRepository
+        {
+            get
+            {
+                return _userOccasionRepository ??= new UserOccasionRepository(_context);
             }
         }
 

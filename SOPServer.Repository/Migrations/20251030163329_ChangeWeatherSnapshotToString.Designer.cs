@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SOPServer.Repository.DBContext;
 
@@ -11,9 +12,11 @@ using SOPServer.Repository.DBContext;
 namespace SOPServer.Repository.Migrations
 {
     [DbContext(typeof(SOPServerContext))]
-    partial class SOPServerContextModelSnapshot : ModelSnapshot
+    [Migration("20251030163329_ChangeWeatherSnapshotToString")]
+    partial class ChangeWeatherSnapshotToString
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -179,41 +182,6 @@ namespace SOPServer.Repository.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("CommentPost", (string)null);
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.Follower", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("FollowerId")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("FollowingId")
-                        .HasColumnType("bigint");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id")
-                        .HasName("PK__Follower__3214EC07");
-
-                    b.HasIndex("FollowingId");
-
-                    b.HasIndex("FollowerId", "FollowingId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Follower_FollowerId_FollowingId");
-
-                    b.ToTable("Follower", (string)null);
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Hashtag", b =>
@@ -767,7 +735,9 @@ namespace SOPServer.Repository.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<string>("AvoidedColor")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(255)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("AvtUrl")
                         .HasMaxLength(255)
@@ -841,7 +811,9 @@ namespace SOPServer.Repository.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PreferedColor")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(255)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<int>("Role")
                         .HasColumnType("int");
@@ -998,27 +970,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("Post");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.Follower", b =>
-                {
-                    b.HasOne("SOPServer.Repository.Entities.User", "FollowerUser")
-                        .WithMany("Followers")
-                        .HasForeignKey("FollowerId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_Follower_FollowerUser");
-
-                    b.HasOne("SOPServer.Repository.Entities.User", "FollowingUser")
-                        .WithMany("Following")
-                        .HasForeignKey("FollowingId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_Follower_FollowingUser");
-
-                    b.Navigation("FollowerUser");
-
-                    b.Navigation("FollowingUser");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Item", b =>
@@ -1317,10 +1268,6 @@ namespace SOPServer.Repository.Migrations
             modelBuilder.Entity("SOPServer.Repository.Entities.User", b =>
                 {
                     b.Navigation("CommentPosts");
-
-                    b.Navigation("Followers");
-
-                    b.Navigation("Following");
 
                     b.Navigation("Items");
 

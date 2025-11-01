@@ -17,7 +17,7 @@ public partial class UserOccasion : BaseEntity
     public DateTime DateOccasion { get; set; }
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
-    public WeatherSnapshot? WeatherSnapshot { get; set; }
+    public string? WeatherSnapshot { get; set; }
     public virtual Occasion Occasion { get; set; }
 
     public virtual User User { get; set; }

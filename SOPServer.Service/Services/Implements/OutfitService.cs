@@ -2,7 +2,9 @@ using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Commons;
+using SOPServer.Repository.DBContext;
 using SOPServer.Repository.Entities;
+using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.ResultModels;
@@ -18,11 +20,13 @@ namespace SOPServer.Service.Services.Implements
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly SOPServerContext _context;
 
-        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper)
+        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper, SOPServerContext context)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _context = context;
         }
 
         public async Task<BaseResponseModel> GetOutfitByIdAsync(long id, long userId)
@@ -93,10 +97,10 @@ namespace SOPServer.Service.Services.Implements
                 include: query => query.Include(x => x.User)
                     .Include(x => x.OutfitItems)
                         .ThenInclude(oi => oi.Item),
-                filter: string.IsNullOrWhiteSpace(paginationParameter.Q)
+                filter: string.IsNullOrWhiteSpace(paginationParameter.Search)
                     ? null
-                    : x => (x.Name != null && x.Name.Contains(paginationParameter.Q)) ||
-                           (x.Description != null && x.Description.Contains(paginationParameter.Q)),
+                    : x => (x.Name != null && x.Name.Contains(paginationParameter.Search)) ||
+                           (x.Description != null && x.Description.Contains(paginationParameter.Search)),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
             var outfitModels = _mapper.Map<Pagination<OutfitModel>>(outfits);
@@ -135,9 +139,9 @@ namespace SOPServer.Service.Services.Implements
                     .Include(x => x.OutfitItems)
                         .ThenInclude(oi => oi.Item),
                 filter: x => x.UserId == userId &&
-                           (string.IsNullOrWhiteSpace(paginationParameter.Q) ||
-                            (x.Name != null && x.Name.Contains(paginationParameter.Q)) ||
-                            (x.Description != null && x.Description.Contains(paginationParameter.Q))) &&
+                           (string.IsNullOrWhiteSpace(paginationParameter.Search) ||
+                            (x.Name != null && x.Name.Contains(paginationParameter.Search)) ||
+                            (x.Description != null && x.Description.Contains(paginationParameter.Search))) &&
                            (!isFavorite.HasValue || x.IsFavorite == isFavorite.Value) &&
                            (!isSaved.HasValue || x.IsSaved == isSaved.Value),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
@@ -174,6 +178,16 @@ namespace SOPServer.Service.Services.Implements
 
             if (model.ItemIds != null && model.ItemIds.Any())
             {
+                // Validate that all items exist
+                foreach (var itemId in model.ItemIds)
+                {
+                    var item = await _unitOfWork.ItemRepository.GetByIdAsync(itemId);
+                    if (item == null)
+                    {
+                        throw new NotFoundException($"Item with ID {itemId} not found");
+                    }
+                }
+
                 var sortedItemIds = model.ItemIds.OrderBy(id => id).ToList();
 
                 var existingOutfits = await _unitOfWork.OutfitRepository.ToPaginationIncludeAsync(
@@ -184,7 +198,7 @@ namespace SOPServer.Service.Services.Implements
                 foreach (var existingOutfit in existingOutfits)
                 {
                     var existingItemIds = existingOutfit.OutfitItems
-                        .Where(oi => oi.ItemId.HasValue)
+                        .Where(oi => oi.ItemId.HasValue && !oi.IsDeleted)
                         .Select(oi => oi.ItemId.Value)
                         .OrderBy(id => id)
                         .ToList();
@@ -203,11 +217,27 @@ namespace SOPServer.Service.Services.Implements
                 Name = model.Name,
                 Description = model.Description,
                 IsFavorite = false,
+                CreatedBy = OutfitCreatedBy.USER,
                 IsSaved = false
             };
 
-            await _unitOfWork.OutfitRepository.AddAsync(outfit);
-            await _unitOfWork.SaveAsync();
+            await _context.Set<Outfit>().AddAsync(outfit);
+            await _context.SaveChangesAsync();
+
+            // Add items to OutfitItems
+            if (model.ItemIds != null && model.ItemIds.Any())
+            {
+                foreach (var itemId in model.ItemIds)
+                {
+                    var outfitItem = new OutfitItems
+                    {
+                        OutfitId = outfit.Id,
+                        ItemId = itemId
+                    };
+                    await _context.Set<OutfitItems>().AddAsync(outfitItem);
+                }
+                await _context.SaveChangesAsync();
+            }
 
             var createdOutfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
                 outfit.Id,
@@ -244,6 +274,55 @@ namespace SOPServer.Service.Services.Implements
 
             _unitOfWork.OutfitRepository.UpdateAsync(outfit);
             await _unitOfWork.SaveAsync();
+
+            // Update items if provided
+            if (model.ItemIds != null)
+            {
+                // Check for duplicate outfit with new items (only if items are being updated)
+                if (model.ItemIds.Any())
+                {
+                    var sortedItemIds = model.ItemIds.OrderBy(x => x).ToList();
+
+                    var existingOutfits = await _unitOfWork.OutfitRepository.ToPaginationIncludeAsync(
+                        new PaginationParameter { TakeAll = true },
+                        include: query => query.Include(o => o.OutfitItems),
+                        filter: o => o.UserId == userId && o.Id != id);
+
+                    foreach (var existingOutfit in existingOutfits)
+                    {
+                        var existingItemIds = existingOutfit.OutfitItems
+                            .Where(oi => oi.ItemId.HasValue)
+                            .Select(oi => oi.ItemId.Value)
+                            .OrderBy(x => x)
+                            .ToList();
+
+                        if (existingItemIds.Count == sortedItemIds.Count &&
+                            existingItemIds.SequenceEqual(sortedItemIds))
+                        {
+                            throw new BadRequestException(MessageConstants.OUTFIT_DUPLICATE_ITEMS);
+                        }
+                    }
+                }
+
+                // Remove existing items
+                var existingItems = await _context.Set<OutfitItems>()
+                    .Where(oi => oi.OutfitId == id)
+                    .ToListAsync();
+                _context.Set<OutfitItems>().RemoveRange(existingItems);
+
+                // Add new items
+                foreach (var itemId in model.ItemIds)
+                {
+                    var outfitItem = new OutfitItems
+                    {
+                        OutfitId = id,
+                        ItemId = itemId
+                    };
+                    await _context.Set<OutfitItems>().AddAsync(outfitItem);
+                }
+
+                await _context.SaveChangesAsync();
+            }
 
             var updatedOutfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
                 id,

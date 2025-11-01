@@ -11,12 +11,20 @@ namespace SOPServer.API.Configurations
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "SOP Server", Version = "v.1.0" });
 
-                // Include XML comments if available
-                var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
-                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-                if (File.Exists(xmlPath))
+                // Include XML comments from API project
+                var apiXmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var apiXmlPath = Path.Combine(AppContext.BaseDirectory, apiXmlFile);
+                if (File.Exists(apiXmlPath))
                 {
-                    c.IncludeXmlComments(xmlPath);
+                    c.IncludeXmlComments(apiXmlPath);
+                }
+
+                // Include XML comments from Service project (for models)
+                var serviceXmlFile = "SOPServer.Service.xml";
+                var serviceXmlPath = Path.Combine(AppContext.BaseDirectory, serviceXmlFile);
+                if (File.Exists(serviceXmlPath))
+                {
+                    c.IncludeXmlComments(serviceXmlPath);
                 }
 
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme

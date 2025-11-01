@@ -39,6 +39,9 @@ app.UseSwaggerConfiguration();
 // Redis Health Check
 await app.UseRedisHealthCheckAsync();
 
+// Qdrant Collection Initialization
+await app.UseQDrantInitializationAsync();
+
 // Middleware Pipeline (HTTPS, CORS, Authentication, Authorization, Exception Handling)
 app.UseMiddlewareConfiguration(CorsConfiguration.PolicyName);
 

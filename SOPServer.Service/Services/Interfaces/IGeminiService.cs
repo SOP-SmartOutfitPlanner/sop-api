@@ -14,5 +14,6 @@ namespace SOPServer.Service.Services.Interfaces
     {
         Task<ImageValidation> ImageValidation(string base64Image, string mimeType);
         Task<ItemModelAI?> ImageGenerateContent(string base64Image, string mimeType);
+        Task<List<float>?> EmbeddingText(string textEmbeeding);
     }
 }

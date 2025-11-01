@@ -26,6 +26,9 @@ namespace SOPServer.API.Configurations
             services.Configure<MinioSettings>(
                 configuration.GetSection("MinioStorage"));
 
+            services.Configure<QDrantClientSettings>(
+                configuration.GetSection("QDrantSettings"));
+
             // Add Infrastructure Services
             services.AddInfractstructure(configuration);
 

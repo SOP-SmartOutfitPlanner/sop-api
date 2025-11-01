@@ -100,21 +100,16 @@ namespace SOPServer.Service.Services.Implements
             };
 
             //mapped to json
-            var stylesJson = JsonSerializer.Serialize(stylesModel, jsonOptions);
-            var occasionsJson = JsonSerializer.Serialize(occasionsModel, jsonOptions);
-            var seasonsJson = JsonSerializer.Serialize(seasonsModel, jsonOptions);
-            var categoriesJson = JsonSerializer.Serialize(categoryModel, jsonOptions);
-
-            string finalPrompt = descriptionPrompt.Value;
-            finalPrompt = finalPrompt.Replace("{{styles}}", stylesJson);
-            finalPrompt = finalPrompt.Replace("{{occasions}}", occasionsJson);
-            finalPrompt = finalPrompt.Replace("{{seasons}}", seasonsJson);
-            finalPrompt = finalPrompt.Replace("{{categories}}", categoriesJson);
+            var stylesJson = JsonSerializer.Serialize(stylesModel, serializerOptions);
+            var occasionsJson = JsonSerializer.Serialize(occasionsModel, serializerOptions);
+            var seasonsJson = JsonSerializer.Serialize(seasonsModel, serializerOptions);
+            var categoriesJson = JsonSerializer.Serialize(categoryModel, serializerOptions);
 
             var promptText = descriptionPromptSetting.Value;
             promptText = promptText.Replace("{{styles}}", stylesJson);
             promptText = promptText.Replace("{{occasions}}", occasionsJson);
             promptText = promptText.Replace("{{seasons}}", seasonsJson);
+            promptText = promptText.Replace("{{categories}}", categoriesJson);
 
             var generateRequest = new GenerateContentRequest();
             generateRequest.AddInlineData(base64Image, mimeType);

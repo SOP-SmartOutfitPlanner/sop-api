@@ -44,10 +44,11 @@ namespace SOPServer.API.Controllers
         [HttpGet("feed")]
         public Task<IActionResult> GetNewsfeed(
             [FromQuery] PaginationParameter paginationParameter,
-            [FromQuery] long userId)
+            [FromQuery] long userId,
+            [FromQuery] string sessionId)
         {
             return ValidateAndExecute(async () => 
-                await _postService.GetNewsFeedAsync(paginationParameter, userId, null));
+                await _postService.GetNewsFeedAsync(paginationParameter, userId, sessionId));
         }
 
         /// <summary>

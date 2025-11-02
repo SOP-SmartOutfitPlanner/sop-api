@@ -439,7 +439,7 @@ public partial class SOPServerContext : DbContext
                 .HasColumnType("datetime2");
 
             entity.Property(e => e.WeatherSnapshot)
-                .HasConversion<int>();
+                .HasMaxLength(255);
 
             entity.HasOne(d => d.User).WithMany(p => p.UserOccasions)
                 .HasForeignKey(d => d.UserId)

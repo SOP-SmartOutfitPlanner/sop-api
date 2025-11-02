@@ -31,16 +31,36 @@ namespace SOPServer.API.Controllers
         /// **Query Parameters:**
         /// - `page-index`: Page number (default: 1)
         /// - `page-size`: Items per page (default: 10)
-        /// - `q`: Search in name or description (optional)
+        /// - `search`: Search in name or description (optional)
+        /// - `start-date`: Filter events from this date (optional, format: yyyy-MM-dd)
+        /// - `end-date`: Filter events until this date (optional, format: yyyy-MM-dd)
+        /// - `year`: Filter events by year (optional)
+        /// - `month`: Filter events by month (1-12, requires year parameter, optional)
+        /// - `upcoming-days`: Get events for next N days (optional, overrides other date filters)
+        /// - `today`: Get only today's events (optional, true/false)
         ///
         /// **Note:** Users can only see their own occasions
+        ///
+        /// **Examples:**
+        /// - Get events for November 2025: ?year=2025&amp;month=11
+        /// - Get events for next 7 days: ?upcoming-days=7
+        /// - Get today's events: ?today=true
+        /// - Get events in date range: ?start-date=2025-11-01&amp;end-date=2025-11-30
         /// </remarks>
         [HttpGet]
-        public Task<IActionResult> GetUserOccasions([FromQuery] PaginationParameter paginationParameter)
+        public Task<IActionResult> GetUserOccasions(
+            [FromQuery] PaginationParameter paginationParameter,
+            [FromQuery(Name = "start-date")] DateTime? startDate,
+            [FromQuery(Name = "end-date")] DateTime? endDate,
+            [FromQuery] int? year,
+            [FromQuery] int? month,
+            [FromQuery(Name = "upcoming-days")] int? upcomingDays,
+            [FromQuery] bool? today)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;
             long.TryParse(userIdClaim, out long userId);
-            return ValidateAndExecute(async () => await _userOccasionService.GetUserOccasionPaginationAsync(paginationParameter, userId));
+            return ValidateAndExecute(async () => await _userOccasionService.GetUserOccasionPaginationAsync(
+                paginationParameter, userId, startDate, endDate, year, month, upcomingDays, today));
         }
 
         /// <summary>

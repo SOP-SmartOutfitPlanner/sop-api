@@ -45,7 +45,7 @@ namespace SOPServer.API.Controllers
         public Task<IActionResult> GetNewsfeed(
             [FromQuery] PaginationParameter paginationParameter,
             [FromQuery] long userId,
-            [FromQuery] string sessionId)
+            [FromQuery] string? sessionId)
         {
             return ValidateAndExecute(async () => 
                 await _postService.GetNewsFeedAsync(paginationParameter, userId, sessionId));

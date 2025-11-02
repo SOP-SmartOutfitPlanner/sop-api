@@ -1,3 +1,4 @@
+using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.JobModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using System;
@@ -10,7 +11,7 @@ namespace SOPServer.Service.Services.Interfaces
 {
     public interface IJobService
     {
-        Task<BaseResponseModel> GetAllAsync(string? search = null);
+        Task<BaseResponseModel> GetAllAsync(PaginationParameter paginationParameter);
         Task<BaseResponseModel> GetByIdAsync(long id);
         Task<BaseResponseModel> CreateAsync(JobRequestModel model);
         Task<BaseResponseModel> UpdateAsync(long id, JobRequestModel model);

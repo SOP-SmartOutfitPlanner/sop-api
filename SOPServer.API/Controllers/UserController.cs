@@ -29,11 +29,21 @@ namespace SOPServer.API.Controllers
             return await ValidateAndExecute(() => _userService.GetUsers(paginationParameter));
         }
 
-        //[Authorize]
-        //todo add authorize too !!!
-        [HttpGet("profile/{userId}")]
-        public async Task<IActionResult> GetUserProfile(long userId)
+        /// <summary>
+        /// Get user profile information
+        /// </summary>
+        /// <remarks>
+        /// **Auth Required**
+        ///
+        /// **Note:** UserId is extracted from JWT token automatically
+        /// </remarks>
+        [Authorize]
+        [HttpGet("profile")]
+        public async Task<IActionResult> GetUserProfile()
         {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+
             return await ValidateAndExecute(() => _userService.GetUserProfileByIdAsync(userId));
         }
 

@@ -198,6 +198,12 @@ namespace SOPServer.Service.Services.Implements
             // Get posts from followed users within the last 30 days
             var lookbackDate = DateTime.UtcNow.AddDays(-30);
             
+            // Ranking constants
+            const double RECENCY_WEIGHT = 0.4;
+            const double ENGAGEMENT_WEIGHT = 0.6;
+            const int RECENCY_WINDOW_HOURS = 72;
+            const int COMMENT_MULTIPLIER = 2;
+
             // Query posts with ranking score calculation
             var postsQuery = _unitOfWork.PostRepository
                 .GetQueryable()
@@ -215,18 +221,16 @@ namespace SOPServer.Service.Services.Implements
                 {
                     Post = p,
                     // Simple ranking score: combine recency and engagement
-                    // Recency: hours since creation (newer = higher score)
-                    RecencyScore = (72 - EF.Functions.DateDiffHour(p.CreatedDate, DateTime.UtcNow)) / 72.0,
+                    // Recency: hours since creation (0-72 hours, normalized to 0-1)
+                    RecencyScore = (RECENCY_WINDOW_HOURS - EF.Functions.DateDiffHour(p.CreatedDate, DateTime.UtcNow)) / (double)RECENCY_WINDOW_HOURS,
                     // Engagement: likes + (comments * 2) - comments are valued more
                     EngagementScore = p.LikePosts.Count(lp => !lp.IsDeleted) + 
-                                    (p.CommentPosts.Count(cp => !cp.IsDeleted) * 2),
-                    // Combined ranking score
+                                    (p.CommentPosts.Count(cp => !cp.IsDeleted) * COMMENT_MULTIPLIER),
+                    // Combined ranking score (recency 40% + engagement 60%)
                     RankingScore = 
-                        // Recency weight (40%): favor recent posts within 3 days
-                        (0.4 * ((72 - EF.Functions.DateDiffHour(p.CreatedDate, DateTime.UtcNow)) / 72.0)) +
-                        // Engagement weight (60%): favor posts with more interactions
-                        (0.6 * (p.LikePosts.Count(lp => !lp.IsDeleted) + 
-                               (p.CommentPosts.Count(cp => !cp.IsDeleted) * 2)))
+                        (RECENCY_WEIGHT * ((RECENCY_WINDOW_HOURS - EF.Functions.DateDiffHour(p.CreatedDate, DateTime.UtcNow)) / (double)RECENCY_WINDOW_HOURS)) +
+                        (ENGAGEMENT_WEIGHT * (p.LikePosts.Count(lp => !lp.IsDeleted) + 
+                               (p.CommentPosts.Count(cp => !cp.IsDeleted) * COMMENT_MULTIPLIER)))
                 });
 
             // Get total count for pagination

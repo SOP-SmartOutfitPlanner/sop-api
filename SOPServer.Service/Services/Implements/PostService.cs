@@ -188,6 +188,7 @@ namespace SOPServer.Service.Services.Implements
             // Get list of users that the current user follows
             var followedUserIds = await _unitOfWork.FollowerRepository
                 .GetQueryable()
+                .AsNoTracking()
                 .Where(f => f.FollowerId == userId && !f.IsDeleted)
                 .Select(f => f.FollowingId)
                 .ToListAsync();
@@ -195,8 +196,9 @@ namespace SOPServer.Service.Services.Implements
             // Include user's own posts
             followedUserIds.Add(userId);
 
-            // Get posts from followed users within the last 30 days
-            var lookbackDate = DateTime.UtcNow.AddDays(-30);
+            // Use single DateTime reference for consistency
+            var currentTime = DateTime.UtcNow;
+            var lookbackDate = currentTime.AddDays(-30);
             
             // Ranking constants
             const double RECENCY_WEIGHT = 0.4;
@@ -204,62 +206,114 @@ namespace SOPServer.Service.Services.Implements
             const int RECENCY_WINDOW_HOURS = 72;
             const int COMMENT_MULTIPLIER = 2;
 
-            // Query posts with ranking score calculation
+            // Query posts with optimized projection - no heavy Includes
             var postsQuery = _unitOfWork.PostRepository
                 .GetQueryable()
+                .AsNoTracking()
                 .Where(p => !p.IsDeleted 
                     && p.UserId.HasValue
                     && followedUserIds.Contains(p.UserId.Value)
                     && p.CreatedDate >= lookbackDate)
-                .Include(p => p.User)
-                .Include(p => p.PostImages)
-                .Include(p => p.PostHashtags)
-                    .ThenInclude(ph => ph.Hashtag)
-                .Include(p => p.LikePosts)
-                .Include(p => p.CommentPosts)
                 .Select(p => new
                 {
-                    Post = p,
-                    // Simple ranking score: combine recency and engagement
-                    // Recency: hours since creation (0-72 hours, normalized to 0-1)
-                    RecencyScore = (RECENCY_WINDOW_HOURS - EF.Functions.DateDiffHour(p.CreatedDate, DateTime.UtcNow)) / (double)RECENCY_WINDOW_HOURS,
-                    // Engagement: likes + (comments * 2) - comments are valued more
-                    EngagementScore = p.LikePosts.Count(lp => !lp.IsDeleted) + 
-                                    (p.CommentPosts.Count(cp => !cp.IsDeleted) * COMMENT_MULTIPLIER),
-                    // Combined ranking score (recency 40% + engagement 60%)
-                    RankingScore = 
-                        (RECENCY_WEIGHT * ((RECENCY_WINDOW_HOURS - EF.Functions.DateDiffHour(p.CreatedDate, DateTime.UtcNow)) / (double)RECENCY_WINDOW_HOURS)) +
-                        (ENGAGEMENT_WEIGHT * (p.LikePosts.Count(lp => !lp.IsDeleted) + 
-                               (p.CommentPosts.Count(cp => !cp.IsDeleted) * COMMENT_MULTIPLIER)))
+                    // Post info
+                    PostId = p.Id,
+                    UserId = p.UserId ?? 0,
+                    Body = p.Body,
+                    CreatedDate = p.CreatedDate,
+                    UpdatedDate = p.UpdatedDate,
+                    
+                    // User info
+                    UserDisplayName = p.User != null ? p.User.DisplayName : "Unknown",
+                    AuthorAvatarUrl = p.User != null ? p.User.AvtUrl : null,
+                    
+                    // Summary data only - no full details
+                    LikeCount = p.LikePosts.Count(lp => !lp.IsDeleted),
+                    CommentCount = p.CommentPosts.Count(cp => !cp.IsDeleted),
+                    
+                    // Images
+                    Images = p.PostImages.Select(pi => pi.ImgUrl).ToList(),
+                    
+                    // Hashtags
+                    Hashtags = p.PostHashtags.Select(ph => ph.Hashtag != null ? ph.Hashtag.Name : "").ToList(),
+                    
+                    // Calculate hours difference for ranking
+                    HoursSinceCreation = EF.Functions.DateDiffHour(p.CreatedDate, currentTime)
                 });
 
             // Get total count for pagination
             var totalCount = await postsQuery.CountAsync();
 
-            // Apply sorting by ranking score and pagination
-            var rankedPosts = await postsQuery
-                .OrderByDescending(x => x.RankingScore)
-                .ThenByDescending(x => x.Post.CreatedDate)
-                .Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
-                .Take(paginationParameter.PageSize)
-                .ToListAsync();
+            // Materialize the query to apply ranking in memory
+            var posts = await postsQuery.ToListAsync();
+
+            // Calculate ranking scores with clamping and normalization
+            var rankedPosts = posts.Select(p =>
+            {
+                // Clamp recency score between 0 and 1 to prevent negative values
+                var hoursSinceCreation = p.HoursSinceCreation;
+                var recencyScore = Math.Max(0, Math.Min(1, 
+                    (RECENCY_WINDOW_HOURS - hoursSinceCreation) / (double)RECENCY_WINDOW_HOURS));
+                
+                // Normalize engagement score using log-scale to reduce dominance of viral posts
+                // Using log(1 + engagement) to handle zero engagement gracefully
+                var rawEngagement = p.LikeCount + (p.CommentCount * COMMENT_MULTIPLIER);
+                var normalizedEngagement = Math.Log(1 + rawEngagement);
+                
+                // Combined ranking score
+                var rankingScore = (RECENCY_WEIGHT * recencyScore) + (ENGAGEMENT_WEIGHT * normalizedEngagement);
+                
+                // Add deterministic shuffle based on sessionId if provided
+                if (!string.IsNullOrEmpty(sessionId))
+                {
+                    // Use hash of sessionId + postId for deterministic but unique ordering per session
+                    var hashCode = (sessionId + p.PostId).GetHashCode();
+                    var shuffleFactor = (hashCode % 100) / 10000.0; // Small adjustment: ±0.01
+                    rankingScore += shuffleFactor;
+                }
+                
+                return new
+                {
+                    Post = p,
+                    RankingScore = rankingScore
+                };
+            })
+            .OrderByDescending(x => x.RankingScore)
+            .ThenByDescending(x => x.Post.CreatedDate)
+            .Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
+            .Take(paginationParameter.PageSize)
+            .ToList();
 
             // Get user's liked post IDs for this batch
-            var postIds = rankedPosts.Select(x => x.Post.Id).ToList();
+            var postIds = rankedPosts.Select(x => x.Post.PostId).ToList();
             var likedPostIdsList = await _unitOfWork.LikePostRepository
                 .GetQueryable()
+                .AsNoTracking()
                 .Where(lp => lp.UserId == userId && postIds.Contains(lp.PostId) && !lp.IsDeleted)
                 .Select(lp => lp.PostId)
                 .ToListAsync();
             var likedPostIds = likedPostIdsList.ToHashSet();
 
-            // Build response with engagement data
+            // Build response with compact essential data
             var feedModels = rankedPosts.Select(x =>
             {
-                var model = _mapper.Map<NewsfeedPostModel>(x.Post);
-                model.RankingScore = x.RankingScore;
-                model.IsLikedByUser = likedPostIds.Contains(x.Post.Id);
-                return model;
+                var p = x.Post;
+                return new NewsfeedPostModel
+                {
+                    Id = p.PostId,
+                    UserId = p.UserId,
+                    UserDisplayName = p.UserDisplayName,
+                    Body = p.Body,
+                    CreatedAt = p.CreatedDate,
+                    UpdatedAt = p.UpdatedDate,
+                    Hashtags = p.Hashtags.Where(h => !string.IsNullOrEmpty(h)).ToList(),
+                    Images = p.Images.Where(i => !string.IsNullOrEmpty(i)).ToList(),
+                    LikeCount = p.LikeCount,
+                    CommentCount = p.CommentCount,
+                    IsLikedByUser = likedPostIds.Contains(p.PostId),
+                    AuthorAvatarUrl = p.AuthorAvatarUrl,
+                    RankingScore = x.RankingScore
+                };
             }).ToList();
 
             var pagination = new Pagination<NewsfeedPostModel>(

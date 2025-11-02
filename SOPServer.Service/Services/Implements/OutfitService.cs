@@ -80,7 +80,11 @@ namespace SOPServer.Service.Services.Implements
 
             var updatedOutfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
                 id,
-                include: query => query.Include(o => o.User));
+                include: query => query
+                    .Include(o => o.User)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.Category));
 
             return new BaseResponseModel
             {
@@ -96,7 +100,8 @@ namespace SOPServer.Service.Services.Implements
                 paginationParameter,
                 include: query => query.Include(x => x.User)
                     .Include(x => x.OutfitItems)
-                        .ThenInclude(oi => oi.Item),
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.Category),
                 filter: string.IsNullOrWhiteSpace(paginationParameter.Search)
                     ? null
                     : x => (x.Name != null && x.Name.Contains(paginationParameter.Search)) ||
@@ -137,7 +142,8 @@ namespace SOPServer.Service.Services.Implements
                 paginationParameter,
                 include: query => query.Include(x => x.User)
                     .Include(x => x.OutfitItems)
-                        .ThenInclude(oi => oi.Item),
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.Category),
                 filter: x => x.UserId == userId &&
                            (string.IsNullOrWhiteSpace(paginationParameter.Search) ||
                             (x.Name != null && x.Name.Contains(paginationParameter.Search)) ||
@@ -178,13 +184,19 @@ namespace SOPServer.Service.Services.Implements
 
             if (model.ItemIds != null && model.ItemIds.Any())
             {
-                // Validate that all items exist
+                // Validate that all items exist and belong to the user
                 foreach (var itemId in model.ItemIds)
                 {
                     var item = await _unitOfWork.ItemRepository.GetByIdAsync(itemId);
                     if (item == null)
                     {
                         throw new NotFoundException($"Item with ID {itemId} not found");
+                    }
+
+                    // Validate that the item belongs to the user
+                    if (item.UserId != userId)
+                    {
+                        throw new ForbiddenException($"Item with ID {itemId} does not belong to you. You can only create outfits with your own items.");
                     }
                 }
 
@@ -278,6 +290,25 @@ namespace SOPServer.Service.Services.Implements
             // Update items if provided
             if (model.ItemIds != null)
             {
+                // Validate that all items exist and belong to the user
+                if (model.ItemIds.Any())
+                {
+                    foreach (var itemId in model.ItemIds)
+                    {
+                        var item = await _unitOfWork.ItemRepository.GetByIdAsync(itemId);
+                        if (item == null)
+                        {
+                            throw new NotFoundException($"Item with ID {itemId} not found");
+                        }
+
+                        // Validate that the item belongs to the user
+                        if (item.UserId != userId)
+                        {
+                            throw new ForbiddenException($"Item with ID {itemId} does not belong to you. You can only use your own items in outfits.");
+                        }
+                    }
+                }
+
                 // Check for duplicate outfit with new items (only if items are being updated)
                 if (model.ItemIds.Any())
                 {
@@ -386,7 +417,11 @@ namespace SOPServer.Service.Services.Implements
 
             var updatedOutfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
                 id,
-                include: query => query.Include(o => o.User));
+                include: query => query
+                    .Include(o => o.User)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.Category));
 
             return new BaseResponseModel
             {

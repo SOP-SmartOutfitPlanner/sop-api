@@ -28,6 +28,7 @@ namespace SOPServer.Repository.UnitOfWork
         ILikePostRepository LikePostRepository { get; }
         ICommentPostRepository CommentPostRepository { get; }
         IFollowerRepository FollowerRepository { get; }
+        IUserOccasionRepository UserOccasionRepository { get; }
 
 
         int Save();

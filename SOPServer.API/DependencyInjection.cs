@@ -41,6 +41,10 @@ namespace SOPServer.API
 
             services.AddScoped<IItemOccasionRepository, ItemOccasionRepository>();
 
+            // ========== USER OCCASION MANAGEMENT ==========
+            services.AddScoped<IUserOccasionRepository, UserOccasionRepository>();
+            services.AddScoped<IUserOccasionService, UserOccasionService>();
+
             // ========== SEASON MANAGEMENT ==========
             services.AddScoped<ISeasonRepository, SeasonRepository>();
             services.AddScoped<ISeasonService, SeasonService>();

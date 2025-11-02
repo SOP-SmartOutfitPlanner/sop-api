@@ -1,4 +1,5 @@
 using AutoMapper;
+using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Service.BusinessModels.JobModels;
 using System;
@@ -15,6 +16,9 @@ namespace SOPServer.Service.Mappers
         {
             CreateMap<Job, JobModel>().ReverseMap();
             CreateMap<JobRequestModel, Job>();
+
+            CreateMap<Pagination<Job>, Pagination<JobModel>>()
+                .ConvertUsing<PaginationConverter<Job, JobModel>>();
         }
     }
 }

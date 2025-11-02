@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.JobModels;
 using SOPServer.Service.Services.Interfaces;
 
@@ -18,9 +19,9 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpGet]
-        public Task<IActionResult> GetAll([FromQuery] string? q = null)
+        public Task<IActionResult> GetAll([FromQuery] PaginationParameter paginationParameter)
         {
-            return ValidateAndExecute(async () => await _jobService.GetAllAsync(q));
+            return ValidateAndExecute(async () => await _jobService.GetAllAsync(paginationParameter));
         }
 
         [HttpGet("{id:long}")]

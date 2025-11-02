@@ -198,6 +198,15 @@ namespace SOPServer.Service.Constants
         public const string ALREADY_FOLLOWING = "You are already following this user";
         public const string FOLLOWER_NOT_FOUND = "Follower relationship not found";
         public const string GET_FOLLOWER_COUNT_SUCCESS = "Get follower count successfully";
+
+        // UserOccasion related messages
+        public const string USER_OCCASION_NOT_FOUND = "User occasion not found";
+        public const string USER_OCCASION_GET_SUCCESS = "User occasion retrieved successfully";
+        public const string USER_OCCASION_CREATE_SUCCESS = "User occasion created successfully";
+        public const string USER_OCCASION_UPDATE_SUCCESS = "User occasion updated successfully";
+        public const string USER_OCCASION_DELETE_SUCCESS = "User occasion deleted successfully";
+        public const string GET_LIST_USER_OCCASION_SUCCESS = "Get list user occasion successfully";
+        public const string USER_OCCASION_ACCESS_DENIED = "You don't have permission to access this occasion";
         public const string GET_FOLLOWING_COUNT_SUCCESS = "Get following count successfully";
         public const string CHECK_FOLLOWING_STATUS_SUCCESS = "Check following status successfully";
         public const string CANNOT_FOLLOW_YOURSELF = "You cannot follow yourself";

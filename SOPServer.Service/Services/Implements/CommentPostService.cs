@@ -102,5 +102,43 @@ namespace SOPServer.Service.Services.Implements
                 }
             };
         }
+
+        public async Task<BaseResponseModel> GetCommentParentByPostId(PaginationParameter paginationParameter, long postId)
+        {
+            var postExisted = await _unitOfWork.PostRepository.GetByIdAsync(postId);
+
+            if(postExisted == null)
+            {
+                throw new NotFoundException(MessageConstants.POST_NOT_FOUND);
+            }
+
+            var comments = await _unitOfWork.CommentPostRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query
+                    .Include(c => c.User),
+                filter: c => c.PostId == postId && c.ParentCommentId == null,
+                orderBy: q => q.OrderByDescending(c => c.CreatedDate));
+
+            var commentModels = _mapper.Map<Pagination<CommentPostModel>>(comments);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_COMMENT_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = commentModels,
+                    MetaData = new
+                    {
+                        commentModels.TotalCount,
+                        commentModels.PageSize,
+                        commentModels.CurrentPage,
+                        commentModels.TotalPages,
+                        commentModels.HasNext,
+                        commentModels.HasPrevious
+                    }
+                }
+            };
+        }
     }
 }

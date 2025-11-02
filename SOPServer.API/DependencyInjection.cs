@@ -13,6 +13,7 @@ namespace SOPServer.API
         {
             // ========== CONFIGURATION SETTINGS ==========
             services.Configure<NewsfeedSettings>(config.GetSection("NewsfeedSettings"));
+            services.Configure<QDrantClientSettings>(config.GetSection("QDrantSettings"));
 
             // ========== UNIT OF WORK ==========
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -86,6 +87,7 @@ namespace SOPServer.API
             services.AddScoped<IGeminiService, GeminiService>();
             services.AddScoped<IRedisService, RedisService>();
             services.AddScoped<IMinioService, MinioService>();
+            services.AddScoped<IQdrantService, QDrantService>();
 
             // ========== EMAIL SERVICES ==========
             services.AddScoped<IMailService, MailService>();

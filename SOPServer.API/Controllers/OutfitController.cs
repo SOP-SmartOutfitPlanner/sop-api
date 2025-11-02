@@ -164,5 +164,11 @@ namespace SOPServer.API.Controllers
             long.TryParse(userIdClaim, out long userId);
             return ValidateAndExecute(async () => await _outfitService.ToggleOutfitSaveAsync(id, userId));
         }
+
+        [HttpPost("suggestion")]
+        public Task<IActionResult> OutfitSuggestion()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

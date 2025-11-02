@@ -29,32 +29,33 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> CreateLikePost(CreateLikePostModel model)
         {
             var likeExists = await _unitOfWork.LikePostRepository.GetByUserAndPost(model.UserId, model.PostId);
-            if(likeExists != null)
+            
+            LikePost likePost;
+            string message;
+            
+            if (likeExists != null)
             {
-                throw new BadRequestException(MessageConstants.ALREADY_LIKE_POST);
+                // Toggle like status
+                likeExists.IsDeleted = !likeExists.IsDeleted;
+                _unitOfWork.LikePostRepository.UpdateAsync(likeExists);
+                likePost = likeExists;
+                message = likeExists.IsDeleted ? MessageConstants.UNLIKE_POST_SUCCESS : MessageConstants.LIKE_POST_SUCCESS;
             }
-
-            var newLike = _mapper.Map<LikePost>(model);
-            await _unitOfWork.LikePostRepository.AddAsync(newLike);
+            else
+            {
+                // Create new like
+                likePost = _mapper.Map<LikePost>(model);
+                await _unitOfWork.LikePostRepository.AddAsync(likePost);
+                message = MessageConstants.LIKE_POST_SUCCESS;
+            }
+            
             await _unitOfWork.SaveAsync();
+            
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status201Created,
-                Message = MessageConstants.LIKE_POST_SUCCESS,
-                Data = _mapper.Map<LikePostModel>(newLike)
-            };
-        }
-
-        public async Task<BaseResponseModel> DeleteLikePost(int id)
-        {
-            var likeExists = await _unitOfWork.LikePostRepository.GetByIdAsync(id);
-            _unitOfWork.LikePostRepository.SoftDeleteAsync(likeExists);
-            await _unitOfWork.SaveAsync();
-
-            return new BaseResponseModel
-            {
-                StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.UNLIKE_POST_SUCCESS
+                Message = message,
+                Data = _mapper.Map<LikePostModel>(likePost)
             };
         }
     }

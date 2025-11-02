@@ -84,7 +84,6 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_OCCASION_NOT_FOUND);
             }
 
-            // Check if the user occasion belongs to the current user
             if (userOccasion.UserId != userId)
             {
                 throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
@@ -106,7 +105,6 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
-            // Validate occasion if provided
             if (model.OccasionId.HasValue)
             {
                 var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(model.OccasionId.Value);
@@ -144,13 +142,11 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_OCCASION_NOT_FOUND);
             }
 
-            // Check if the user occasion belongs to the current user
             if (userOccasion.UserId != userId)
             {
                 throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
             }
 
-            // Validate occasion if provided
             if (model.OccasionId.HasValue)
             {
                 var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(model.OccasionId.Value);
@@ -160,7 +156,6 @@ namespace SOPServer.Service.Services.Implements
                 }
             }
 
-            // Update only provided fields
             if (!string.IsNullOrEmpty(model.Name))
                 userOccasion.Name = model.Name;
 

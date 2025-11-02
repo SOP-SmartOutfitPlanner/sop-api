@@ -27,7 +27,11 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> GetStylePaginationAsync(PaginationParameter paginationParameter)
         {
-            var styles = await _unitOfWork.StyleRepository.ToPaginationIncludeAsync(paginationParameter,
+            var styles = await _unitOfWork.StyleRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                filter: x => !x.IsDeleted &&
+                    (string.IsNullOrWhiteSpace(paginationParameter.Search) ||
+                     x.Name.Contains(paginationParameter.Search)),
                 orderBy: q => q.OrderByDescending(x => x.CreatedDate));
 
             var models = _mapper.Map<Pagination<StyleModel>>(styles);

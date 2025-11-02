@@ -23,14 +23,18 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly NewsfeedSettings _newsfeedSettings;
+        private readonly IRedisService _redisService;
 
         public PostService(
             IUnitOfWork unitOfWork, 
-            IMapper mapper, IOptions<NewsfeedSettings> newsfeedSettings)
+            IMapper mapper, 
+            IOptions<NewsfeedSettings> newsfeedSettings,
+            IRedisService redisService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _newsfeedSettings = newsfeedSettings.Value;
+            _redisService = redisService;
         }
 
         public async Task<BaseResponseModel> CreatePostAsync(PostCreateModel model)
@@ -105,30 +109,70 @@ namespace SOPServer.Service.Services.Implements
         {
             await ValidateUserExistsAsync(userId);
 
-            var followedUserIds = await GetFollowedUserIdsAsync(userId);
-            var currentTime = DateTime.UtcNow;
-            var lookbackDate = currentTime.AddDays(-_newsfeedSettings.LookbackDays);
+            // Generate sessionId if not provided
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                sessionId = Guid.NewGuid().ToString("N");
+            }
 
-            var postsQuery = BuildNewsfeedQuery(followedUserIds, lookbackDate, currentTime);
-            var totalCount = await postsQuery.CountAsync();
-            var posts = await postsQuery.ToListAsync();
+            var cacheKey = RedisKeyConstants.GetNewsfeedCacheKey(userId, sessionId);
+            
+            // Try to get cached data
+            var cachedData = await _redisService.GetAsync<NewsfeedCacheModel>(cacheKey);
+            
+            List<RankedPost> allRankedPosts;
+            int totalCount;
 
-            var rankedPosts = RankAndPaginatePosts(
-                posts, 
-                paginationParameter, 
-                sessionId,
-                _newsfeedSettings.RecencyWeight,
-                _newsfeedSettings.EngagementWeight,
-                _newsfeedSettings.RecencyWindowHour,
-                _newsfeedSettings.CommentMultiplier);
+            if (cachedData != null)
+            {
+                // Use cached data
+                allRankedPosts = cachedData.RankedPosts;
+                totalCount = cachedData.TotalCount;
+            }
+            else
+            {
+                // Fetch and rank posts
+                var followedUserIds = await GetFollowedUserIdsAsync(userId);
+                var currentTime = DateTime.UtcNow;
+                var lookbackDate = currentTime.AddDays(-_newsfeedSettings.LookbackDays);
 
-            var postIds = rankedPosts.Select(x => x.Post.PostId).ToList();
+                var postsQuery = BuildNewsfeedQuery(followedUserIds, lookbackDate, currentTime);
+                totalCount = await postsQuery.CountAsync();
+                var posts = await postsQuery.ToListAsync();
+
+                // Rank all posts (without pagination)
+                allRankedPosts = RankPosts(
+                    posts, 
+                    sessionId,
+                    _newsfeedSettings.RecencyWeight,
+                    _newsfeedSettings.EngagementWeight,
+                    _newsfeedSettings.RecencyWindowHour,
+                    _newsfeedSettings.CommentMultiplier);
+
+                // Cache the ranked posts for 30 minutes
+                var cacheModel = new NewsfeedCacheModel
+                {
+                    RankedPosts = allRankedPosts,
+                    TotalCount = totalCount,
+                    CachedAt = DateTime.UtcNow
+                };
+   
+                await _redisService.SetAsync(cacheKey, cacheModel, TimeSpan.FromMinutes(30));
+            }
+
+            // Paginate from cached/ranked posts
+            var pagedPosts = allRankedPosts
+                .Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
+                .Take(paginationParameter.PageSize)
+                .ToList();
+
+            var postIds = pagedPosts.Select(x => x.Post.PostId).ToList();
             var likedPostIds = await GetLikedPostIdsByUserAsync(userId, postIds);
 
-            var feedModels = BuildNewsfeedModels(rankedPosts, likedPostIds);
+            var feedModels = BuildNewsfeedModels(pagedPosts, likedPostIds);
             var pagination = CreatePagination(feedModels, totalCount, paginationParameter);
 
-            return CreateNewsfeedResponse(pagination, totalCount);
+            return CreateNewsfeedResponse(pagination, totalCount, sessionId);
         }
 
 
@@ -393,6 +437,38 @@ namespace SOPServer.Service.Services.Implements
             .ToList();
         }
 
+        private List<RankedPost> RankPosts(
+            List<PostProjection> posts,
+            string sessionId,
+            double recencyWeight,
+            double engagementWeight,
+            int recencyWindowHours,
+            int commentMultiplier)
+        {
+            return posts.Select(p =>
+            {
+                var rankingScore = CalculateRankingScore(
+                    p.HoursSinceCreation,
+                    p.LikeCount,
+                    p.CommentCount,
+                    p.PostId,
+                    sessionId,
+                    recencyWeight,
+                    engagementWeight,
+                    recencyWindowHours,
+                    commentMultiplier);
+
+                return new RankedPost
+                {
+                    Post = p,
+                    RankingScore = rankingScore
+                };
+            })
+            .OrderByDescending(x => x.RankingScore)
+            .ThenByDescending(x => x.Post.CreatedDate)
+            .ToList();
+        }
+
         private List<NewsfeedPostModel> BuildNewsfeedModels(List<RankedPost> rankedPosts, HashSet<long> likedPostIds)
         {
             return rankedPosts.Select(x =>
@@ -429,7 +505,7 @@ namespace SOPServer.Service.Services.Implements
                 paginationParameter.PageSize);
         }
 
-        private BaseResponseModel CreateNewsfeedResponse(Pagination<NewsfeedPostModel> pagination, int totalCount)
+        private BaseResponseModel CreateNewsfeedResponse(Pagination<NewsfeedPostModel> pagination, int totalCount, string sessionId)
         {
             return new BaseResponseModel
             {
@@ -445,7 +521,8 @@ namespace SOPServer.Service.Services.Implements
                         pagination.CurrentPage,
                         pagination.TotalPages,
                         pagination.HasNext,
-                        pagination.HasPrevious
+                        pagination.HasPrevious,
+                        SessionId = sessionId
                     }
                 }
             };

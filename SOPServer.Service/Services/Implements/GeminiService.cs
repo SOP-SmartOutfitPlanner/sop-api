@@ -33,16 +33,17 @@ namespace SOPServer.Service.Services.Implements
         private readonly GenerativeModel _generativeModel;
         private readonly EmbeddingModel _embeddingModel;
         private readonly IMapper _mapper;
-
+        private readonly QDrantClientSettings _qdrantClientSettings;
         private readonly HashSet<string> _allowedMime = new(StringComparer.OrdinalIgnoreCase)
         {
             "image/jpeg", "image/png", "image/webp", "image/gif"
         };
 
-        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IMapper mapper)
+        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IMapper mapper, IOptions<QDrantClientSettings> qdrantClientSettings)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _qdrantClientSettings = qdrantClientSettings.Value;
 
             // AI model for item analyzing
             var apiKeyAnalyzing = GetAiSettingValue(AISettingType.API_ITEM_ANALYZING);
@@ -138,9 +139,13 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<List<float>?> EmbeddingText(string textEmbeeding)
         {
-            var result = await _embeddingModel.EmbedContentAsync(textEmbeeding);
-            return result.Embedding.Values;
+            var request = new EmbedContentRequest
+            {
+                Content = new Content { Parts = { new Part { Text = textEmbeeding } } },
+                OutputDimensionality = int.Parse(_qdrantClientSettings.Size)
+            };
+            var response = await _embeddingModel.EmbedContentAsync(request);
+            return response.Embedding.Values;
         }
     }
-
 }

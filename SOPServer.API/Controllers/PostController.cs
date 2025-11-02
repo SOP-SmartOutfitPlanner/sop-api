@@ -36,19 +36,18 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
-        /// Gets personalized newsfeed for user with Facebook-like refresh dynamics.
+        /// Gets personalized newsfeed for user with simple ranking algorithm.
+        /// Posts are ranked by recency (40%) and engagement (60%).
         /// </summary>
         /// <param name="paginationParameter">Pagination parameters (pageIndex, pageSize)</param>
         /// <param name="userId">User ID requesting the feed</param>
-        /// <param name="sessionId">Optional session ID for seen posts tracking</param>
         [HttpGet("feed")]
         public Task<IActionResult> GetNewsfeed(
             [FromQuery] PaginationParameter paginationParameter,
-            [FromQuery] long userId,
-            [FromQuery] string? sessionId = null)
+            [FromQuery] long userId)
         {
             return ValidateAndExecute(async () => 
-                await _postService.GetNewsFeedAsync(paginationParameter, userId, sessionId));
+                await _postService.GetNewsFeedAsync(paginationParameter, userId, null));
         }
 
         /// <summary>

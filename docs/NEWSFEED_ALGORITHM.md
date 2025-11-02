@@ -1,10 +1,10 @@
-# Thu?t Toán Newsfeed Ranking
+# Thu?t Toï¿½n Newsfeed Ranking
 
 ## T?ng Quan
 
-H? th?ng newsfeed c?a SOP API s? d?ng thu?t toán ranking ph?c t?p, l?y c?m h?ng t? Facebook's EdgeRank, ?? cung c?p n?i dung ???c cá nhân hóa cho t?ng ng??i dùng. Thu?t toán k?t h?p nhi?u y?u t? nh? **th?i gian**, **m?c ?? t??ng tác**, **m?i quan h? ng??i dùng**, **ch?t l??ng n?i dung**, và **?a d?ng hóa**.
+H? th?ng newsfeed c?a SOP API s? d?ng thu?t toï¿½n ranking ??n gi?n, hi?u qu?, vï¿½ d? hi?u, phï¿½ h?p cho ??n ï¿½n t?t nghi?p. Thu?t toï¿½n k?t h?p hai y?u t? chï¿½nh: **th?i gian** (recency) vï¿½ **m?c ?? t??ng tï¿½c** (engagement) ?? cung c?p n?i dung ???c cï¿½ nhï¿½n hï¿½a cho t?ng ng??i dï¿½ng.
 
-## Ki?n Trúc T?ng Th?
+## Ki?n Trï¿½c T?ng Th?
 
 ```
 ???????????????????????????????????????????????????????????????????
@@ -13,573 +13,307 @@ H? th?ng newsfeed c?a SOP API s? d?ng thu?t toán ranking ph?c t?p, l?y c?m h?ng 
                               ?
                               ?
         ????????????????????????????????????????????
-        ?   Step 1: Get/Build Candidate Set       ?
-        ?   - Check Redis cache                    ?
-        ?   - If miss: Query DB for posts from     ?
-        ?     followed users + own posts           ?
-        ?   - Backfill with trending posts         ?
-        ?   - Calculate base scores                ?
-        ?   - Cache candidates in Redis ZSET       ?
+        ?   Step 1: Get Followed Users             ?
+        ?   - Query user's following list          ?
+        ?   - Include user's own ID                ?
         ????????????????????????????????????????????
                               ?
                               ?
         ????????????????????????????????????????????
-        ?   Step 2: Get Seen Posts                 ?
-        ?   - Retrieve seen post IDs from Redis    ?
-        ?     using userId + sessionId             ?
+        ?   Step 2: Query Posts with Ranking       ?
+        ?   - Get posts from followed users        ?
+        ?   - Posts within last 30 days            ?
+        ?   - Calculate ranking score:             ?
+        ?     Score = (0.4 ï¿½ Recency) +            ?
+        ?             (0.6 ï¿½ Engagement)           ?
+        ?   - Recency: based on age (0-72 hours)   ?
+        ?   - Engagement: likes + (comments ï¿½ 2)   ?
         ????????????????????????????????????????????
                               ?
                               ?
         ????????????????????????????????????????????
-        ?   Step 3: Filter Unseen Candidates       ?
-        ?   - Remove already seen posts            ?
+        ?   Step 3: Sort & Paginate                ?
+        ?   - Order by ranking score DESC          ?
+        ?   - Then by created date DESC            ?
+        ?   - Apply pagination (skip/take)         ?
         ????????????????????????????????????????????
                               ?
                               ?
         ????????????????????????????????????????????
-        ?   Step 4: Re-Rank Posts                  ?
-        ?   - Calculate composite scores with:     ?
-        ?     • Recency (time-decay)               ?
-        ?     • Engagement (likes, comments)       ?
-        ?     • Affinity (user-author relationship)?
-        ?     • Quality (author reputation)        ?
-        ?     • Diversity (author distribution)    ?
-        ?     • Negative feedback penalties        ?
-        ?     • Contextual boosts                  ?
-        ?   - Apply jitter for variance            ?
-        ?   - ?-greedy exploration                 ?
-        ????????????????????????????????????????????
-                              ?
-                              ?
-        ????????????????????????????????????????????
-        ?   Step 5: Apply Pagination               ?
-        ?   - Skip + Take based on page params     ?
-        ????????????????????????????????????????????
-                              ?
-                              ?
-        ????????????????????????????????????????????
-        ?   Step 6: Fetch Full Post Data           ?
-        ?   - Load complete post objects with      ?
-        ?     User, Images, Hashtags, etc.         ?
-        ????????????????????????????????????????????
-                              ?
-                              ?
-        ????????????????????????????????????????????
-        ?   Step 7: Enrich with User Context       ?
+        ?   Step 4: Enrich with User Context       ?
         ?   - Check if user liked each post        ?
+        ?   - Include ranking score for debugging  ?
         ????????????????????????????????????????????
                               ?
                               ?
         ????????????????????????????????????????????
-        ?   Step 8: Mark as Seen                   ?
-        ?   - Add post IDs to seen set in Redis    ?
-        ????????????????????????????????????????????
-                              ?
-                              ?
-        ????????????????????????????????????????????
-        ?   Step 9: Build Response                 ?
+        ?   Step 5: Build Response                 ?
         ?   - Map to NewsfeedPostModel             ?
         ?   - Include pagination metadata          ?
-        ?   - Return sessionId for continuity      ?
         ????????????????????????????????????????????
 ```
 
 ---
 
-## Chi Ti?t Các B??c
+## Chi Ti?t Cï¿½c B??c
 
-### Step 1: Get/Build Candidate Set
+### Step 1: Get Followed Users
 
-**M?c ?ích:** Thu th?p t?p h?p các bài post có kh? n?ng hi?n th? cho ng??i dùng.
-
-**Quy trình:**
-
-1. **Ki?m tra Redis cache:**
-   - Key: `feed:candidates:{userId}`
-   - N?u t?n t?i ? tr? v? danh sách candidates t? cache
-   - N?u không ? xây d?ng candidate set m?i
-
-2. **Xây d?ng candidate set m?i:**
-   ```csharp
-   // L?y danh sách ng??i dùng ???c follow
-   var followedUserIds = await _unitOfWork.FollowerRepository
-       .GetQueryable()
-       .Where(f => f.FollowerId == userId && !f.IsDeleted)
-       .Select(f => f.FollowingId)
-       .ToListAsync();
-   
-   // Thêm chính userId vào danh sách
-   followedUserIds.Add(userId);
-   
-   // L?y posts trong kho?ng th?i gian lookback
-   var lookbackDate = DateTime.UtcNow.AddDays(-CandidateLookbackDays);
-   var posts = await _unitOfWork.PostRepository
-       .GetQueryable()
-       .Where(p => !p.IsDeleted 
-           && p.UserId.HasValue
-           && followedUserIds.Contains(p.UserId.Value)
-           && p.CreatedDate >= lookbackDate)
-       .Include(p => p.LikePosts)
-       .Include(p => p.CommentPosts)
-       .OrderByDescending(p => p.CreatedDate)
-       .Take(MaxCandidateFetch)
-       .ToListAsync();
-   ```
-
-3. **Tính base score cho m?i post:**
-   ```
-   BaseScore = (Wr × Recency) + (We × Engagement)
-   
-   Recency = exp(-? × age_hours)
-   Engagement = ?×likes + ?×comments + ?×reshares
-   ```
-
-4. **Cache metrics vào Redis:**
-   - Key: `post:{postId}:metrics`
-   - L?u: likes, comments, reshares, authorId, createdAt
-   - TTL: `MetricsCacheTTL` phút
-
-5. **Backfill v?i trending posts:**
-   - N?u `candidates.Count < MinCandidates`
-   - L?y thêm posts có engagement cao trong 3 ngày g?n ?ây
-   - Lo?i tr? posts ?ã có trong candidate set
-
-6. **L?u candidates vào Redis:**
-   - Key: `feed:candidates:{userId}`
-   - Type: Sorted Set (ZSET)
-   - Score: base score
-   - TTL: `CandidateCacheTTL` phút
-
----
-
-### Step 2: Get Seen Posts
-
-**M?c ?ích:** Tránh hi?n th? l?i các bài post ?ã xem.
+**M?c ?ï¿½ch:** L?y danh sï¿½ch ng??i dï¿½ng mï¿½ user ?ang follow.
 
 ```csharp
-var seenPosts = await _redisHelper.GetSeenPostsAsync(userId, sessionId);
-```
-
-- **Redis Key:** `seen:{userId}:{sessionId}`
-- **Type:** SET
-- **TTL:** `SeenPostsTTL` phút
-- **Session ID:** 
-  - Client g?i lên ?? duy trì session
-  - N?u không có ? t?o m?i `Guid.NewGuid().ToString("N")`
-
----
-
-### Step 3: Filter Unseen Candidates
-
-**M?c ?ích:** Lo?i b? posts ?ã xem kh?i danh sách candidates.
-
-```csharp
-var unseenCandidates = candidates
-    .Where(kvp => !seenPosts.Contains(kvp.Key))
-    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-```
-
----
-
-### Step 4: Re-Rank Posts (Ph?n quan tr?ng nh?t)
-
-**M?c ?ích:** Tính toán ?i?m s? cu?i cùng cho m?i post d?a trên nhi?u y?u t?.
-
-#### 4.1. Composite Score Formula
-
-```
-FinalScore = Wr×R + We×E + Wa×A + Wc×Q + Wd×D + Wn×N + Wb×B
-```
-
-Trong ?ó:
-
-| Ký hi?u | Tên | Mô t? | Công th?c |
-|---------|-----|-------|-----------|
-| **R** | Recency | ?? m?i c?a post | `exp(-? × age_hours)` |
-| **E** | Engagement | M?c ?? t??ng tác | `?×likes + ?×comments + ?×reshares` |
-| **A** | Affinity | M?i quan h? user-author | `normalize(w1×pastLikes + w2×pastComments + w3×replies + w4×visits)` |
-| **Q** | Quality | Ch?t l??ng tác gi? | `EMA(author_engagement_rate, 30d)` |
-| **D** | Diversity | Penalty ?a d?ng hóa | `-? × over_representation_factor` |
-| **N** | Negative Feedback | Penalty ph?n h?i tiêu c?c | `-? × feedback_severity` |
-| **B** | Contextual Boost | Boost theo ng? c?nh | `trending_boost + mutual_followers_boost` |
-
-#### 4.2. Chi Ti?t T?ng Component
-
-##### **Recency Score (R)**
-
-```csharp
-var recency = Math.Exp(-lambda * ageHours);
-```
-
-- **lambda (?):** T?c ?? decay (m?c ??nh: 0.01)
-- **ageHours:** Tu?i c?a post tính b?ng gi?
-- **??c ?i?m:** 
-  - Post m?i ? R ? 1.0
-  - Post 24h ? R ? 0.79
-  - Post 1 tu?n ? R ? 0.02
-
-##### **Engagement Score (E)**
-
-```csharp
-var engagement = (alpha * likes) + (beta * comments) + (gamma * reshares);
-```
-
-- **alpha (?):** Tr?ng s? likes (m?c ??nh: 1.0)
-- **beta (?):** Tr?ng s? comments (m?c ??nh: 2.0)
-- **gamma (?):** Tr?ng s? reshares (m?c ??nh: 3.0)
-- **Ý ngh?a:** Comments quan tr?ng h?n likes, reshares quan tr?ng nh?t
-
-##### **Affinity Score (A)**
-
-```csharp
-var rawAffinity = (w1 * pastLikes) + (w2 * pastComments) + 
-                  (w3 * directReplies) + (w4 * profileVisits);
-var affinity = Math.Min(rawAffinity / maxAffinity, 1.0);
-```
-
-- **Y?u t? tính toán:**
-  - `pastLikes`: S? l?n user like posts c?a author
-  - `pastComments`: S? l?n user comment posts c?a author
-  - `directReplies`: S? l?n reply tr?c ti?p
-  - `profileVisits`: S? l?n xem profile
-- **Boost:** N?u user follow author ? +0.3
-- **Range:** [0, 1]
-
-##### **Quality Score (Q)**
-
-```csharp
-var quality = Math.Clamp(authorEngagementRate, 0.0, 1.0);
-```
-
-- **Hi?n t?i:** Placeholder = 0.5
-- **Production:** Tính EMA c?a engagement rate trong 30 ngày
-
-##### **Diversity Penalty (D)**
-
-```csharp
-if (authorPostCount > diversityThreshold)
-{
-    var overRepresentation = (authorPostCount - diversityThreshold) / diversityThreshold;
-    diversity = -delta * overRepresentation;
-}
-```
-
-- **M?c ?ích:** Tránh feed b? chi?m b?i 1-2 tác gi?
-- **diversityThreshold:** S? post t?i ?a m?i author (m?c ??nh: 3)
-- **delta (?):** M?c ?? penalty (m?c ??nh: 0.2)
-- **Tracking:** Redis HASH `feed:author_count:{userId}`
-
-##### **Negative Feedback Penalty (N)**
-
-```csharp
-var feedbackSeverity = hideCount + (reportCount * 2);
-negativeFeedback = -zeta * feedbackSeverity;
-```
-
-- **Hi?n t?i:** Placeholder = 0.0
-- **Production:** Track user hide/report actions
-
-##### **Contextual Boost (B)**
-
-```csharp
-if (hasTrendingHashtag) boost += TrendingBoost;
-if (hasMutualFollowers) boost += MutualFollowersBoost;
-```
-
-- **Hi?n t?i:** Placeholder = 0.0
-- **Production:** Detect trending hashtags, mutual connections
-
-#### 4.3. Apply Jitter
-
-```csharp
-var tau = score * (jitterPercent / 100.0);
-var epsilon = (random.NextDouble() * 2 - 1) * tau; // Uniform(-?, ?)
-score = score + epsilon;
-```
-
-- **M?c ?ích:** Thêm variance ?? feed không b? stale
-- **jitterPercent:** M?c ??nh 1.5%
-
-#### 4.4. ?-greedy Exploration
-
-```csharp
-if (random.NextDouble() < exploreRate && ranked.Count > 10)
-{
-    var exploreCount = Math.Max(1, (int)(ranked.Count * exploreRate));
-    // Swap m?t s? top posts v?i lower-ranked posts
-}
-```
-
-- **exploreRate:** M?c ??nh 10%
-- **M?c ?ích:** Inject content m?i ?? tránh filter bubble
-
----
-
-### Step 5: Apply Pagination
-
-```csharp
-var skip = (pageIndex - 1) * pageSize;
-var pagedPostIds = rankedPosts
-    .Skip(skip)
-    .Take(pageSize)
-    .ToList();
-```
-
----
-
-### Step 6: Fetch Full Post Data
-
-```csharp
-var posts = await _unitOfWork.PostRepository
+var followedUserIds = await _unitOfWork.FollowerRepository
     .GetQueryable()
-    .Where(p => postIds.Contains(p.Id) && !p.IsDeleted)
+    .Where(f => f.FollowerId == userId && !f.IsDeleted)
+    .Select(f => f.FollowingId)
+    .ToListAsync();
+
+// Thï¿½m chï¿½nh userId vï¿½o ?? hi?n th? posts c?a mï¿½nh
+followedUserIds.Add(userId);
+```
+
+---
+
+### Step 2: Query Posts with Ranking
+
+**M?c ?ï¿½ch:** L?y posts vï¿½ tï¿½nh ?i?m ranking tr?c ti?p trong database query.
+
+**Cï¿½ng th?c ranking ??n gi?n:**
+
+```
+RankingScore = (0.4 ï¿½ RecencyScore) + (0.6 ï¿½ EngagementScore)
+```
+
+**Trong ?ï¿½:**
+
+#### **Recency Score (40%)**
+```csharp
+RecencyScore = (72 - hoursSinceCreated) / 72.0
+```
+- ?ï¿½nh giï¿½ posts trong vï¿½ng 72 gi? (3 ngï¿½y)
+- Post m?i nh?t: score = 1.0
+- Post 36 gi?: score = 0.5
+- Post 72 gi?: score = 0.0
+- **?ï¿½ gi?n ??n, d? hi?u**: Khï¿½ng c?n hï¿½m exponential ph?c t?p
+
+#### **Engagement Score (60%)**
+```csharp
+EngagementScore = likes + (comments ï¿½ 2)
+```
+- M?i like: +1 ?i?m
+- M?i comment: +2 ?i?m
+- **Lï¿½ do comments ???c ?ï¿½nh giï¿½ cao h?n:** Comments th? hi?n s? t??ng tï¿½c sï¿½u h?n likes
+
+**T?i sao ch?n t? tr?ng 40/60?**
+- **40% Recency:** ?? ?m b?o posts m?i v?n ???c ?u tiï¿½n
+- **60% Engagement:** ?? n?i dung ch?t l??ng cao khï¿½ng b? chï¿½n vï¿½i quï¿½ nhanh
+- Cï¿½n b?ng gi?a s? m?i m? vï¿½ ch?t l??ng
+
+**Query hoï¿½n ch?nh:**
+
+```csharp
+var postsQuery = _unitOfWork.PostRepository
+    .GetQueryable()
+    .Where(p => !p.IsDeleted 
+        && p.UserId.HasValue
+        && followedUserIds.Contains(p.UserId.Value)
+        && p.CreatedDate >= DateTime.UtcNow.AddDays(-30))
     .Include(p => p.User)
     .Include(p => p.PostImages)
     .Include(p => p.PostHashtags).ThenInclude(ph => ph.Hashtag)
     .Include(p => p.LikePosts)
     .Include(p => p.CommentPosts)
-    .ToListAsync();
+    .Select(p => new
+    {
+        Post = p,
+        RankingScore = 
+            (0.4 * ((72 - EF.Functions.DateDiffHour(p.CreatedDate, DateTime.UtcNow)) / 72.0)) +
+            (0.6 * (p.LikePosts.Count(lp => !lp.IsDeleted) + 
+                   (p.CommentPosts.Count(cp => !cp.IsDeleted) * 2)))
+    });
 ```
-
-- **Maintain order:** S?p x?p theo th? t? trong `postIds`
 
 ---
 
-### Step 7: Enrich with User Context
+### Step 3: Sort & Paginate
+
+**S?p x?p:**
+1. **Chï¿½nh:** Theo `RankingScore` gi?m d?n
+2. **Ph?:** Theo `CreatedDate` gi?m d?n (n?u score b?ng nhau)
+
+**Pagination:**
+```csharp
+var rankedPosts = await postsQuery
+    .OrderByDescending(x => x.RankingScore)
+    .ThenByDescending(x => x.Post.CreatedDate)
+    .Skip((pageIndex - 1) * pageSize)
+    .Take(pageSize)
+    .ToListAsync();
+```
+
+---
+
+### Step 4: Enrich with User Context
+
+**M?c ?ï¿½ch:** Thï¿½m thï¿½ng tin ng? c?nh c? th? cho user.
 
 ```csharp
+// L?y danh sï¿½ch posts mï¿½ user ?ï¿½ like
 var likedPostIds = await _unitOfWork.LikePostRepository
     .GetQueryable()
     .Where(lp => lp.UserId == userId && postIds.Contains(lp.PostId) && !lp.IsDeleted)
     .Select(lp => lp.PostId)
-    .ToHashSet();
+    .ToListAsync();
 
+// ??nh d?u trong response
 model.IsLikedByUser = likedPostIds.Contains(post.Id);
+model.RankingScore = x.RankingScore; // For debugging
 ```
 
 ---
 
-### Step 8: Mark as Seen
+### Step 5: Build Response
 
 ```csharp
-await _redisHelper.AddSeenPostsAsync(
-    userId, 
-    sessionId, 
-    pagedPostIds.Select(p => p.PostId),
-    TimeSpan.FromMinutes(SeenPostsTTL)
-);
-```
-
-- **Redis Key:** `seen:{userId}:{sessionId}`
-- **Type:** SET
-- **TTL:** `SeenPostsTTL` phút
-
----
-
-### Step 9: Build Response
-
-```csharp
-var feedModels = posts.Select(p =>
+var feedModels = rankedPosts.Select(x =>
 {
-    var model = _mapper.Map<NewsfeedPostModel>(p);
-    model.RankingScore = rankedPost.Score;
-    model.IsLikedByUser = likedPostIds.Contains(p.Id);
+    var model = _mapper.Map<NewsfeedPostModel>(x.Post);
+    model.RankingScore = x.RankingScore;
+    model.IsLikedByUser = likedPostIds.Contains(x.Post.Id);
     return model;
 }).ToList();
-```
 
-- **Response includes:**
-  - Paginated posts
-  - Metadata (totalCount, pageSize, etc.)
-  - SessionId (cho request ti?p theo)
+var pagination = new Pagination<NewsfeedPostModel>(
+    feedModels,
+    totalCount,
+    pageIndex,
+    pageSize);
+```
 
 ---
 
-## C?u Hình Parameters
+## C?u Hï¿½nh Parameters
 
-T?t c? parameters có th? config trong `appsettings.json`:
+**Thu?t toï¿½n m?i KHï¿½NG C?N c?u hï¿½nh ph?c t?p!** M?i th? ???c hard-code v?i giï¿½ tr? t?i ?u:
+
+```csharp
+// T? tr?ng c? ??nh trong code
+const double RECENCY_WEIGHT = 0.4;      // 40%
+const double ENGAGEMENT_WEIGHT = 0.6;   // 60%
+const int COMMENT_MULTIPLIER = 2;       // Comments = 2x likes
+const int LOOKBACK_DAYS = 30;           // Posts trong 30 ngï¿½y
+const int RECENCY_WINDOW_HOURS = 72;    // ?ï¿½nh giï¿½ recency trong 72h
+```
+
+**N?u mu?n tï¿½y ch?nh (khï¿½ng b?t bu?c):**
+
+T?o file `appsettings.json` vï¿½ thï¿½m:
 
 ```json
 {
   "NewsfeedSettings": {
-    // Engagement weights
-    "Alpha": 1.0,           // Weight for likes
-    "Beta": 2.0,            // Weight for comments
-    "Gamma": 3.0,           // Weight for reshares
-    
-    // Affinity weights
-    "W1": 1.0,              // Past likes
-    "W2": 2.0,              // Past comments
-    "W3": 3.0,              // Direct replies
-    "W4": 0.5,              // Profile visits
-    "MaxAffinity": 100.0,   // Normalization cap
-    
-    // Composite score weights
-    "Wr": 0.3,              // Recency
-    "We": 0.25,             // Engagement
-    "Wa": 0.2,              // Affinity
-    "Wc": 0.1,              // Quality
-    "Wd": 0.05,             // Diversity
-    "Wn": 0.05,             // Negative feedback
-    "Wb": 0.05,             // Contextual boost
-    
-    // Other parameters
-    "Lambda": 0.01,         // Recency decay rate
-    "Delta": 0.2,           // Diversity penalty
-    "Zeta": 1.0,            // Negative feedback penalty
-    "DiversityThreshold": 3,// Max posts per author
-    "JitterPercent": 1.5,   // Score variance
-    "ExploreRate": 0.1,     // ?-greedy exploration
-    
-    // Cache settings
-    "CandidateLookbackDays": 7,    // How far back to fetch
-    "MaxCandidateFetch": 500,      // Max candidates
-    "MinCandidates": 100,          // Trigger backfill
-    "CandidateCacheTTL": 30,       // Minutes
-    "MetricsCacheTTL": 60,         // Minutes
-    "SeenPostsTTL": 120,           // Minutes
-    
-    // Boost values
-    "TrendingBoost": 0.1,
-    "MutualFollowersBoost": 0.15
+    "RecencyWeight": 0.4,           // T? tr?ng ?? m?i (0-1)
+    "EngagementWeight": 0.6,        // T? tr?ng engagement (0-1)
+    "CommentMultiplier": 2,         // Comments = ? ï¿½ likes
+    "LookbackDays": 30,             // S? ngï¿½y look back
+    "RecencyWindowHours": 72        // C?a s? ?ï¿½nh giï¿½ recency (gi?)
   }
 }
 ```
 
----
-
-## Redis Data Structures
-
-### 1. Candidate Set
-```
-Key: feed:candidates:{userId}
-Type: ZSET (Sorted Set)
-Member: postId
-Score: baseScore
-TTL: CandidateCacheTTL minutes
-```
-
-### 2. Post Metrics
-```
-Key: post:{postId}:metrics
-Type: HASH
-Fields:
-  - likes: int
-  - comments: int
-  - reshares: int
-  - authorId: long
-  - createdAt: datetime (ticks)
-TTL: MetricsCacheTTL minutes
-```
-
-### 3. Seen Posts
-```
-Key: seen:{userId}:{sessionId}
-Type: SET
-Members: postId[]
-TTL: SeenPostsTTL minutes
-```
-
-### 4. Feed Version
-```
-Key: feed:ver:{userId}
-Type: STRING (counter)
-Purpose: Invalidate cache on new post/follow
-No TTL
-```
-
-### 5. Author Counts
-```
-Key: feed:author_count:{userId}
-Type: HASH
-Fields: {authorId}: count
-TTL: 10 minutes (per ranking session)
-```
+**? ?ï¿½ ??N GI?N H?N NHI?U!**
 
 ---
 
-## Cache Invalidation
+## Khï¿½ng C?n Redis Cache!
 
-### Khi nào invalidate candidate cache?
+Thu?t toï¿½n m?i **KHï¿½NG S? D?NG Redis** cho newsfeed ranking. T?t c? ???c x? lï¿½ tr?c ti?p b?ng SQL queries.
 
-1. **User creates new post:**
-   ```csharp
-   await _redisHelper.InvalidateFeedAsync(userId);
-   // Invalidate followers' feeds
-   foreach (var followerId in followerIds)
-   {
-       await _redisHelper.InvalidateFeedAsync(followerId);
-   }
-   ```
-
-2. **User follows/unfollows:**
-   ```csharp
-   await _redisHelper.InvalidateFeedAsync(userId);
-   ```
-
-3. **Post gets deleted:**
-   ```csharp
-   await _redisHelper.InvalidateFeedAsync(authorId);
-   // Invalidate followers' feeds
-   ```
+**L?i ï¿½ch:**
+- ? ?? ph?c t?p gi?m 90%
+- Khï¿½ng c?n duy trï¿½ cache invalidation
+- Khï¿½ng c?n lo v? cache consistency
+- Khï¿½ng c?n cï¿½i ??t Redis (n?u ch? dï¿½ng cho newsfeed)
+- D? debug vï¿½ monitor h?n
 
 ---
 
 ## Performance Optimizations
 
-### 1. Multi-tier Caching
-- **Tier 1:** Candidate set (30 min TTL)
-- **Tier 2:** Post metrics (60 min TTL)
-- **Tier 3:** Seen posts (120 min TTL)
+### 1. Database Indexes (Quan tr?ng!)
 
-### 2. Batch Operations
-- Fetch all post metrics in parallel
-- Single batch query for liked posts
+**B?T BU?C ph?i cï¿½:**
 
-### 3. Database Indexes
 ```sql
--- Required indexes
-CREATE INDEX idx_post_userid_created ON Post(UserId, CreatedDate DESC) WHERE IsDeleted = 0;
-CREATE INDEX idx_follower_followerid ON Follower(FollowerId, FollowingId) WHERE IsDeleted = 0;
-CREATE INDEX idx_likepost_userid_postid ON LikePost(UserId, PostId) WHERE IsDeleted = 0;
-CREATE INDEX idx_commentpost_postid ON CommentPost(PostId) WHERE IsDeleted = 0;
+-- Index cho query posts by followed users + date
+CREATE INDEX idx_post_userid_created 
+ON Post(UserId, CreatedDate DESC) 
+WHERE IsDeleted = 0;
+
+-- Index cho follower lookup
+CREATE INDEX idx_follower_followerid 
+ON Follower(FollowerId, FollowingId) 
+WHERE IsDeleted = 0;
+
+-- Index cho like lookup
+CREATE INDEX idx_likepost_userid_postid 
+ON LikePost(UserId, PostId) 
+WHERE IsDeleted = 0;
+
+-- Index cho comment count
+CREATE INDEX idx_commentpost_postid 
+ON CommentPost(PostId) 
+WHERE IsDeleted = 0;
+
+-- Index cho like count
+CREATE INDEX idx_likepost_postid 
+ON LikePost(PostId) 
+WHERE IsDeleted = 0;
 ```
 
-### 4. Connection Pooling
-- Redis: Use single IConnectionMultiplexer instance
-- Database: EF Core connection pooling enabled
+### 2. Query Optimization
+
+- S? d?ng `Include()` ?? load related data trong 1 query (eager loading)
+- Tï¿½nh ranking score tr?c ti?p trong SQL query (khï¿½ng ph?i l?y h?t v? r?i tï¿½nh)
+- Ch? l?y posts trong 30 ngï¿½y g?n nh?t ?? gi?m data scan
+
+### 3. Database Connection Pooling
+
+Entity Framework Core t? ??ng enable connection pooling:
+
+```csharp
+// In Startup.cs/Program.cs
+services.AddDbContext<SOPDbContext>(options =>
+    options.UseSqlServer(connectionString, sqlOptions =>
+    {
+        sqlOptions.CommandTimeout(60);
+        sqlOptions.EnableRetryOnFailure(3);
+    })
+);
+```
 
 ---
 
 ## Monitoring & Tuning
 
-### Key Metrics
+### Key Metrics ??n Gi?n
 
-1. **Cache hit rate:**
-   - Target: >80% for candidate cache
-   - Monitor: Redis INFO stats
+1. **Query time:**
+   - Target: <500ms cho full newsfeed query
+   - Monitor: EF Core logging hoáº·c Application Insights
+   - N?u ch?m: Ki?m tra indexes
 
-2. **Ranking latency:**
-   - Target: <200ms for ranking logic
-   - Monitor: Application Insights
+2. **Feed quality metrics:**
+   - Engagement rate (likes + comments / views)
+   - Monitor qua analytics
 
-3. **Database query time:**
-   - Target: <100ms for candidate fetch
-   - Monitor: EF Core logging
+### A/B Testing (Tï¿½y ch?n)
 
-4. **Feed quality metrics:**
-   - Click-through rate (CTR)
-   - Dwell time
-   - Engagement rate (likes/views)
+N?u mu?n optimize, cï¿½ th? test:
 
-### A/B Testing Parameters
-
-Các parameters có th? test:
-
-- **Recency vs Engagement:** Thay ??i Wr, We
-- **Diversity threshold:** Test 2, 3, 4 posts/author
-- **Jitter amount:** Test 1%, 2%, 3%
-- **Explore rate:** Test 5%, 10%, 15%
+- **Recency vs Engagement weight:** Thay ??i 40/60 thï¿½nh 30/70 ho?c 50/50
+- **Comment multiplier:** Test 1.5x, 2x, 3x
+- **Lookback window:** Test 14, 21, 30 ngï¿½y
 
 ---
 
@@ -587,11 +321,15 @@ Các parameters có th? test:
 
 ### Request
 ```http
-GET /api/posts/newsfeed?page-index=1&page-size=10
+GET /api/v1/posts/feed?userId=123&pageIndex=1&pageSize=10
 Headers:
   Authorization: Bearer {token}
-  X-Session-Id: abc123 (optional)
 ```
+
+**Parameters:**
+- `userId`: ID c?a user mu?n l?y newsfeed
+- `pageIndex`: Trang hi?n t?i (b?t ??u t? 1)
+- `pageSize`: S? l??ng posts m?i trang (khuy?n ngh? 10-20)
 
 ### Response
 ```json
@@ -612,7 +350,7 @@ Headers:
           "commentCount": 8,
           "isLikedByUser": true,
           "authorAvatarUrl": "https://...",
-          "rankingScore": 0.8523,  // For debugging
+          "rankingScore": 15.8,  // For debugging
           "createdAt": "2024-01-15T10:30:00Z"
         }
       ],
@@ -629,86 +367,99 @@ Headers:
       "currentPage": 1,
       "totalPages": 16,
       "hasNext": true,
-      "hasPrevious": false,
-      "sessionId": "abc123"  // Use in next request
+      "hasPrevious": false
     }
   }
 }
 ```
 
+**Note:** `rankingScore` cï¿½ th? lï¿½ s? th?p phï¿½n (0-1) ho?c s? nguyï¿½n (0-100+) tï¿½y thu?c implementation.
+
 ---
 
-## Roadmap & Future Improvements
+## ?? ??N GI?N H?N BAN ??U NHI?U!
 
-### Phase 1 (Current)
-- ? Basic ranking with recency + engagement
-- ? Redis caching for candidates
-- ? Seen posts tracking
-- ? Diversity enforcement
+### So sï¿½nh v?i thu?t toï¿½n c?:
 
-### Phase 2 (Planned)
-- [ ] ML-based affinity scoring
-- [ ] Real-time negative feedback tracking
-- [ ] Trending hashtag detection
-- [ ] Author quality scoring (EMA)
+| KhÃ­a c?nh | Thu?t toï¿½n c? | Thu?t toï¿½n m?i |
+|-----------|---------------|----------------|
+| **S? d?ng Redis** | C? (nhi?u layers) | KHï¿½NG |
+| **Session tracking** | C? | KHï¿½NG |
+| **Parameters c?n config** | 20+ parameters | 0 (ho?c 3-5 n?u mu?n tï¿½y ch?nh) |
+| **Y?u t? ranking** | 7 y?u t? ph?c t?p | 2 y?u t? ??n gi?n |
+| **Code lines** | ~400 lines | ~80 lines |
+| **D? hi?u** | Khï¿½ | D? |
+| **D? maintain** | Khï¿½ | D? |
+| **Performance** | T?t (v?i Redis) | T?t (v?i indexes) |
 
-### Phase 3 (Future)
-- [ ] Deep learning ranking model
+### T?i sao ??n gi?n h?n l?i t?t h?n cho ??n ï¿½n t?t nghi?p?
+
+1. **D? hi?u:** Sinh viï¿½n cï¿½ th? gi?i thï¿½ch ???c toï¿½n b? logic
+2. **D? debug:** Khï¿½ng c?n lo v? cache inconsistency
+3. **D? test:** Khï¿½ng c?n mock Redis
+4. **D? demo:** Ch? c?n database lï¿½ ch?y ???c
+5. **Th?c t?:** V?n hi?u qu? cho app nh? (?n 100k users)
+6. **??y ?? ch?c n?ng:** V?n cï¿½ ranking, personalization, pagination
+
+---
+
+## Future Improvements (N?u mu?n m? r?ng)
+
+Sau khi hoï¿½n thï¿½nh ??n ï¿½n, cï¿½ th? thï¿½m:
+
+### Phase 2 (Khï¿½ng b?t bu?c)
+- [ ] Thï¿½m Redis cache cho candidate set (gi?m load DB)
+- [ ] User affinity based on interaction history
+- [ ] Trending hashtag boost
+- [ ] Diversity penalty (max posts per author)
+
+### Phase 3 (Nï¿½ng cao)
+- [ ] ML-based personalization
 - [ ] Real-time stream processing
-- [ ] Collaborative filtering
-- [ ] Multi-armed bandit for exploration
+- [ ] A/B testing framework
+
+**Nh?ng hi?n t?i, thu?t toï¿½n ??n gi?n ?ï¿½ ?? t?t cho graduation project!**
 
 ---
 
 ## Troubleshooting
 
-### Feed is stale / not updating
+### Feed load ch?m
 
-**Cause:** Candidate cache not invalidated  
+**Cause:** Thi?u database indexes  
 **Solution:**
-```csharp
-await _redisHelper.InvalidateFeedAsync(userId);
+```sql
+-- Ch?y cï¿½c l?nh CREATE INDEX ? ph?n Performance Optimizations
 ```
 
-### Too many posts from one author
+### Feed khï¿½ng cï¿½ posts
 
-**Cause:** Diversity threshold too high  
-**Solution:** Lower `DiversityThreshold` in appsettings
+**Possible causes:**
+1. User ch?a follow ai
+2. Ng??i ???c follow ch?a cï¿½ posts
+3. T?t c? posts ?ï¿½ quï¿½ 30 ngï¿½y
 
-### Feed is too repetitive
+**Solution:** Ki?m tra data trong database
 
-**Cause:** Jitter too low, explore rate too low  
-**Solution:**
-- Increase `JitterPercent` (e.g., 3%)
-- Increase `ExploreRate` (e.g., 15%)
+### Posts khï¿½ng ???c s?p x?p ?ï¿½ng
 
-### Performance issues
-
-**Causes:**
-1. Cache miss ? candidate fetch from DB
-2. Too many candidates ? slow ranking
-3. Missing database indexes
-
-**Solutions:**
-1. Increase cache TTL
-2. Reduce `MaxCandidateFetch`
-3. Add missing indexes
+**Cause:** Ranking score calculation sai  
+**Solution:** Ki?m tra DateDiffHour function vï¿½ logic tï¿½nh toï¿½n
 
 ---
 
 ## References
 
-1. **Facebook EdgeRank:** Original inspiration for composite scoring
-2. **Twitter Timeline Algorithm:** Affinity and engagement factors
-3. **Instagram Explore:** Diversity and exploration strategies
-4. **Redis Patterns:** Caching strategies and data structures
+1. **Entity Framework Core:** Query optimization and performance
+2. **SQL Server:** Indexing strategies
+3. **Real-world social media feeds:** Facebook, Instagram, Twitter (simplified)
 
 ---
 
 ## Contact
 
-For questions or issues with the newsfeed algorithm:
-- **Team:** Backend Team
-- **Owner:** [Your Name]
-- **Documentation Version:** 1.0.0
-- **Last Updated:** 2024-01-15
+For questions or issues:
+- **Team:** SOP Backend Team (3 students)
+- **Project:** Smart Outfit Planner - Graduation Project
+- **Documentation Version:** 2.0.0 (Simplified)
+- **Last Updated:** 2025-11-02

@@ -74,68 +74,124 @@ followedUserIds.Add(userId);
 
 ---
 
-### Step 2: Query Posts with Ranking
+### Step 2: Query Posts with Optimized Projection
 
-**M?c ?�ch:** L?y posts v� t�nh ?i?m ranking tr?c ti?p trong database query.
+**M?c ?�ch:** L?y posts v?i projection ?? performance t?t nh?t.
 
-**C�ng th?c ranking ??n gi?n:**
+**Optimization:**
+- **AsNoTracking()**: Kh�ng track changes (read-only)
+- **Projection**: Ch? l?y fields c?n thi?t, kh�ng load full collections
+- **Single DateTime**: D�ng `currentTime = DateTime.UtcNow` cho t?t c? calculations
+
+**C�ng th?c ranking c?i ti?n:**
 
 ```
-RankingScore = (0.4 � RecencyScore) + (0.6 � EngagementScore)
+RankingScore = (0.4 � RecencyScore) + (0.6 � NormalizedEngagement) + SessionShuffle
 ```
 
 **Trong ?�:**
 
-#### **Recency Score (40%)**
+#### **Recency Score (40%) - Clamped**
 ```csharp
-RecencyScore = (72 - hoursSinceCreated) / 72.0
+recencyScore = Math.Max(0, Math.Min(1, 
+    (72 - hoursSinceCreated) / 72.0))
 ```
-- ?�nh gi� posts trong v�ng 72 gi? (3 ng�y)
+- **Clamping gi?a 0 v� 1:** Tr�nh gi� tr? �m cho posts > 72 gi?
 - Post m?i nh?t: score = 1.0
 - Post 36 gi?: score = 0.5
 - Post 72 gi?: score = 0.0
-- **?� gi?n ??n, d? hi?u**: Kh�ng c?n h�m exponential ph?c t?p
+- Post > 72 gi?: score = 0.0 (clamped, kh�ng ph?i �m)
 
-#### **Engagement Score (60%)**
+#### **Engagement Score (60%) - Log-scale Normalized**
 ```csharp
-EngagementScore = likes + (comments � 2)
+rawEngagement = likes + (comments � 2)
+normalizedEngagement = Math.Log(1 + rawEngagement)
 ```
-- M?i like: +1 ?i?m
-- M?i comment: +2 ?i?m
-- **L� do comments ???c ?�nh gi� cao h?n:** Comments th? hi?n s? t??ng t�c s�u h?n likes
+- **Log-scale normalization:** Gi?m dominance c?a viral posts
+- **log(1 + x):** Handle zero engagement gracefully
+- **V� d?:**
+  - 0 engagement: log(1) = 0
+  - 10 engagement: log(11) = 2.4
+  - 100 engagement: log(101) = 4.6
+  - 1000 engagement: log(1001) = 6.9
+- **Hi?u qu?:** Posts v?a v?i engagement v?n ???c rank cao, kh�ng b? viral posts ch�n v�i
+
+#### **Session Shuffle (T�y ch?n)**
+```csharp
+if (!string.IsNullOrEmpty(sessionId))
+{
+    hashCode = (sessionId + postId).GetHashCode()
+    shuffleFactor = (hashCode % 100) / 10000.0  // ±0.01
+    rankingScore += shuffleFactor
+}
+```
+- **Deterministic shuffle:** M?i session th?y th? t? kh�c nhau m?t ch�t
+- **Nh?ng stable:** C�ng sessionId s? lu�n th?y c�ng th? t?
+- **Small adjustment:** Ch? ±0.01 ?? kh�ng l�m lo?n ranking ch�nh
 
 **T?i sao ch?n t? tr?ng 40/60?**
 - **40% Recency:** ?? ?m b?o posts m?i v?n ???c ?u ti�n
 - **60% Engagement:** ?? n?i dung ch?t l??ng cao kh�ng b? ch�n v�i qu� nhanh
 - C�n b?ng gi?a s? m?i m? v� ch?t l??ng
+- **Log-scale gi�p:** Viral posts (1000+ likes) kh�ng "ch?t" posts v?a (10-50 likes)
 
-**Query ho�n ch?nh:**
+**Query t?i ?u v?i Projection:**
 
 ```csharp
+// Single timestamp for consistency
+var currentTime = DateTime.UtcNow;
+var lookbackDate = currentTime.AddDays(-30);
+
 var postsQuery = _unitOfWork.PostRepository
     .GetQueryable()
+    .AsNoTracking()  // Read-only, faster
     .Where(p => !p.IsDeleted 
         && p.UserId.HasValue
         && followedUserIds.Contains(p.UserId.Value)
-        && p.CreatedDate >= DateTime.UtcNow.AddDays(-30))
-    .Include(p => p.User)
-    .Include(p => p.PostImages)
-    .Include(p => p.PostHashtags).ThenInclude(ph => ph.Hashtag)
-    .Include(p => p.LikePosts)
-    .Include(p => p.CommentPosts)
-    .Select(p => new
+        && p.CreatedDate >= lookbackDate)
+    .Select(p => new  // Projection - ch? l?y fields c?n thi?t
     {
-        Post = p,
-        RankingScore = 
-            (0.4 * ((72 - EF.Functions.DateDiffHour(p.CreatedDate, DateTime.UtcNow)) / 72.0)) +
-            (0.6 * (p.LikePosts.Count(lp => !lp.IsDeleted) + 
-                   (p.CommentPosts.Count(cp => !cp.IsDeleted) * 2)))
+        PostId = p.Id,
+        UserId = p.UserId ?? 0,
+        Body = p.Body,
+        CreatedDate = p.CreatedDate,
+        UserDisplayName = p.User != null ? p.User.DisplayName : "Unknown",
+        AuthorAvatarUrl = p.User != null ? p.User.AvtUrl : null,
+        
+        // Ch? l?y COUNT, kh�ng load full collections
+        LikeCount = p.LikePosts.Count(lp => !lp.IsDeleted),
+        CommentCount = p.CommentPosts.Count(cp => !cp.IsDeleted),
+        
+        Images = p.PostImages.Select(pi => pi.ImgUrl).ToList(),
+        Hashtags = p.PostHashtags.Select(ph => ph.Hashtag.Name).ToList(),
+        
+        // Calculate hours for ranking
+        HoursSinceCreation = EF.Functions.DateDiffHour(p.CreatedDate, currentTime)
     });
+
+// Materialize to apply ranking in memory
+var posts = await postsQuery.ToListAsync();
+
+// Apply ranking with clamping and normalization
+var rankedPosts = posts.Select(p => {
+    var recency = Math.Max(0, Math.Min(1, 
+        (72 - p.HoursSinceCreation) / 72.0));
+    var engagement = Math.Log(1 + p.LikeCount + (p.CommentCount * 2));
+    var score = (0.4 * recency) + (0.6 * engagement);
+    
+    // Optional session shuffle
+    if (!string.IsNullOrEmpty(sessionId)) {
+        var hash = (sessionId + p.PostId).GetHashCode();
+        score += (hash % 100) / 10000.0;
+    }
+    
+    return new { Post = p, RankingScore = score };
+});
 ```
 
 ---
 
-### Step 3: Sort & Paginate
+### Step 3: Sort & Paginate (In-Memory)
 
 **S?p x?p:**
 1. **Ch�nh:** Theo `RankingScore` gi?m d?n
@@ -143,13 +199,15 @@ var postsQuery = _unitOfWork.PostRepository
 
 **Pagination:**
 ```csharp
-var rankedPosts = await postsQuery
+var pagedPosts = rankedPosts
     .OrderByDescending(x => x.RankingScore)
     .ThenByDescending(x => x.Post.CreatedDate)
     .Skip((pageIndex - 1) * pageSize)
     .Take(pageSize)
-    .ToListAsync();
+    .ToList();
 ```
+
+**L?u �:** Ranking ???c apply in-memory sau khi fetch t? DB v� clamping/normalization c?n c�c operations kh�ng support trong SQL.
 
 ---
 
@@ -161,14 +219,32 @@ var rankedPosts = await postsQuery
 // L?y danh s�ch posts m� user ?� like
 var likedPostIds = await _unitOfWork.LikePostRepository
     .GetQueryable()
+    .AsNoTracking()  // Read-only
     .Where(lp => lp.UserId == userId && postIds.Contains(lp.PostId) && !lp.IsDeleted)
     .Select(lp => lp.PostId)
     .ToListAsync();
 
-// ??nh d?u trong response
-model.IsLikedByUser = likedPostIds.Contains(post.Id);
-model.RankingScore = x.RankingScore; // For debugging
+// Build compact response - no AutoMapper
+var feedModels = pagedPosts.Select(x => {
+    var p = x.Post;
+    return new NewsfeedPostModel {
+        Id = p.PostId,
+        UserId = p.UserId,
+        UserDisplayName = p.UserDisplayName,
+        Body = p.Body,
+        CreatedAt = p.CreatedDate,
+        Hashtags = p.Hashtags.Where(h => !string.IsNullOrEmpty(h)).ToList(),
+        Images = p.Images.Where(i => !string.IsNullOrEmpty(i)).ToList(),
+        LikeCount = p.LikeCount,
+        CommentCount = p.CommentCount,
+        IsLikedByUser = likedPostIds.Contains(p.PostId),
+        AuthorAvatarUrl = p.AuthorAvatarUrl,
+        RankingScore = x.RankingScore  // For debugging
+    };
+}).ToList();
 ```
+
+**L?u �:** Kh�ng d�ng AutoMapper ?? control ch�nh x�c data flow v� optimize performance.
 
 ---
 

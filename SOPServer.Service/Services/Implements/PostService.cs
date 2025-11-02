@@ -11,8 +11,6 @@ using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
-using SOPServer.Service.Utils;
-using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,110 +23,25 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly NewsfeedSettings _newsfeedSettings;
-        private readonly NewsfeedRedisHelper _redisHelper;
-        private readonly Random _random;
 
         public PostService(
             IUnitOfWork unitOfWork, 
-            IMapper mapper,
-            IOptions<NewsfeedSettings> newsfeedSettings,
-            IConnectionMultiplexer redis)
+            IMapper mapper, IOptions<NewsfeedSettings> newsfeedSettings)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _newsfeedSettings = newsfeedSettings.Value;
-            _redisHelper = new NewsfeedRedisHelper(redis);
-            _random = new Random();
         }
 
         public async Task<BaseResponseModel> CreatePostAsync(PostCreateModel model)
         {
-            // Validate user exists
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(model.UserId);
-            if (user == null)
-            {
-                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
-            }
+            await ValidateUserExistsAsync(model.UserId);
 
-            // Create new post
-            var newPost = new Post
-            {
-                User = user,
-                UserId = model.UserId,
-                Body = model.Body
-            };
+            var newPost = await CreatePostEntityAsync(model);
+            await AddPostImagesAsync(newPost.Id, model.ImageUrls);
+            await HandlePostHashtagsAsync(newPost.Id, model.Hashtags);
 
-            await _unitOfWork.PostRepository.AddAsync(newPost);
-            _unitOfWork.Save();
-
-            foreach (var imageUrl in model.ImageUrls)
-            {
-                var imagePost = new PostImage
-                {
-                    PostId = newPost.Id,
-                    ImgUrl = imageUrl
-                };
-                await _unitOfWork.PostImageRepository.AddAsync(imagePost);
-            }
-            _unitOfWork.Save();
-
-
-            // Handle hashtags
-            if (model.Hashtags != null && model.Hashtags.Any())
-            {
-                var postHashtagsList = new List<PostHashtags>();
-
-                foreach (var hashtagName in model.Hashtags)
-                {
-                    if (string.IsNullOrWhiteSpace(hashtagName))
-                        continue;
-
-                    // Check if hashtag exists
-                    var existingHashtag = await _unitOfWork.HashtagRepository.GetByNameAsync(hashtagName.Trim());
-                    
-                    Hashtag hashtag;
-                    if (existingHashtag == null)
-                    {
-                        // Create new hashtag
-                        hashtag = new Hashtag
-                        {
-                            Name = hashtagName.Trim()
-                        };
-                        await _unitOfWork.HashtagRepository.AddAsync(hashtag);
-                        _unitOfWork.Save();
-                    }
-                    else
-                    {
-                        hashtag = existingHashtag;
-                    }
-
-                    // Create post-hashtag relationship
-                    var postHashtag = new PostHashtags
-                    {
-                        PostId = newPost.Id,
-                        HashtagId = hashtag.Id
-                    };
-                    postHashtagsList.Add(postHashtag);
-                }
-
-                if (postHashtagsList.Any())
-                {
-                    await _unitOfWork.PostHashtagsRepository.AddRangeAsync(postHashtagsList);
-                    _unitOfWork.Save();
-                }
-            }
-
-            // Retrieve the created post with all related data
-            var createdPost = await _unitOfWork.PostRepository.GetByIdIncludeAsync(
-                newPost.Id,
-                include: query => query
-                    .Include(p => p.User)
-                    .Include(p => p.PostImages)
-                    .Include(p => p.PostHashtags)
-                        .ThenInclude(ph => ph.Hashtag)
-                    .Include(p => p.LikePosts)
-            );
-
+            var createdPost = await GetPostWithRelationsAsync(newPost.Id);
             var postModel = _mapper.Map<PostModel>(createdPost);
 
             return new BaseResponseModel
@@ -190,464 +103,40 @@ namespace SOPServer.Service.Services.Implements
             long userId, 
             string? sessionId = null)
         {
-            // Validate user exists
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
-            if (user == null)
-            {
-                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
-            }
+            await ValidateUserExistsAsync(userId);
 
-            // Generate session ID if not provided
-            sessionId ??= Guid.NewGuid().ToString("N");
+            var followedUserIds = await GetFollowedUserIdsAsync(userId);
+            var currentTime = DateTime.UtcNow;
+            var lookbackDate = currentTime.AddDays(-_newsfeedSettings.LookbackDays);
 
-            // Step 1: Get or build candidate set
-            var candidates = await GetOrBuildCandidateSetAsync(userId);
+            var postsQuery = BuildNewsfeedQuery(followedUserIds, lookbackDate, currentTime);
+            var totalCount = await postsQuery.CountAsync();
+            var posts = await postsQuery.ToListAsync();
 
-            if (!candidates.Any())
-            {
-                return new BaseResponseModel
-                {
-                    StatusCode = StatusCodes.Status200OK,
-                    Message = MessageConstants.NEWSFEED_EMPTY,
-                    Data = new ModelPaging
-                    {
-                        Data = new Pagination<NewsfeedPostModel>(
-                            new List<NewsfeedPostModel>(), 
-                            0, 
-                            paginationParameter.PageIndex, 
-                            paginationParameter.PageSize),
-                        MetaData = new
-                        {
-                            TotalCount = 0,
-                            PageSize = paginationParameter.PageSize,
-                            CurrentPage = paginationParameter.PageIndex,
-                            TotalPages = 0,
-                            HasNext = false,
-                            HasPrevious = false
-                        }
-                    }
-                };
-            }
+            var rankedPosts = RankAndPaginatePosts(
+                posts, 
+                paginationParameter, 
+                sessionId,
+                _newsfeedSettings.RecencyWeight,
+                _newsfeedSettings.EngagementWeight,
+                _newsfeedSettings.RecencyWindowHour,
+                _newsfeedSettings.CommentMultiplier);
 
-            // Step 2: Get seen posts to exclude
-            var seenPosts = await _redisHelper.GetSeenPostsAsync(userId, sessionId);
+            var postIds = rankedPosts.Select(x => x.Post.PostId).ToList();
+            var likedPostIds = await GetLikedPostIdsByUserAsync(userId, postIds);
 
-            // Step 3: Filter out seen posts
-            var unseenCandidates = candidates
-                .Where(kvp => !seenPosts.Contains(kvp.Key))
-                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            var feedModels = BuildNewsfeedModels(rankedPosts, likedPostIds);
+            var pagination = CreatePagination(feedModels, totalCount, paginationParameter);
 
-            // Step 4: Re-rank with current time-decay, jitter, and diversity
-            var rankedPosts = await RankPostsAsync(userId, unseenCandidates);
-
-            // Step 5: Apply pagination
-            var totalCount = rankedPosts.Count;
-            var skip = (paginationParameter.PageIndex - 1) * paginationParameter.PageSize;
-            var pagedPostIds = rankedPosts
-                .Skip(skip)
-                .Take(paginationParameter.PageSize)
-                .ToList();
-
-            // Step 6: Fetch full post data
-            var posts = await FetchPostDetailsAsync(pagedPostIds.Select(p => p.PostId).ToList(), userId);
-
-            // Step 7: Get user's liked post IDs for this batch
-            var postIds = posts.Select(p => p.Id).ToList();
-            var likedPostIdsList = await _unitOfWork.LikePostRepository
-                .GetQueryable()
-                .Where(lp => lp.UserId == userId && postIds.Contains(lp.PostId) && !lp.IsDeleted)
-                .Select(lp => lp.PostId)
-                .ToListAsync();
-            var likedPostIds = likedPostIdsList.ToHashSet();
-
-            // Step 8: Mark as seen
-            await _redisHelper.AddSeenPostsAsync(
-                userId, 
-                sessionId, 
-                pagedPostIds.Select(p => p.PostId),
-                TimeSpan.FromMinutes(_newsfeedSettings.SeenPostsTTL));
-
-            // Step 9: Build response with engagement data
-            var feedModels = posts.Select(p =>
-            {
-                var model = _mapper.Map<NewsfeedPostModel>(p);
-                var rankedPost = pagedPostIds.FirstOrDefault(rp => rp.PostId == p.Id);
-                if (rankedPost.PostId != 0)
-                {
-                    model.RankingScore = rankedPost.Score;
-                }
-                model.IsLikedByUser = likedPostIds.Contains(p.Id);
-                return model;
-            }).ToList();
-
-            var pagination = new Pagination<NewsfeedPostModel>(
-                feedModels,
-                totalCount,
-                paginationParameter.PageIndex,
-                paginationParameter.PageSize);
-
-            return new BaseResponseModel
-            {
-                StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.NEWSFEED_GET_SUCCESS,
-                Data = new ModelPaging
-                {
-                    Data = pagination,
-                    MetaData = new
-                    {
-                        pagination.TotalCount,
-                        pagination.PageSize,
-                        pagination.CurrentPage,
-                        pagination.TotalPages,
-                        pagination.HasNext,
-                        pagination.HasPrevious,
-                        SessionId = sessionId
-                    }
-                }
-            };
+            return CreateNewsfeedResponse(pagination, totalCount);
         }
 
-        /// <summary>
-        /// Gets candidate set from Redis cache or builds it from database.
-        /// Candidates include: posts from followed users + user's own posts + trending backfill.
-        /// </summary>
-        private async Task<Dictionary<long, double>> GetOrBuildCandidateSetAsync(long userId)
-        {
-            // Check cache first
-            if (await _redisHelper.CandidatesExistAsync(userId))
-            {
-                return await _redisHelper.GetCandidatesAsync(userId);
-            }
 
-            // Build candidate set from database
-            var candidates = new Dictionary<long, double>();
-
-            // Get followed user IDs
-            var followedUserIds = await _unitOfWork.FollowerRepository
-                .GetQueryable()
-                .Where(f => f.FollowerId == userId && !f.IsDeleted)
-                .Select(f => f.FollowingId)
-                .ToListAsync();
-
-            // Include user's own ID
-            followedUserIds.Add(userId);
-
-            // Fetch posts from followed users within lookback window
-            var lookbackDate = DateTime.UtcNow.AddDays(-_newsfeedSettings.CandidateLookbackDays);
-            var posts = await _unitOfWork.PostRepository
-                .GetQueryable()
-                .Where(p => !p.IsDeleted 
-                    && p.UserId.HasValue
-                    && followedUserIds.Contains(p.UserId.Value)
-                    && p.CreatedDate >= lookbackDate)
-                .Include(p => p.LikePosts)
-                .Include(p => p.CommentPosts)
-                .OrderByDescending(p => p.CreatedDate)
-                .Take(_newsfeedSettings.MaxCandidateFetch)
-                .ToListAsync();
-
-            // Calculate base scores and cache metrics
-            foreach (var post in posts)
-            {
-                var baseScore = CalculateBaseScore(post);
-                candidates[post.Id] = baseScore;
-
-                // Cache post metrics
-                await _redisHelper.SetPostMetricsAsync(
-                    post.Id,
-                    new PostMetricsCache
-                    {
-                        Likes = post.LikePosts?.Count(lp => !lp.IsDeleted) ?? 0,
-                        Comments = post.CommentPosts?.Count(cp => !cp.IsDeleted) ?? 0,
-                        Reshares = 0,
-                        AuthorId = post.UserId ?? 0,
-                        CreatedAt = post.CreatedDate
-                    },
-                    TimeSpan.FromMinutes(_newsfeedSettings.MetricsCacheTTL));
-            }
-
-            // Backfill with trending posts if candidate pool is small
-            if (candidates.Count < _newsfeedSettings.MinCandidates)
-            {
-                var trendingPosts = await GetTrendingPostsAsync(
-                    _newsfeedSettings.MinCandidates - candidates.Count,
-                    candidates.Keys.ToHashSet());
-
-                foreach (var post in trendingPosts)
-                {
-                    var baseScore = CalculateBaseScore(post);
-                    candidates[post.Id] = baseScore;
-
-                    await _redisHelper.SetPostMetricsAsync(
-                        post.Id,
-                        new PostMetricsCache
-                        {
-                            Likes = post.LikePosts?.Count(lp => !lp.IsDeleted) ?? 0,
-                            Comments = post.CommentPosts?.Count(cp => !cp.IsDeleted) ?? 0,
-                            Reshares = 0,
-                            AuthorId = post.UserId ?? 0,
-                            CreatedAt = post.CreatedDate
-                        },
-                        TimeSpan.FromMinutes(_newsfeedSettings.MetricsCacheTTL));
-                }
-            }
-
-            // Cache candidates
-            await _redisHelper.SetCandidatesAsync(
-                userId,
-                candidates,
-                TimeSpan.FromMinutes(_newsfeedSettings.CandidateCacheTTL));
-
-            return candidates;
-        }
-
-        /// <summary>
-        /// Calculates base score for a post (without user-specific factors).
-        /// Used for initial candidate scoring and caching.
-        /// </summary>
-        private double CalculateBaseScore(Post post)
-        {
-            var likes = post.LikePosts?.Count(lp => !lp.IsDeleted) ?? 0;
-            var comments = post.CommentPosts?.Count(cp => !cp.IsDeleted) ?? 0;
-            var reshares = 0;
-
-            var recency = NewsfeedScoringUtils.CalculateRecencyScore(
-                post.CreatedDate,
-                _newsfeedSettings.Lambda);
-
-            var engagement = NewsfeedScoringUtils.CalculateEngagementScore(
-                likes,
-                comments,
-                reshares,
-                _newsfeedSettings.Alpha,
-                _newsfeedSettings.Beta,
-                _newsfeedSettings.Gamma);
-
-            // Base score = weighted recency + engagement
-            return (_newsfeedSettings.Wr * recency) + (_newsfeedSettings.We * engagement);
-        }
-
-        /// <summary>
-        /// Re-ranks posts with user-specific factors, time-decay, jitter, and diversity.
-        /// Implements Facebook-like refresh dynamics.
-        /// </summary>
-        private async Task<List<(long PostId, double Score)>> RankPostsAsync(
-            long userId,
-            Dictionary<long, double> candidates)
-        {
-            var scored = new List<(long PostId, double Score, long AuthorId)>();
-
-            // Clear author counts for fresh diversity calculation
-            await _redisHelper.ClearAuthorCountsAsync(userId);
-
-            foreach (var candidate in candidates)
-            {
-                var postId = candidate.Key;
-                var baseScore = candidate.Value;
-
-                // Get cached metrics
-                var metrics = await _redisHelper.GetPostMetricsAsync(postId);
-                if (metrics == null) continue;
-
-                // Recalculate time-decay with current time
-                var recency = NewsfeedScoringUtils.CalculateRecencyScore(
-                    metrics.CreatedAt,
-                    _newsfeedSettings.Lambda);
-
-                var engagement = NewsfeedScoringUtils.CalculateEngagementScore(
-                    metrics.Likes,
-                    metrics.Comments,
-                    metrics.Reshares,
-                    _newsfeedSettings.Alpha,
-                    _newsfeedSettings.Beta,
-                    _newsfeedSettings.Gamma);
-
-                // Calculate affinity (simplified - in production, query user-author interaction history)
-                var affinity = await CalculateAffinityAsync(userId, metrics.AuthorId);
-
-                // Calculate author quality (simplified - in production, use EMA of engagement rate)
-                var quality = 0.5; // Placeholder
-
-                // Calculate diversity penalty
-                var authorPostCount = await _redisHelper.GetAuthorCountAsync(userId, metrics.AuthorId);
-                var diversity = NewsfeedScoringUtils.CalculateDiversityPenalty(
-                    authorPostCount,
-                    _newsfeedSettings.DiversityThreshold,
-                    _newsfeedSettings.Delta);
-
-                // Calculate negative feedback (simplified - in production, track user feedback)
-                var negativeFeedback = 0.0; // Placeholder
-
-                // Calculate contextual boost (simplified)
-                var contextualBoost = 0.0; // Placeholder
-
-                // Composite score
-                var score = NewsfeedScoringUtils.CalculateCompositeScore(
-                    recency,
-                    engagement,
-                    affinity,
-                    quality,
-                    diversity,
-                    negativeFeedback,
-                    contextualBoost,
-                    _newsfeedSettings.Wr,
-                    _newsfeedSettings.We,
-                    _newsfeedSettings.Wa,
-                    _newsfeedSettings.Wc,
-                    _newsfeedSettings.Wd,
-                    _newsfeedSettings.Wn,
-                    _newsfeedSettings.Wb);
-
-                // Apply jitter for variance
-                score = NewsfeedScoringUtils.ApplyJitter(
-                    score,
-                    _newsfeedSettings.JitterPercent,
-                    _random);
-
-                scored.Add((postId, score, metrics.AuthorId));
-
-                // Track author count for diversity
-                await _redisHelper.IncrementAuthorCountAsync(userId, metrics.AuthorId);
-            }
-
-            // Sort by score descending
-            var ranked = scored
-                .OrderByDescending(s => s.Score)
-                .Select(s => (s.PostId, s.Score))
-                .ToList();
-
-            // Apply ε-greedy exploration (inject trending posts)
-            if (_random.NextDouble() < _newsfeedSettings.ExploreRate && ranked.Count > 10)
-            {
-                // Swap a few top posts with lower-ranked posts for exploration
-                var exploreCount = Math.Max(1, (int)(ranked.Count * _newsfeedSettings.ExploreRate));
-                for (int i = 0; i < exploreCount && i < ranked.Count / 2; i++)
-                {
-                    var topIndex = _random.Next(0, ranked.Count / 3);
-                    var exploreIndex = _random.Next(ranked.Count / 2, ranked.Count);
-                    (ranked[topIndex], ranked[exploreIndex]) = (ranked[exploreIndex], ranked[topIndex]);
-                }
-            }
-
-            return ranked;
-        }
-
-        /// <summary>
-        /// Calculates affinity score between user and author.
-        /// In production, this should query user-author interaction history.
-        /// </summary>
-        private async Task<double> CalculateAffinityAsync(long userId, long authorId)
-        {
-            if (userId == authorId)
-                return 1.0; // Max affinity for own posts
-
-            // Simplified: check if user follows author
-            var isFollowing = await _unitOfWork.FollowerRepository
-                .IsFollowing(userId, authorId);
-
-            // Simplified: count past likes to author's posts
-            var pastLikes = await _unitOfWork.LikePostRepository
-                .GetQueryable()
-                .Where(lp => lp.UserId == userId && !lp.IsDeleted)
-                .Join(
-                    _unitOfWork.PostRepository.GetQueryable(),
-                    lp => lp.PostId,
-                    p => p.Id,
-                    (lp, p) => new { lp, p })
-                .Where(x => x.p.UserId == authorId && !x.p.IsDeleted)
-                .CountAsync();
-
-            // Simplified: count past comments to author's posts
-            var pastComments = await _unitOfWork.CommentPostRepository
-                .GetQueryable()
-                .Where(cp => cp.UserId == userId && !cp.IsDeleted)
-                .Join(
-                    _unitOfWork.PostRepository.GetQueryable(),
-                    cp => cp.PostId,
-                    p => p.Id,
-                    (cp, p) => new { cp, p })
-                .Where(x => x.p.UserId == authorId && !x.p.IsDeleted)
-                .CountAsync();
-
-            var affinity = NewsfeedScoringUtils.CalculateAffinityScore(
-                pastLikes,
-                pastComments,
-                0, // directReplies placeholder
-                0, // profileVisits placeholder
-                _newsfeedSettings.W1,
-                _newsfeedSettings.W2,
-                _newsfeedSettings.W3,
-                _newsfeedSettings.W4,
-                _newsfeedSettings.MaxAffinity);
-
-            // Boost if following
-            if (isFollowing)
-                affinity = Math.Min(affinity + 0.3, 1.0);
-
-            return affinity;
-        }
-
-        /// <summary>
-        /// Gets trending posts for backfill.
-        /// Uses recent posts with high engagement.
-        /// </summary>
-        private async Task<List<Post>> GetTrendingPostsAsync(int count, HashSet<long> excludeIds)
-        {
-            var lookbackDate = DateTime.UtcNow.AddDays(-3); // Recent trending
-
-            var trendingPosts = await _unitOfWork.PostRepository
-                .GetQueryable()
-                .Where(p => !p.IsDeleted 
-                    && p.CreatedDate >= lookbackDate
-                    && !excludeIds.Contains(p.Id))
-                .Include(p => p.LikePosts)
-                .Include(p => p.CommentPosts)
-                .OrderByDescending(p => p.LikePosts.Count(lp => !lp.IsDeleted) 
-                    + (p.CommentPosts.Count(cp => !cp.IsDeleted) * 2))
-                .Take(count)
-                .ToListAsync();
-
-            return trendingPosts;
-        }
-
-        /// <summary>
-        /// Fetches full post details with all related data for display.
-        /// </summary>
-        private async Task<List<Post>> FetchPostDetailsAsync(List<long> postIds, long userId)
-        {
-            if (!postIds.Any())
-                return new List<Post>();
-
-            var posts = await _unitOfWork.PostRepository
-                .GetQueryable()
-                .Where(p => postIds.Contains(p.Id) && !p.IsDeleted)
-                .Include(p => p.User)
-                .Include(p => p.PostImages)
-                .Include(p => p.PostHashtags)
-                    .ThenInclude(ph => ph.Hashtag)
-                .Include(p => p.LikePosts)
-                .Include(p => p.CommentPosts)
-                .ToListAsync();
-
-            // Maintain order from postIds
-            var orderedPosts = postIds
-                .Select(id => posts.FirstOrDefault(p => p.Id == id))
-                .Where(p => p != null)
-                .ToList();
-
-            return orderedPosts;
-        }
 
         public async Task<BaseResponseModel> GetPostByUserIdAsync(PaginationParameter paginationParameter, long userId)
         {
-            // Validate user exists
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
-            if (user == null)
-            {
-                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
-            }
+            await ValidateUserExistsAsync(userId);
 
-            // Get posts by userId with pagination and all related data
             var posts = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
                 paginationParameter,
                 include: query => query
@@ -660,27 +149,330 @@ namespace SOPServer.Service.Services.Implements
                 orderBy: q => q.OrderByDescending(p => p.CreatedDate)
             );
 
-            // Map to PostModel
             var postModels = _mapper.Map<Pagination<PostModel>>(posts);
 
+            return CreatePaginatedResponse(postModels, MessageConstants.GET_LIST_POST_BY_USER_SUCCESS);
+        }
+
+        #region Private Helper Methods
+
+        private async Task ValidateUserExistsAsync(long userId)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+        }
+
+        private async Task<Post> CreatePostEntityAsync(PostCreateModel model)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(model.UserId);
+            
+            var newPost = new Post
+            {
+                User = user,
+                UserId = model.UserId,
+                Body = model.Body
+            };
+
+            await _unitOfWork.PostRepository.AddAsync(newPost);
+            _unitOfWork.Save();
+
+            return newPost;
+        }
+
+        private async Task AddPostImagesAsync(long postId, List<string> imageUrls)
+        {
+            if (imageUrls == null || !imageUrls.Any())
+            {
+                return;
+            }
+
+            foreach (var imageUrl in imageUrls)
+            {
+                var imagePost = new PostImage
+                {
+                    PostId = postId,
+                    ImgUrl = imageUrl
+                };
+                await _unitOfWork.PostImageRepository.AddAsync(imagePost);
+            }
+            
+            _unitOfWork.Save();
+        }
+
+        private async Task HandlePostHashtagsAsync(long postId, List<string> hashtags)
+        {
+            if (hashtags == null || !hashtags.Any())
+            {
+                return;
+            }
+
+            var postHashtagsList = new List<PostHashtags>();
+
+            foreach (var hashtagName in hashtags)
+            {
+                if (string.IsNullOrWhiteSpace(hashtagName))
+                {
+                    continue;
+                }
+
+                var hashtag = await GetOrCreateHashtagAsync(hashtagName.Trim());
+                
+                var postHashtag = new PostHashtags
+                {
+                    PostId = postId,
+                    HashtagId = hashtag.Id
+                };
+                postHashtagsList.Add(postHashtag);
+            }
+
+            if (postHashtagsList.Any())
+            {
+                await _unitOfWork.PostHashtagsRepository.AddRangeAsync(postHashtagsList);
+                _unitOfWork.Save();
+            }
+        }
+
+        private async Task<Hashtag> GetOrCreateHashtagAsync(string hashtagName)
+        {
+            var existingHashtag = await _unitOfWork.HashtagRepository.GetByNameAsync(hashtagName);
+            
+            if (existingHashtag != null)
+            {
+                return existingHashtag;
+            }
+
+            var newHashtag = new Hashtag
+            {
+                Name = hashtagName
+            };
+            
+            await _unitOfWork.HashtagRepository.AddAsync(newHashtag);
+            _unitOfWork.Save();
+            
+            return newHashtag;
+        }
+
+        private async Task<Post?> GetPostWithRelationsAsync(long postId)
+        {
+            return await _unitOfWork.PostRepository.GetByIdIncludeAsync(
+                postId,
+                include: query => query
+                    .Include(p => p.User)
+                    .Include(p => p.PostImages)
+                    .Include(p => p.PostHashtags)
+                        .ThenInclude(ph => ph.Hashtag)
+                    .Include(p => p.LikePosts)
+            );
+        }
+
+        private async Task<List<long>> GetFollowedUserIdsAsync(long userId)
+        {
+            var followedUserIds = await _unitOfWork.FollowerRepository
+                .GetQueryable()
+                .AsNoTracking()
+                .Where(f => f.FollowerId == userId && !f.IsDeleted)
+                .Select(f => f.FollowingId)
+                .ToListAsync();
+
+            followedUserIds.Add(userId);
+            
+            return followedUserIds;
+        }
+
+        private double CalculateRecencyScore(int hoursSinceCreation, int recencyWindowHours)
+        {
+            return Math.Max(0, Math.Min(1, 
+                (recencyWindowHours - hoursSinceCreation) / (double)recencyWindowHours));
+        }
+
+        private double CalculateEngagementScore(int likeCount, int commentCount, int commentMultiplier)
+        {
+            var rawEngagement = likeCount + (commentCount * commentMultiplier);
+            return Math.Log(1 + rawEngagement);
+        }
+
+        private double CalculateRankingScore(
+            int hoursSinceCreation, 
+            int likeCount, 
+            int commentCount,
+            long postId,
+            string? sessionId,
+            double recencyWeight,
+            double engagementWeight,
+            int recencyWindowHours,
+            int commentMultiplier)
+        {
+            var recencyScore = CalculateRecencyScore(hoursSinceCreation, recencyWindowHours);
+            var normalizedEngagement = CalculateEngagementScore(likeCount, commentCount, commentMultiplier);
+            
+            var rankingScore = (recencyWeight * recencyScore) + (engagementWeight * normalizedEngagement);
+            
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                var hashCode = (sessionId + postId).GetHashCode();
+                var shuffleFactor = (hashCode % 100) / 10000.0;
+                rankingScore += shuffleFactor;
+            }
+            
+            return rankingScore;
+        }
+
+        private async Task<HashSet<long>> GetLikedPostIdsByUserAsync(long userId, List<long> postIds)
+        {
+            var likedPostIdsList = await _unitOfWork.LikePostRepository
+                .GetQueryable()
+                .AsNoTracking()
+                .Where(lp => lp.UserId == userId && postIds.Contains(lp.PostId) && !lp.IsDeleted)
+                .Select(lp => lp.PostId)
+                .ToListAsync();
+                
+            return likedPostIdsList.ToHashSet();
+        }
+
+        private IQueryable<PostProjection> BuildNewsfeedQuery(List<long> followedUserIds, DateTime lookbackDate, DateTime currentTime)
+        {
+            return _unitOfWork.PostRepository
+                .GetQueryable()
+                .AsNoTracking()
+                .Where(p => !p.IsDeleted 
+                    && p.UserId.HasValue
+                    && followedUserIds.Contains(p.UserId.Value)
+                    && p.CreatedDate >= lookbackDate)
+                .Select(p => new PostProjection
+                {
+                    PostId = p.Id,
+                    UserId = p.UserId ?? 0,
+                    Body = p.Body,
+                    CreatedDate = p.CreatedDate,
+                    UpdatedDate = p.UpdatedDate,
+                    UserDisplayName = p.User != null ? p.User.DisplayName : "Unknown",
+                    AuthorAvatarUrl = p.User != null ? p.User.AvtUrl : null,
+                    LikeCount = p.LikePosts.Count(lp => !lp.IsDeleted),
+                    CommentCount = p.CommentPosts.Count(cp => !cp.IsDeleted),
+                    Images = p.PostImages.Select(pi => pi.ImgUrl).ToList(),
+                    Hashtags = p.PostHashtags.Select(ph => ph.Hashtag != null ? ph.Hashtag.Name : "").ToList(),
+                    HoursSinceCreation = EF.Functions.DateDiffHour(p.CreatedDate, currentTime)
+                });
+        }
+
+        private List<RankedPost> RankAndPaginatePosts(
+            List<PostProjection> posts,
+            PaginationParameter paginationParameter,
+            string? sessionId,
+            double recencyWeight,
+            double engagementWeight,
+            int recencyWindowHours,
+            int commentMultiplier)
+        {
+            return posts.Select(p =>
+            {
+                var rankingScore = CalculateRankingScore(
+                    p.HoursSinceCreation,
+                    p.LikeCount,
+                    p.CommentCount,
+                    p.PostId,
+                    sessionId,
+                    recencyWeight,
+                    engagementWeight,
+                    recencyWindowHours,
+                    commentMultiplier);
+
+                return new RankedPost
+                {
+                    Post = p,
+                    RankingScore = rankingScore
+                };
+            })
+            .OrderByDescending(x => x.RankingScore)
+            .ThenByDescending(x => x.Post.CreatedDate)
+            .Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
+            .Take(paginationParameter.PageSize)
+            .ToList();
+        }
+
+        private List<NewsfeedPostModel> BuildNewsfeedModels(List<RankedPost> rankedPosts, HashSet<long> likedPostIds)
+        {
+            return rankedPosts.Select(x =>
+            {
+                var p = x.Post;
+                return new NewsfeedPostModel
+                {
+                    Id = p.PostId,
+                    UserId = p.UserId,
+                    UserDisplayName = p.UserDisplayName,
+                    Body = p.Body,
+                    CreatedAt = p.CreatedDate,
+                    UpdatedAt = p.UpdatedDate,
+                    Hashtags = p.Hashtags.Where(h => !string.IsNullOrEmpty(h)).ToList(),
+                    Images = p.Images.Where(i => !string.IsNullOrEmpty(i)).ToList(),
+                    LikeCount = p.LikeCount,
+                    CommentCount = p.CommentCount,
+                    IsLikedByUser = likedPostIds.Contains(p.PostId),
+                    AuthorAvatarUrl = p.AuthorAvatarUrl,
+                    RankingScore = x.RankingScore
+                };
+            }).ToList();
+        }
+
+        private Pagination<NewsfeedPostModel> CreatePagination(
+            List<NewsfeedPostModel> feedModels,
+            int totalCount,
+            PaginationParameter paginationParameter)
+        {
+            return new Pagination<NewsfeedPostModel>(
+                feedModels,
+                totalCount,
+                paginationParameter.PageIndex,
+                paginationParameter.PageSize);
+        }
+
+        private BaseResponseModel CreateNewsfeedResponse(Pagination<NewsfeedPostModel> pagination, int totalCount)
+        {
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.GET_LIST_POST_BY_USER_SUCCESS,
+                Message = totalCount > 0 ? MessageConstants.NEWSFEED_GET_SUCCESS : MessageConstants.NEWSFEED_EMPTY,
                 Data = new ModelPaging
                 {
-                    Data = postModels,
+                    Data = pagination,
                     MetaData = new
                     {
-                        postModels.TotalCount,
-                        postModels.PageSize,
-                        postModels.CurrentPage,
-                        postModels.TotalPages,
-                        postModels.HasNext,
-                        postModels.HasPrevious
+                        pagination.TotalCount,
+                        pagination.PageSize,
+                        pagination.CurrentPage,
+                        pagination.TotalPages,
+                        pagination.HasNext,
+                        pagination.HasPrevious
                     }
                 }
             };
         }
+
+        private BaseResponseModel CreatePaginatedResponse<T>(Pagination<T> pagination, string message)
+        {
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = message,
+                Data = new ModelPaging
+                {
+                    Data = pagination,
+                    MetaData = new
+                    {
+                        pagination.TotalCount,
+                        pagination.PageSize,
+                        pagination.CurrentPage,
+                        pagination.TotalPages,
+                        pagination.HasNext,
+                        pagination.HasPrevious
+                    }
+                }
+            };
+        }
+
+        #endregion
     }
 }

@@ -17,7 +17,6 @@ namespace SOPServer.Service.BusinessModels.UserModels
         public string? Location { get; set; }
         public string? Bio { get; set; }
         public bool IsVerifiedEmail { get; set; }
-        public bool IsStylist { get; set; }
         public bool IsPremium { get; set; }
         public bool IsLoginWithGoogle { get; set; }
         public bool? IsFirstTime { get; set; }

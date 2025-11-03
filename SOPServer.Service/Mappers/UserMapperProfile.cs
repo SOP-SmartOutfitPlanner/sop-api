@@ -28,6 +28,12 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.JobDescription, opt => opt.MapFrom(src => src.Job != null ? src.Job.Description : null))
                 .ForMember(dest => dest.UserStyles, opt => opt.MapFrom(src => src.UserStyles != null ? src.UserStyles.ToList() : new List<UserStyle>()));
 
+            // User Public mapping (no sensitive fields)
+            CreateMap<User, UserPublicModel>()
+                .ForMember(dest => dest.JobName, opt => opt.MapFrom(src => src.Job != null ? src.Job.Name : null))
+                .ForMember(dest => dest.JobDescription, opt => opt.MapFrom(src => src.Job != null ? src.Job.Description : null))
+                .ForMember(dest => dest.UserStyles, opt => opt.MapFrom(src => src.UserStyles != null ? src.UserStyles.ToList() : new List<UserStyle>()));
+
             CreateMap<UserStyle, UserStyleModel>()
                 .ForMember(dest => dest.StyleId, opt => opt.MapFrom(src => src.StyleId ?? 0))
                 .ForMember(dest => dest.StyleName, opt => opt.MapFrom(src => src.Style != null ? src.Style.Name : string.Empty))

@@ -100,24 +100,6 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetFollowingCount(long userId)
-        {
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
-            if (user == null)
-            {
-                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
-            }
-
-            var count = await _unitOfWork.FollowerRepository.GetFollowingCount(userId);
-
-            return new BaseResponseModel
-            {
-                StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.GET_FOLLOWING_COUNT_SUCCESS,
-                Data = new { Count = count }
-            };
-        }
-
         public async Task<BaseResponseModel> IsFollowing(long followerId, long followingId)
         {
             var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(followerId, followingId);

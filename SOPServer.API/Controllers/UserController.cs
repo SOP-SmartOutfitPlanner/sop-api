@@ -30,6 +30,20 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
+        /// Get user by ID (public information only)
+        /// </summary>
+        /// <remarks>
+        /// **No Auth Required**
+        ///
+        /// Returns public user information without sensitive fields
+        /// </remarks>
+        [HttpGet("{userId}")]
+        public async Task<IActionResult> GetUserById(long userId)
+        {
+            return await ValidateAndExecute(() => _userService.GetUserByIdAsync(userId));
+        }
+
+        /// <summary>
         /// Get user profile information
         /// </summary>
         /// <remarks>

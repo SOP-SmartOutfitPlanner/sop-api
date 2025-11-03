@@ -18,8 +18,6 @@ public partial class User : BaseEntity
 
     public bool IsVerifiedEmail { get; set; } = false;
 
-    public bool IsStylist { get; set; } = false;
-
     public bool IsPremium { get; set; } = false;
 
     public bool IsLoginWithGoogle { get; set; } = false;

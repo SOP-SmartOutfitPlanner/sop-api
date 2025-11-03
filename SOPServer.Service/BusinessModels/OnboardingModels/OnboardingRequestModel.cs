@@ -19,12 +19,16 @@ namespace SOPServer.Service.BusinessModels.OnboardingModels
         public string? Location { get; set; }
         /// <example>1</example>
         public long? JobId { get; set; }
+        /// <example>Software Engineer</example>
+        public string? OtherJob { get; set; }
         /// <example>2000-12-31</example>
         public DateOnly? Dob { get; set; }
         /// <example>This is my bio</example>
         public string? Bio { get; set; }
         /// <example>[1, 2]</example>
         public List<long>? StyleIds { get; set; }
+        /// <example>["Minimalist", "Bohemian"]</example>
+        public List<string>? OtherStyles { get; set; }
 
     }
 }

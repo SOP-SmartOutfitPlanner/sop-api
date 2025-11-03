@@ -13,7 +13,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> FollowUser(CreateFollowerModel model);
         Task<BaseResponseModel> UnfollowUser(long id);
         Task<BaseResponseModel> GetFollowerCount(long userId);
-        Task<BaseResponseModel> GetFollowingCount(long userId);
         Task<BaseResponseModel> IsFollowing(long followerId, long followingId);
     }
 }

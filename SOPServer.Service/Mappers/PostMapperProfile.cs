@@ -18,6 +18,7 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.Hashtags, opt => opt.MapFrom(src => src.PostHashtags != null ? src.PostHashtags.Select(ph => ph.Hashtag != null ? ph.Hashtag.Name : "").Where(n => !string.IsNullOrEmpty(n)).ToList() : new List<string>()))
                 .ForMember(dest => dest.Images, opt => opt.MapFrom(src => src.PostImages != null ? src.PostImages.Select(pi => pi.ImgUrl).Where(url => !string.IsNullOrEmpty(url)).ToList() : new List<string>()))
                 .ForMember(dest => dest.LikeCount, opt => opt.MapFrom(src => src.LikePosts != null ? src.LikePosts.Count(lp => !lp.IsDeleted) : 0))
+                .ForMember(dest => dest.CommentCount, opt => opt.MapFrom(src => src.CommentPosts != null ? src.CommentPosts.Count(lp => !lp.IsDeleted) : 0))
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedDate))
                 .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedDate));
 

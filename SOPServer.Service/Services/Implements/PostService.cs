@@ -85,6 +85,7 @@ namespace SOPServer.Service.Services.Implements
                     .Include(p => p.PostHashtags)
                         .ThenInclude(ph => ph.Hashtag)
                     .Include(p => p.LikePosts)
+                    .Include(p => p.CommentPosts)
             );
 
             if (post == null)

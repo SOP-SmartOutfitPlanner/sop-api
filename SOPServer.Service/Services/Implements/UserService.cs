@@ -503,10 +503,26 @@ namespace SOPServer.Service.Services.Implements
             _mapper.Map(requestModel, existingUser);
             existingUser.IsFirstTime = false;
 
+            // Handle OtherJob - create new job if provided
+            if (!string.IsNullOrWhiteSpace(requestModel.OtherJob))
+            {
+                var newJob = new Job
+                {
+                    Name = requestModel.OtherJob,
+                    Description = "User-defined job",
+                    Other = requestModel.OtherJob
+                };
+                await _unitOfWork.JobRepository.AddAsync(newJob);
+                await _unitOfWork.SaveAsync();
+                existingUser.JobId = newJob.Id;
+            }
+
+            // Handle Styles
+            existingUser.UserStyles.Clear();
+
+            // Add styles from StyleIds
             if (requestModel.StyleIds != null && requestModel.StyleIds.Any())
             {
-                existingUser.UserStyles.Clear();
-
                 foreach (var styleId in requestModel.StyleIds)
                 {
                     existingUser.UserStyles.Add(new UserStyle
@@ -514,6 +530,31 @@ namespace SOPServer.Service.Services.Implements
                         UserId = userId,
                         StyleId = styleId
                     });
+                }
+            }
+
+            // Handle OtherStyles - create new styles and add to UserStyles
+            if (requestModel.OtherStyles != null && requestModel.OtherStyles.Any())
+            {
+                foreach (var otherStyleName in requestModel.OtherStyles)
+                {
+                    if (!string.IsNullOrWhiteSpace(otherStyleName))
+                    {
+                        var newStyle = new Style
+                        {
+                            Name = otherStyleName,
+                            Description = "User-defined style",
+                            Other = otherStyleName
+                        };
+                        await _unitOfWork.StyleRepository.AddAsync(newStyle);
+                        await _unitOfWork.SaveAsync();
+
+                        existingUser.UserStyles.Add(new UserStyle
+                        {
+                            UserId = userId,
+                            StyleId = newStyle.Id
+                        });
+                    }
                 }
             }
 
@@ -719,6 +760,25 @@ namespace SOPServer.Service.Services.Implements
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.GET_USER_PROFILE_SUCCESS,
                 Data = userProfile
+            };
+        }
+
+        public async Task<BaseResponseModel> GetUserByIdAsync(long userId)
+        {
+            var user = await _unitOfWork.UserRepository.GetUserProfileByIdAsync(userId);
+
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            var userPublic = _mapper.Map<UserPublicModel>(user);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_USER_SUCCESS,
+                Data = userPublic
             };
         }
 

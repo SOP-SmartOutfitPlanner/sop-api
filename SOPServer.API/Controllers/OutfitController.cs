@@ -49,7 +49,7 @@ namespace SOPServer.API.Controllers
         /// **Query Parameters:**
         /// - `page-index`: Page number (default: 1)
         /// - `page-size`: Items per page (default: 10)
-        /// - `q`: Search in name or description (optional)
+        /// - `search`: Search in name or description (optional)
         /// - `is-favorite`: Filter by favorite status (optional)
         /// - `is-saved`: Filter by saved status (optional)
         /// </remarks>

@@ -67,7 +67,7 @@ namespace SOPServer.Service.Services.Implements
 
             var updatedItem = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(id,
    include: query => query
-   .Include(x => x.Category)
+   .Include(x => x.Category).ThenInclude(x => x.Parent)
         .Include(x => x.User)
    .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
       .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)

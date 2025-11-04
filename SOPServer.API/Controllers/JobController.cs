@@ -31,6 +31,7 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "ADMIN")]
         public Task<IActionResult> Create([FromBody] JobRequestModel model)
         {
             return ValidateAndExecute(async () => await _jobService.CreateAsync(model));

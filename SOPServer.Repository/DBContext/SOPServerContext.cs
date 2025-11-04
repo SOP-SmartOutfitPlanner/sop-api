@@ -106,12 +106,14 @@ public partial class SOPServerContext : DbContext
                 .IsUnicode(true);
             entity.Property(e => e.FrequencyWorn)
                 .HasMaxLength(255)
-                .IsUnicode(true);
+                .IsUnicode(true)
+                .IsRequired(false);
             entity.Property(e => e.ImgUrl)
                 .HasMaxLength(255)
                 .IsUnicode(true);
             entity.Property(e => e.LastWornAt)
-                .HasColumnType("datetime2");
+                .HasColumnType("datetime2")
+                .IsRequired(false);
             entity.Property(e => e.Name)
                 .HasMaxLength(255)
                 .IsUnicode(true);

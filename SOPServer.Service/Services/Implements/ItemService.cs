@@ -119,7 +119,7 @@ namespace SOPServer.Service.Services.Implements
             var newItem = _mapper.Map<Item>(model);
 
             await _unitOfWork.ItemRepository.AddAsync(newItem);
-            _unitOfWork.Save();
+            await _unitOfWork.SaveAsync();
 
             // Add relationships if provided
             await AddItemRelationshipsAsync(newItem.Id, model.StyleIds, model.OccasionIds, model.SeasonIds);

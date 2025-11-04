@@ -66,7 +66,7 @@ namespace SOPServer.Service.Services.Implements
             }
 
             _unitOfWork.PostRepository.SoftDeleteAsync(post);
-            _unitOfWork.Save();
+            await _unitOfWork.SaveAsync();
 
             return new BaseResponseModel
             {
@@ -222,7 +222,7 @@ namespace SOPServer.Service.Services.Implements
             };
 
             await _unitOfWork.PostRepository.AddAsync(newPost);
-            _unitOfWork.Save();
+            await _unitOfWork.SaveAsync();
 
             return newPost;
         }
@@ -243,8 +243,8 @@ namespace SOPServer.Service.Services.Implements
                 };
                 await _unitOfWork.PostImageRepository.AddAsync(imagePost);
             }
-            
-            _unitOfWork.Save();
+
+            await _unitOfWork.SaveAsync();
         }
 
         private async Task HandlePostHashtagsAsync(long postId, List<string> hashtags)
@@ -276,7 +276,7 @@ namespace SOPServer.Service.Services.Implements
             if (postHashtagsList.Any())
             {
                 await _unitOfWork.PostHashtagsRepository.AddRangeAsync(postHashtagsList);
-                _unitOfWork.Save();
+                await _unitOfWork.SaveAsync();
             }
         }
 
@@ -295,8 +295,8 @@ namespace SOPServer.Service.Services.Implements
             };
             
             await _unitOfWork.HashtagRepository.AddAsync(newHashtag);
-            _unitOfWork.Save();
-            
+            await _unitOfWork.SaveAsync();
+
             return newHashtag;
         }
 

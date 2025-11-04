@@ -105,7 +105,7 @@ namespace SOPServer.Service.Services.Implements
                         {
                             Field = new FieldCondition
                             {
-                                Key = "SlotItem",
+                                Key = "Category",
                                 Match = new Match
                                 {
                                     Keyword = slotItem.ToString()

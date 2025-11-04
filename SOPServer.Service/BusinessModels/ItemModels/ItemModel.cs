@@ -63,9 +63,9 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public string Brand { get; set; }
 
-        public string FrequencyWorn { get; set; }
+        public string? FrequencyWorn { get; set; }
 
-        public DateTime LastWornAt { get; set; }
+        public DateTime? LastWornAt { get; set; }
 
         public string ImgUrl { get; set; }
 

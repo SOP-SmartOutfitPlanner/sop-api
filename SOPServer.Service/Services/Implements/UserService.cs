@@ -503,19 +503,22 @@ namespace SOPServer.Service.Services.Implements
             _mapper.Map(requestModel, existingUser);
             existingUser.IsFirstTime = false;
 
-            // Handle OtherJob - create new job if provided
+            // Handle Job - prioritize OtherJob over JobId
             if (!string.IsNullOrWhiteSpace(requestModel.OtherJob))
             {
+                // If OtherJob is provided, create new job and use it
                 var newJob = new Job
                 {
                     Name = requestModel.OtherJob,
                     Description = "User-defined job",
-                    Other = requestModel.OtherJob
+                    Other = requestModel.OtherJob,
+                    CreatedBy = CreatedBy.USER
                 };
                 await _unitOfWork.JobRepository.AddAsync(newJob);
                 await _unitOfWork.SaveAsync();
                 existingUser.JobId = newJob.Id;
             }
+            // else JobId from requestModel is already mapped via AutoMapper
 
             // Handle Styles
             existingUser.UserStyles.Clear();
@@ -544,7 +547,8 @@ namespace SOPServer.Service.Services.Implements
                         {
                             Name = otherStyleName,
                             Description = "User-defined style",
-                            Other = otherStyleName
+                            Other = otherStyleName,
+                            CreatedBy = CreatedBy.USER
                         };
                         await _unitOfWork.StyleRepository.AddAsync(newStyle);
                         await _unitOfWork.SaveAsync();
@@ -777,7 +781,7 @@ namespace SOPServer.Service.Services.Implements
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.GET_USER_SUCCESS,
+                Message = MessageConstants.GET_USER_BY_ID_SUCCESS,
                 Data = userPublic
             };
         }

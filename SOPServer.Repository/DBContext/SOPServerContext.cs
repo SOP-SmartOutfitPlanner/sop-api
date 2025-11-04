@@ -2,6 +2,7 @@
 #nullable disable
 using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Entities;
+using SOPServer.Repository.Enums;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -193,6 +194,8 @@ public partial class SOPServerContext : DbContext
             entity.Property(e => e.Other)
                 .HasMaxLength(255)
                 .IsUnicode(true);
+            entity.Property(e => e.CreatedBy)
+                .HasDefaultValue(CreatedBy.SYSTEM);
         });
 
         modelBuilder.Entity<Occasion>(entity =>
@@ -232,6 +235,8 @@ public partial class SOPServerContext : DbContext
             entity.Property(e => e.Other)
                 .HasMaxLength(255)
                 .IsUnicode(true);
+            entity.Property(e => e.CreatedBy)
+                .HasDefaultValue(CreatedBy.SYSTEM);
         });
 
         modelBuilder.Entity<User>(entity =>

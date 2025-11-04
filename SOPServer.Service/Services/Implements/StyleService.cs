@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
+using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.StyleModels;
 using SOPServer.Service.BusinessModels.ResultModels;
@@ -79,6 +80,7 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> CreateStyleAsync(StyleCreateModel model)
         {
             var entity = _mapper.Map<Style>(model);
+            entity.CreatedBy = CreatedBy.SYSTEM; // Admin creates system styles
             await _unitOfWork.StyleRepository.AddAsync(entity);
             await _unitOfWork.SaveAsync();
 

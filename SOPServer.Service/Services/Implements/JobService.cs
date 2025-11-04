@@ -2,6 +2,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
+using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.JobModels;
 using SOPServer.Service.BusinessModels.ResultModels;
@@ -82,6 +83,7 @@ namespace SOPServer.Service.Services.Implements
             }
 
             var entity = _mapper.Map<Job>(model);
+            entity.CreatedBy = CreatedBy.SYSTEM; // Admin creates system jobs
             await _unitOfWork.JobRepository.AddAsync(entity);
             await _unitOfWork.SaveAsync();
 

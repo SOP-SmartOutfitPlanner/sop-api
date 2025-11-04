@@ -36,8 +36,6 @@ namespace SOPServer.Repository.UnitOfWork
         private IFollowerRepository _followerRepository;
         private IUserOccasionRepository _userOccasionRepository;
 
-
-
         public UnitOfWork(SOPServerContext context)
         {
             _context = context;

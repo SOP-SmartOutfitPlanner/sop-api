@@ -138,6 +138,7 @@ namespace SOPServer.Service.Constants
 
         // User Profile related messages
         public const string GET_USER_PROFILE_SUCCESS = "Get user profile successfully";
+        public const string GET_USER_BY_ID_SUCCESS = "Get user by id successfully";
 
         // Style related messages used by StyleService
         public const string GET_STYLE_BY_ID_SUCCESS = "Get style by id successfully";
@@ -215,5 +216,15 @@ namespace SOPServer.Service.Constants
         public const string NEWSFEED_GET_SUCCESS = "Newsfeed retrieved successfully";
         public const string NEWSFEED_EMPTY = "No posts available in your feed";
         public const string NEWSFEED_REFRESH_SUCCESS = "Newsfeed refreshed successfully";
+
+        // OutfitCalendar related messages
+        public const string OUTFIT_CALENDAR_NOT_FOUND = "Outfit calendar entry not found";
+        public const string OUTFIT_CALENDAR_GET_SUCCESS = "Outfit calendar entry retrieved successfully";
+        public const string OUTFIT_CALENDAR_CREATE_SUCCESS = "Outfit calendar entry created successfully";
+        public const string OUTFIT_CALENDAR_UPDATE_SUCCESS = "Outfit calendar entry updated successfully";
+        public const string OUTFIT_CALENDAR_DELETE_SUCCESS = "Outfit calendar entry deleted successfully";
+        public const string GET_LIST_OUTFIT_CALENDAR_SUCCESS = "Get list outfit calendar successfully";
+        public const string OUTFIT_CALENDAR_ACCESS_DENIED = "You don't have permission to access this outfit calendar entry";
+        public const string OUTFIT_CALENDAR_ALREADY_EXISTS = "An outfit is already scheduled for this date";
     }
 }

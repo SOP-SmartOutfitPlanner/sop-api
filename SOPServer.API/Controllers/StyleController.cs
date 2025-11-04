@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.StyleModels;
@@ -29,18 +30,21 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "ADMIN")]
         public Task<IActionResult> CreateStyle([FromBody] StyleCreateModel model)
         {
             return ValidateAndExecute(async () => await _styleService.CreateStyleAsync(model));
         }
 
         [HttpPut]
+        [Authorize(Roles = "ADMIN")]
         public Task<IActionResult> UpdateStyle([FromBody] StyleUpdateModel model)
         {
             return ValidateAndExecute(async () => await _styleService.UpdateStyleByIdAsync(model));
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "ADMIN")]
         public Task<IActionResult> DeleteStyle(long id)
         {
             return ValidateAndExecute(async () => await _styleService.DeleteStyleByIdAsync(id));

@@ -13,6 +13,7 @@ namespace SOPServer.API.Configurations
             {
                 options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
                 options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.Never;
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
 
             // Configure API Behavior for Model Validation

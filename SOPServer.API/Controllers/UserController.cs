@@ -30,6 +30,15 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
+        /// Get user by ID (public information only)
+        /// </summary>
+        [HttpGet("{userId}")]
+        public async Task<IActionResult> GetUserById(long userId)
+        {
+            return await ValidateAndExecute(() => _userService.GetUserByIdAsync(userId));
+        }
+
+        /// <summary>
         /// Get user profile information
         /// </summary>
         /// <remarks>

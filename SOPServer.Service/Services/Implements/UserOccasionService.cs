@@ -25,12 +25,60 @@ namespace SOPServer.Service.Services.Implements
             _mapper = mapper;
         }
 
-        public async Task<BaseResponseModel> GetUserOccasionPaginationAsync(PaginationParameter paginationParameter, long userId)
+        public async Task<BaseResponseModel> GetUserOccasionPaginationAsync(
+            PaginationParameter paginationParameter,
+            long userId,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            int? year = null,
+            int? month = null,
+            int? upcomingDays = null,
+            bool? today = null)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
             if (user == null)
             {
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Calculate date range based on parameters
+            DateTime? filterStartDate = null;
+            DateTime? filterEndDate = null;
+
+            if (today.HasValue && today.Value)
+            {
+                // Get today's events only
+                var todayDate = DateTime.Today;
+                filterStartDate = todayDate;
+                filterEndDate = todayDate.AddDays(1).AddTicks(-1);
+            }
+            else if (upcomingDays.HasValue && upcomingDays.Value > 0)
+            {
+                // Get events for next N days
+                filterStartDate = DateTime.Today;
+                filterEndDate = DateTime.Today.AddDays(upcomingDays.Value).AddTicks(-1);
+            }
+            else if (year.HasValue && month.HasValue)
+            {
+                // Get events for specific month and year
+                if (month.Value < 1 || month.Value > 12)
+                {
+                    throw new BadRequestException("Month must be between 1 and 12");
+                }
+                filterStartDate = new DateTime(year.Value, month.Value, 1);
+                filterEndDate = filterStartDate.Value.AddMonths(1).AddTicks(-1);
+            }
+            else if (year.HasValue)
+            {
+                // Get events for entire year
+                filterStartDate = new DateTime(year.Value, 1, 1);
+                filterEndDate = new DateTime(year.Value, 12, 31, 23, 59, 59);
+            }
+            else if (startDate.HasValue || endDate.HasValue)
+            {
+                // Use provided date range
+                filterStartDate = startDate;
+                filterEndDate = endDate;
             }
 
             var userOccasions = await _unitOfWork.UserOccasionRepository.ToPaginationIncludeAsync(
@@ -41,7 +89,9 @@ namespace SOPServer.Service.Services.Implements
                 filter: x => x.UserId == userId &&
                            (string.IsNullOrWhiteSpace(paginationParameter.Search) ||
                             (x.Name != null && x.Name.Contains(paginationParameter.Search)) ||
-                            (x.Description != null && x.Description.Contains(paginationParameter.Search))),
+                            (x.Description != null && x.Description.Contains(paginationParameter.Search))) &&
+                           (!filterStartDate.HasValue || x.DateOccasion >= filterStartDate.Value) &&
+                           (!filterEndDate.HasValue || x.DateOccasion <= filterEndDate.Value),
                 orderBy: q => q.OrderByDescending(x => x.DateOccasion));
 
             var models = _mapper.Map<Pagination<UserOccasionModel>>(userOccasions);

@@ -2,6 +2,7 @@
 #nullable disable
 using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Entities;
+using SOPServer.Repository.Enums;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -190,6 +191,11 @@ public partial class SOPServerContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(255)
                 .IsUnicode(true);
+            entity.Property(e => e.Other)
+                .HasMaxLength(255)
+                .IsUnicode(true);
+            entity.Property(e => e.CreatedBy)
+                .HasDefaultValue(CreatedBy.SYSTEM);
         });
 
         modelBuilder.Entity<Occasion>(entity =>
@@ -226,6 +232,11 @@ public partial class SOPServerContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(255)
                 .IsUnicode(true);
+            entity.Property(e => e.Other)
+                .HasMaxLength(255)
+                .IsUnicode(true);
+            entity.Property(e => e.CreatedBy)
+                .HasDefaultValue(CreatedBy.SYSTEM);
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -262,7 +273,6 @@ public partial class SOPServerContext : DbContext
                 .HasMaxLength(255)
                 .IsUnicode(true);
             entity.Property(e => e.IsPremium).HasDefaultValue(false);
-            entity.Property(e => e.IsStylist).HasDefaultValue(false);
             entity.Property(e => e.IsVerifiedEmail).HasDefaultValue(false);
             entity.Property(e => e.IsLoginWithGoogle).HasDefaultValue(false);
             entity.Property(e => e.IsFirstTime).HasDefaultValue(false);
@@ -441,7 +451,7 @@ public partial class SOPServerContext : DbContext
                 .HasColumnType("datetime2");
 
             entity.Property(e => e.WeatherSnapshot)
-                .HasConversion<int>();
+                .HasMaxLength(255);
 
             entity.HasOne(d => d.User).WithMany(p => p.UserOccasions)
                 .HasForeignKey(d => d.UserId)

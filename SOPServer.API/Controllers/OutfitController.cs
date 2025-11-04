@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SOPServer.Repository.Commons;
+using SOPServer.Service.BusinessModels.OutfitCalendarModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.Services.Interfaces;
+using System;
 using System.Threading.Tasks;
 
 namespace SOPServer.API.Controllers
@@ -31,7 +33,7 @@ namespace SOPServer.API.Controllers
         /// **Query Parameters:**
         /// - `page-index`: Page number (default: 1)
         /// - `page-size`: Items per page (default: 10)
-        /// - `q`: Search in name or description (optional)
+        /// - `search`: Search in name or description (optional)
         /// </remarks>
         [HttpGet]
         [Authorize(Roles = "ADMIN")]
@@ -49,7 +51,7 @@ namespace SOPServer.API.Controllers
         /// **Query Parameters:**
         /// - `page-index`: Page number (default: 1)
         /// - `page-size`: Items per page (default: 10)
-        /// - `q`: Search in name or description (optional)
+        /// - `search`: Search in name or description (optional)
         /// - `is-favorite`: Filter by favorite status (optional)
         /// - `is-saved`: Filter by saved status (optional)
         /// </remarks>
@@ -163,6 +165,135 @@ namespace SOPServer.API.Controllers
             var userIdClaim = User.FindFirst("UserId")?.Value;
             long.TryParse(userIdClaim, out long userId);
             return ValidateAndExecute(async () => await _outfitService.ToggleOutfitSaveAsync(id, userId));
+        }
+
+
+        /// <summary>
+        /// Get user's outfit calendar entries with pagination and filters
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Query Parameters:**
+        /// - `page-index`: Page number (default: 1)
+        /// - `page-size`: Items per page (default: 10)
+        /// - `start-date`: Filter entries from this date (optional, format: yyyy-MM-dd)
+        /// - `end-date`: Filter entries until this date (optional, format: yyyy-MM-dd)
+        /// - `year`: Filter entries by year (optional)
+        /// - `month`: Filter entries by month (1-12, requires year parameter, optional)
+        ///
+        /// **Note:** Users can only see their own outfit calendar entries
+        ///
+        /// **Examples:**
+        /// - Get entries for December 2025: ?year=2025&amp;month=12
+        /// - Get entries in date range: ?start-date=2025-12-01&amp;end-date=2025-12-31
+        /// - Get entries for specific occasion: ?user-occasion-id=5
+        /// </remarks>
+        [HttpGet("calendar")]
+        public Task<IActionResult> GetOutfitCalendar(
+            [FromQuery] PaginationParameter paginationParameter,
+            [FromQuery(Name = "start-date")] DateTime? startDate,
+            [FromQuery(Name = "end-date")] DateTime? endDate,
+            [FromQuery] int? year,
+            [FromQuery] int? month)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+            return ValidateAndExecute(async () => await _outfitService.GetOutfitCalendarPaginationAsync(
+                paginationParameter, userId, startDate, endDate, year, month));
+        }
+
+        /// <summary>
+        /// Get outfit calendar entry by ID with full details
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Note:** Users can only access their own outfit calendar entries
+        /// </remarks>
+        [HttpGet("calendar/{id}")]
+        public Task<IActionResult> GetOutfitCalendarById(long id)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+            return ValidateAndExecute(async () => await _outfitService.GetOutfitCalendarByIdAsync(id, userId));
+        }
+
+        /// <summary>
+        /// Get all outfit calendar entries for a specific user occasion
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Note:**
+        /// - Users can only access outfit calendars for their own occasions
+        /// - Returns all outfits scheduled for the specified occasion
+        /// - Includes full outfit and item details
+        /// </remarks>
+        [HttpGet("calendar/occasion/{userOccasionId}")]
+        public Task<IActionResult> GetOutfitCalendarByUserOccasionId(long userOccasionId)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+            return ValidateAndExecute(async () => await _outfitService.GetOutfitCalendarByUserOccasionIdAsync(userOccasionId, userId));
+        }
+
+        /// <summary>
+        /// Create a new outfit calendar entry (schedule an outfit for a date)
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Request Body:**
+        /// - `outfitId`: ID of the outfit to schedule (required)
+        /// - `userOccasionId`: Link to a specific occasion/event (optional)
+        /// - `dateUsed`: Date when the outfit will be worn (required)
+        ///
+        /// **Note:** UserId is extracted from JWT token automatically
+        /// </remarks>
+        [HttpPost("calendar")]
+        public Task<IActionResult> CreateOutfitCalendar([FromBody] OutfitCalendarCreateModel model)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+            return ValidateAndExecute(async () => await _outfitService.CreateOutfitCalendarAsync(userId, model));
+        }
+
+        /// <summary>
+        /// Update outfit calendar entry
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Request Body:** All fields are optional, only provided fields will be updated
+        /// - `outfitId`: ID of the outfit to schedule
+        /// - `userOccasionId`: Link to a specific occasion/event
+        /// - `dateUsed`: Date when the outfit will be worn
+        ///
+        /// **Note:** Users can only update their own outfit calendar entries
+        /// </remarks>
+        [HttpPut("calendar/{id}")]
+        public Task<IActionResult> UpdateOutfitCalendar(long id, [FromBody] OutfitCalendarUpdateModel model)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+            return ValidateAndExecute(async () => await _outfitService.UpdateOutfitCalendarAsync(id, userId, model));
+        }
+
+        /// <summary>
+        /// Delete outfit calendar entry (soft delete)
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Note:** Users can only delete their own outfit calendar entries
+        /// </remarks>
+        [HttpDelete("calendar/{id}")]
+        public Task<IActionResult> DeleteOutfitCalendar(long id)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+            return ValidateAndExecute(async () => await _outfitService.DeleteOutfitCalendarAsync(id, userId));
         }
 
         [HttpPost("suggestion")]

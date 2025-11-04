@@ -138,6 +138,7 @@ namespace SOPServer.Service.Constants
 
         // User Profile related messages
         public const string GET_USER_PROFILE_SUCCESS = "Get user profile successfully";
+        public const string GET_USER_BY_ID_SUCCESS = "Get user by id successfully";
 
         // Style related messages used by StyleService
         public const string GET_STYLE_BY_ID_SUCCESS = "Get style by id successfully";

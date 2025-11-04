@@ -33,14 +33,16 @@ namespace SOPServer.Service.Services.Implements
         private readonly IGeminiService _geminiService;
         private readonly IMinioService _minioService;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IQdrantService _qdrantService;
 
-        public ItemService(IUnitOfWork unitOfWork, IMapper mapper, IGeminiService geminiService, IMinioService minioService, IHttpClientFactory httpClientFactory)
+        public ItemService(IUnitOfWork unitOfWork, IMapper mapper, IGeminiService geminiService, IMinioService minioService, IHttpClientFactory httpClientFactory, IQdrantService qdrantService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _geminiService = geminiService;
             _minioService = minioService;
             _httpClientFactory = httpClientFactory;
+            _qdrantService = qdrantService;
         }
 
         public async Task<BaseResponseModel> UpdateItemAsync(long id, ItemCreateModel model)
@@ -71,6 +73,26 @@ namespace SOPServer.Service.Services.Implements
       .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
           .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
 
+            var stringItem = ConvertItemToEmbeddingString(updatedItem);
+
+            var embeddingText = await _geminiService.EmbeddingText(stringItem);
+
+            if (embeddingText != null && embeddingText.Any())
+            {
+                // Prepare payload for Qdrant
+                var payload = new Dictionary<string, object>
+                {
+                    { "UserId", updatedItem.UserId ?? 0 },
+                    { "Name", updatedItem.Name ?? "" },
+                    { "Category", updatedItem.Category?.Parent.Name ?? "" },
+                    { "Color", updatedItem.Color ?? "" },
+                    { "Brand", updatedItem.Brand ?? "" }
+                };
+
+                // Upload to Qdrant
+                await _qdrantService.UpSertItem(embeddingText, payload, updatedItem.Id);
+            }
+
             var data = _mapper.Map<ItemModel>(updatedItem);
             return new BaseResponseModel
             {
@@ -88,7 +110,7 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
-            var category = await _unitOfWork.CategoryRepository.GetByIdAsync(model.CategoryId);
+            var category = await _unitOfWork.CategoryRepository.GetByIdIncludeAsync(model.CategoryId, include: x => x.Include(x => x.Parent));
             if (category == null)
             {
                 throw new NotFoundException(MessageConstants.CATEGORY_NOT_EXIST);
@@ -103,12 +125,33 @@ namespace SOPServer.Service.Services.Implements
             await AddItemRelationshipsAsync(newItem.Id, model.StyleIds, model.OccasionIds, model.SeasonIds);
 
             var newItemInclude = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(newItem.Id,
-                   include: query => query
-               .Include(x => x.Category)
-                  .Include(x => x.User)
-                .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
-      .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-        .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
+                                include: query => query
+                                        .Include(x => x.Category).ThenInclude(c => c.Parent)
+                                        .Include(x => x.User)
+                                        .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+                                        .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+                                        .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
+
+            // Convert item to structured string for embedding
+            var stringItem = ConvertItemToEmbeddingString(newItemInclude);
+
+            var embeddingText = await _geminiService.EmbeddingText(stringItem);
+
+            if (embeddingText != null && embeddingText.Any())
+            {
+                // Prepare payload for Qdrant
+                var payload = new Dictionary<string, object>
+                {
+                    { "UserId", newItemInclude.UserId ?? 0 },
+                    { "Name", newItemInclude.Name ?? "" },
+                    { "Category", newItemInclude.Category?.Parent.Name ?? "" },
+                    { "Color", newItemInclude.Color ?? "" },
+                    { "Brand", newItemInclude.Brand ?? "" }
+                };
+
+                // Upload to Qdrant
+                await _qdrantService.UpSertItem(embeddingText, payload, newItemInclude.Id);
+            }
 
             return new BaseResponseModel
             {
@@ -129,6 +172,8 @@ namespace SOPServer.Service.Services.Implements
 
             _unitOfWork.ItemRepository.SoftDeleteAsync(item);
             await _unitOfWork.SaveAsync();
+
+            await _qdrantService.DeleteItem(id);
 
             return new BaseResponseModel
             {
@@ -947,10 +992,10 @@ namespace SOPServer.Service.Services.Implements
         private async Task UpdateItemRelationshipsAsync(long itemId, List<long> styleIds, List<long> occasionIds, List<long> seasonIds)
         {
             var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(itemId,
-             include: query => query
-      .Include(x => x.ItemStyles)
-     .Include(x => x.ItemOccasions)
-    .Include(x => x.ItemSeasons));
+                            include: query => query
+                                .Include(x => x.ItemStyles)
+                                .Include(x => x.ItemOccasions)
+                                .Include(x => x.ItemSeasons));
 
             if (item == null)
             {
@@ -1045,6 +1090,74 @@ namespace SOPServer.Service.Services.Implements
             {
                 await _unitOfWork.SaveAsync();
             }
+        }
+
+        // Helper method to convert Item to structured string for embedding
+        private string ConvertItemToEmbeddingString(Item item)
+        {
+            var sb = new StringBuilder();
+
+            // Basic information
+            sb.AppendLine($"Item Name: {item.Name ?? "Unknown"}");
+
+            // Category with hierarchy
+            if (item.Category != null)
+            {
+                var categoryPath = item.Category.Parent != null
+                     ? $"{item.Category.Parent.Name} > {item.Category.Name}"
+                   : item.Category.Name;
+                sb.AppendLine($"Category: {categoryPath}");
+            }
+
+            // Physical attributes
+            if (!string.IsNullOrEmpty(item.Color))
+                sb.AppendLine($"Color: {item.Color}");
+
+            if (!string.IsNullOrEmpty(item.Pattern))
+                sb.AppendLine($"Pattern: {item.Pattern}");
+
+            if (!string.IsNullOrEmpty(item.Fabric))
+                sb.AppendLine($"Fabric: {item.Fabric}");
+
+            if (!string.IsNullOrEmpty(item.Brand))
+                sb.AppendLine($"Brand: {item.Brand}");
+
+            // Condition and weather
+            if (!string.IsNullOrEmpty(item.Condition))
+                sb.AppendLine($"Condition: {item.Condition}");
+
+            if (!string.IsNullOrEmpty(item.WeatherSuitable))
+                sb.AppendLine($"Weather Suitable: {item.WeatherSuitable}");
+
+            // AI Description (important for semantic search)
+            if (!string.IsNullOrEmpty(item.AiDescription))
+                sb.AppendLine($"Description: {item.AiDescription}");
+
+            // Styles
+            var styles = item.ItemStyles?
+                .Where(ist => !ist.IsDeleted && ist.Style != null)
+       .Select(ist => ist.Style.Name)
+                .ToList();
+            if (styles != null && styles.Any())
+                sb.AppendLine($"Styles: {string.Join(", ", styles)}");
+
+            // Occasions
+            var occasions = item.ItemOccasions?
+        .Where(io => !io.IsDeleted && io.Occasion != null)
+         .Select(io => io.Occasion.Name)
+      .ToList();
+            if (occasions != null && occasions.Any())
+                sb.AppendLine($"Occasions: {string.Join(", ", occasions)}");
+
+            // Seasons
+            var seasons = item.ItemSeasons?
+     .Where(ise => !ise.IsDeleted && ise.Season != null)
+         .Select(ise => ise.Season.Name)
+   .ToList();
+            if (seasons != null && seasons.Any())
+                sb.AppendLine($"Seasons: {string.Join(", ", seasons)}");
+
+            return sb.ToString().Trim();
         }
     }
 }

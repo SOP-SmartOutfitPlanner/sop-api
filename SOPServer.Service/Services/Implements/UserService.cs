@@ -121,7 +121,7 @@ namespace SOPServer.Service.Services.Implements
                     IsLoginWithGoogle = true
                 };
                 await _unitOfWork.UserRepository.AddAsync(newUser);
-                _unitOfWork.Save();
+                await _unitOfWork.SaveAsync();
 
                 // send welcome email without awaiting (fire-and-forget)
                 _ = Task.Run(async () =>

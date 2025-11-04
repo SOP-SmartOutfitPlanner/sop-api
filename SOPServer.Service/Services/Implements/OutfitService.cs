@@ -6,11 +6,14 @@ using SOPServer.Repository.DBContext;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
+using SOPServer.Service.BusinessModels.OutfitCalendarModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -428,6 +431,266 @@ namespace SOPServer.Service.Services.Implements
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.OUTFIT_TOGGLE_SAVE_SUCCESS,
                 Data = _mapper.Map<OutfitModel>(updatedOutfit)
+            };
+        }
+
+
+        public async Task<BaseResponseModel> GetOutfitCalendarPaginationAsync(
+            PaginationParameter paginationParameter,
+            long userId,
+            DateTime? startDate = null,
+            DateTime? endDate = null,
+            int? year = null,
+            int? month = null)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            DateTime? filterStartDate = null;
+            DateTime? filterEndDate = null;
+
+            if (year.HasValue && month.HasValue)
+            {
+                // Get entries for specific month and year
+                if (month.Value < 1 || month.Value > 12)
+                {
+                    throw new BadRequestException("Month must be between 1 and 12");
+                }
+                filterStartDate = new DateTime(year.Value, month.Value, 1);
+                filterEndDate = filterStartDate.Value.AddMonths(1).AddTicks(-1);
+            }
+            else if (year.HasValue)
+            {
+                // Get entries for entire year
+                filterStartDate = new DateTime(year.Value, 1, 1);
+                filterEndDate = new DateTime(year.Value, 12, 31, 23, 59, 59);
+            }
+            else if (startDate.HasValue || endDate.HasValue)
+            {
+                // Use provided date range
+                filterStartDate = startDate;
+                filterEndDate = endDate;
+            }
+
+            var outfitCalendars = await _unitOfWork.OutfitRepository.GetOutfitCalendarPaginationAsync(
+                paginationParameter,
+                filter: x => x.UserId == userId &&
+                           (!filterStartDate.HasValue || x.DateUsed >= filterStartDate.Value) &&
+                           (!filterEndDate.HasValue || x.DateUsed <= filterEndDate.Value),
+                orderBy: q => q.OrderBy(x => x.DateUsed));
+
+            var models = _mapper.Map<Pagination<OutfitCalendarModel>>(outfitCalendars);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_OUTFIT_CALENDAR_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = models,
+                    MetaData = new
+                    {
+                        models.TotalCount,
+                        models.PageSize,
+                        models.CurrentPage,
+                        models.TotalPages,
+                        models.HasNext,
+                        models.HasPrevious
+                    }
+                }
+            };
+        }
+
+        public async Task<BaseResponseModel> GetOutfitCalendarByIdAsync(long id, long userId)
+        {
+            var outfitCalendar = await _unitOfWork.OutfitRepository.GetOutfitCalendarByIdAsync(id);
+
+            if (outfitCalendar == null)
+            {
+                throw new NotFoundException(MessageConstants.OUTFIT_CALENDAR_NOT_FOUND);
+            }
+
+            if (outfitCalendar.UserId != userId)
+            {
+                throw new ForbiddenException(MessageConstants.OUTFIT_CALENDAR_ACCESS_DENIED);
+            }
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.OUTFIT_CALENDAR_GET_SUCCESS,
+                Data = _mapper.Map<OutfitCalendarDetailedModel>(outfitCalendar)
+            };
+        }
+
+        public async Task<BaseResponseModel> GetOutfitCalendarByUserOccasionIdAsync(long userOccasionId, long userId)
+        {
+            // Validate user occasion exists and belongs to user
+            var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdAsync(userOccasionId);
+            if (userOccasion == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_OCCASION_NOT_FOUND);
+            }
+
+            if (userOccasion.UserId != userId)
+            {
+                throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
+            }
+
+            // Get all outfit calendar entries for this user occasion
+            var outfitCalendars = await _unitOfWork.OutfitRepository.GetOutfitCalendarByUserOccasionAsync(userOccasionId, userId);
+
+            var models = _mapper.Map<List<OutfitCalendarDetailedModel>>(outfitCalendars);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_OUTFIT_CALENDAR_SUCCESS,
+                Data = models
+            };
+        }
+
+        public async Task<BaseResponseModel> CreateOutfitCalendarAsync(long userId, OutfitCalendarCreateModel model)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Verify outfit exists and belongs to user
+            var outfit = await _unitOfWork.OutfitRepository.GetByIdAsync(model.OutfitId);
+            if (outfit == null)
+            {
+                throw new NotFoundException(MessageConstants.OUTFIT_NOT_FOUND);
+            }
+
+            if (outfit.UserId != userId)
+            {
+                throw new ForbiddenException(MessageConstants.OUTFIT_ACCESS_DENIED);
+            }
+
+            // Verify user occasion if provided
+            if (model.UserOccasionId.HasValue)
+            {
+                var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdAsync(model.UserOccasionId.Value);
+                if (userOccasion == null)
+                {
+                    throw new NotFoundException(MessageConstants.USER_OCCASION_NOT_FOUND);
+                }
+
+                if (userOccasion.UserId != userId)
+                {
+                    throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
+                }
+            }
+
+            var outfitCalendar = _mapper.Map<OutfitUsageHistory>(model);
+            outfitCalendar.UserId = userId;
+            outfitCalendar.CreatedBy = OutfitCreatedBy.USER;
+
+            await _unitOfWork.OutfitRepository.AddOutfitCalendarAsync(outfitCalendar);
+            await _unitOfWork.SaveAsync();
+
+            var created = await _unitOfWork.OutfitRepository.GetOutfitCalendarByIdAsync(outfitCalendar.Id);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status201Created,
+                Message = MessageConstants.OUTFIT_CALENDAR_CREATE_SUCCESS,
+                Data = _mapper.Map<OutfitCalendarModel>(created)
+            };
+        }
+
+        public async Task<BaseResponseModel> UpdateOutfitCalendarAsync(long id, long userId, OutfitCalendarUpdateModel model)
+        {
+            var outfitCalendar = await _unitOfWork.OutfitRepository.GetOutfitCalendarByIdAsync(id);
+            if (outfitCalendar == null)
+            {
+                throw new NotFoundException(MessageConstants.OUTFIT_CALENDAR_NOT_FOUND);
+            }
+
+            if (outfitCalendar.UserId != userId)
+            {
+                throw new ForbiddenException(MessageConstants.OUTFIT_CALENDAR_ACCESS_DENIED);
+            }
+
+            // Verify outfit if provided
+            if (model.OutfitId.HasValue)
+            {
+                var outfit = await _unitOfWork.OutfitRepository.GetByIdAsync(model.OutfitId.Value);
+                if (outfit == null)
+                {
+                    throw new NotFoundException(MessageConstants.OUTFIT_NOT_FOUND);
+                }
+
+                if (outfit.UserId != userId)
+                {
+                    throw new ForbiddenException(MessageConstants.OUTFIT_ACCESS_DENIED);
+                }
+
+                outfitCalendar.OutfitId = model.OutfitId.Value;
+            }
+
+            // Verify user occasion if provided
+            if (model.UserOccasionId.HasValue)
+            {
+                var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdAsync(model.UserOccasionId.Value);
+                if (userOccasion == null)
+                {
+                    throw new NotFoundException(MessageConstants.USER_OCCASION_NOT_FOUND);
+                }
+
+                if (userOccasion.UserId != userId)
+                {
+                    throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
+                }
+
+                outfitCalendar.UserOccassionId = model.UserOccasionId.Value;
+            }
+
+            if (model.DateUsed.HasValue)
+            {
+                outfitCalendar.DateUsed = model.DateUsed.Value;
+            }
+
+            _unitOfWork.OutfitRepository.UpdateOutfitCalendar(outfitCalendar);
+            await _unitOfWork.SaveAsync();
+
+            var updated = await _unitOfWork.OutfitRepository.GetOutfitCalendarByIdAsync(id);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.OUTFIT_CALENDAR_UPDATE_SUCCESS,
+                Data = _mapper.Map<OutfitCalendarModel>(updated)
+            };
+        }
+
+        public async Task<BaseResponseModel> DeleteOutfitCalendarAsync(long id, long userId)
+        {
+            var outfitCalendar = await _unitOfWork.OutfitRepository.GetOutfitCalendarByIdAsync(id);
+            if (outfitCalendar == null)
+            {
+                throw new NotFoundException(MessageConstants.OUTFIT_CALENDAR_NOT_FOUND);
+            }
+
+            // Check if the outfit calendar entry belongs to the current user
+            if (outfitCalendar.UserId != userId)
+            {
+                throw new ForbiddenException(MessageConstants.OUTFIT_CALENDAR_ACCESS_DENIED);
+            }
+
+            _unitOfWork.OutfitRepository.DeleteOutfitCalendar(outfitCalendar);
+            await _unitOfWork.SaveAsync();
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.OUTFIT_CALENDAR_DELETE_SUCCESS
             };
         }
     }

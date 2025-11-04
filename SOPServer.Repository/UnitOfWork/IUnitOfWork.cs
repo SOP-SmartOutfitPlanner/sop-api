@@ -30,7 +30,6 @@ namespace SOPServer.Repository.UnitOfWork
         IFollowerRepository FollowerRepository { get; }
         IUserOccasionRepository UserOccasionRepository { get; }
 
-
         int Save();
         void Commit();
         void Rollback();

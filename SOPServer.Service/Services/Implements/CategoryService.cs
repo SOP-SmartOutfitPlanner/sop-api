@@ -217,7 +217,7 @@ namespace SOPServer.Service.Services.Implements
             _mapper.Map(model, category);
 
             _unitOfWork.CategoryRepository.UpdateAsync(category);
-            _unitOfWork.Save();
+            await _unitOfWork.SaveAsync();
 
             var updated = await _unitOfWork.CategoryRepository.GetByIdIncludeAsync(model.Id, include: q => q.Include(x => x.Parent));
 

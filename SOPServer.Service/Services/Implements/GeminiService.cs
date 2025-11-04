@@ -91,7 +91,7 @@ namespace SOPServer.Service.Services.Implements
             var stylesModel = styles.Select(s => new StyleItemModel { Id = s.Id, Name = s.Name });
             var occasionsModel = occasions.Select(o => new OccasionItemModel { Id = o.Id, Name = o.Name });
             var seasonsModel = seasons.Select(s => new SeasonItemModel { Id = s.Id, Name = s.Name });
-            var categoryModel = categories.Select(c => new CategoryItemModel { Id = c.Id, Name = c.Name });
+            var categoryModel = categories.Where(x => x.ParentId != null).Select(c => new CategoryItemModel { Id = c.Id, Name = c.Name });
 
             // JSON serializer options
             var serializerOptions = new JsonSerializerOptions

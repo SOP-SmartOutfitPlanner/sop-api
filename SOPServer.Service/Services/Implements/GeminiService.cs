@@ -88,10 +88,10 @@ namespace SOPServer.Service.Services.Implements
             var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
 
             //get and map
-            var stylesModel = styles.Where(s => s.CreatedBy == CreatedBy.SYSTEM).Select(s => new StyleItemModel { Id = s.Id, Name = s.Name });
-            var occasionsModel = occasions.Select(o => new OccasionItemModel { Id = o.Id, Name = o.Name });
-            var seasonsModel = seasons.Select(s => new SeasonItemModel { Id = s.Id, Name = s.Name });
-            var categoryModel = categories.Where(x => x.ParentId != null).Select(c => new CategoryItemModel { Id = c.Id, Name = c.Name });
+            var stylesModel = styles.Where(s => s.CreatedBy == CreatedBy.SYSTEM && !s.IsDeleted).Select(s => new StyleItemModel { Id = s.Id, Name = s.Name });
+            var occasionsModel = occasions.Where(o => !o.IsDeleted).Select(o => new OccasionItemModel { Id = o.Id, Name = o.Name });
+            var seasonsModel = seasons.Where(s => !s.IsDeleted).Select(s => new SeasonItemModel { Id = s.Id, Name = s.Name });
+            var categoryModel = categories.Where(x => x.ParentId != null && !x.IsDeleted).Select(c => new CategoryItemModel { Id = c.Id, Name = c.Name });
 
             // JSON serializer options
             var serializerOptions = new JsonSerializerOptions

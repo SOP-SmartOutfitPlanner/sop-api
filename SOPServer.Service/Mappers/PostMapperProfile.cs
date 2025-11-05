@@ -1,5 +1,7 @@
 using AutoMapper;
+using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
+using SOPServer.Service.BusinessModels.CategoryModels;
 using SOPServer.Service.BusinessModels.PostModels;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +19,9 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.Images, opt => opt.MapFrom(src => src.PostImages != null ? src.PostImages.Select(pi => pi.ImgUrl).Where(url => !string.IsNullOrEmpty(url)).ToList() : new List<string>()))
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedDate))
                 .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedDate));
+
+            CreateMap<Pagination<Post>, Pagination<PostModel>>()
+                .ConvertUsing<PaginationConverter<Post, PostModel>>();
         }
     }
 }

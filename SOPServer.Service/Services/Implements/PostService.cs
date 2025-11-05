@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.PostModels;
@@ -138,6 +139,40 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.POST_DELETE_SUCCESS
+            };
+        }
+
+        public async Task<BaseResponseModel> GetAllPostsAsync(PaginationParameter paginationParameter)
+        {
+            var pagedPosts = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query
+                    .Include(p => p.User)
+                    .Include(p => p.PostImages)
+                    .Include(p => p.PostHashtags)
+                        .ThenInclude(ph => ph.Hashtag),
+                orderBy: query => query.OrderByDescending(p => p.CreatedDate)
+            );
+
+            var postModels = _mapper.Map<Pagination<PostModel>>(pagedPosts);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_POST_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = postModels,
+                    MetaData = new
+                    {
+                        postModels.TotalCount,
+                        postModels.PageSize,
+                        postModels.CurrentPage,
+                        postModels.TotalPages,
+                        postModels.HasNext,
+                        postModels.HasPrevious
+                    }
+                }
             };
         }
 

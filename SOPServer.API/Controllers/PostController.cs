@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.PostModels;
 using SOPServer.Service.Services.Interfaces;
 using System.Threading.Tasks;
@@ -32,6 +33,12 @@ namespace SOPServer.API.Controllers
         public Task<IActionResult> DeletePost(long id)
         {
             return ValidateAndExecute(async () => await _postService.DeletePostByIdAsync(id));
+        }
+
+        [HttpGet]
+        public Task<IActionResult> GetAllPosts(PaginationParameter paginationParameter)
+        {
+            return ValidateAndExecute(async () => await _postService.GetAllPostsAsync(paginationParameter));
         }
     }
 }

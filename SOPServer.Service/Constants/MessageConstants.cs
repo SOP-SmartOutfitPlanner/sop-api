@@ -82,7 +82,8 @@ namespace SOPServer.Service.Constants
         public const string POST_DELETE_SUCCESS = "Post deleted successfully";
         public const string POST_GET_SUCCESS = "Post retrieved successfully";
         public const string POST_NOT_FOUND = "Post not found";
-        
+        public const string GET_LIST_POST_SUCCESS = "Get post successfully";
+
         public const string OTP_SENT_SUCCESS = "OTP sent successfully to your gmail";
         public const string OTP_VERIFY_SUCCESS = "Verify OTP successfully";
         public const string OTP_INVALID = "OTP is invalid or expired!";
@@ -168,6 +169,7 @@ namespace SOPServer.Service.Constants
         public const string JOB_CREATE_SUCCESS = "Job created successfully";
         public const string JOB_UPDATE_SUCCESS = "Job updated successfully";
         public const string JOB_DELETE_SUCCESS = "Job deleted successfully";
+
 
     }
 }

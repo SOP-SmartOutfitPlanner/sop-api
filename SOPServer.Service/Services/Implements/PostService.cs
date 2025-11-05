@@ -26,8 +26,8 @@ namespace SOPServer.Service.Services.Implements
         private readonly IRedisService _redisService;
 
         public PostService(
-            IUnitOfWork unitOfWork, 
-            IMapper mapper, 
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
             IOptions<NewsfeedSettings> newsfeedSettings,
             IRedisService redisService)
         {
@@ -104,8 +104,8 @@ namespace SOPServer.Service.Services.Implements
         }
 
         public async Task<BaseResponseModel> GetNewsFeedAsync(
-            PaginationParameter paginationParameter, 
-            long userId, 
+            PaginationParameter paginationParameter,
+            long userId,
             string? sessionId = null)
         {
             await ValidateUserExistsAsync(userId);
@@ -117,10 +117,10 @@ namespace SOPServer.Service.Services.Implements
             }
 
             var cacheKey = RedisKeyConstants.GetNewsfeedCacheKey(userId, sessionId);
-            
+
             // Try to get cached data
             var cachedData = await _redisService.GetAsync<NewsfeedCacheModel>(cacheKey);
-            
+
             List<RankedPost> allRankedPosts;
             int totalCount;
 
@@ -143,7 +143,7 @@ namespace SOPServer.Service.Services.Implements
 
                 // Rank all posts (without pagination)
                 allRankedPosts = RankPosts(
-                    posts, 
+                    posts,
                     sessionId,
                     _newsfeedSettings.RecencyWeight,
                     _newsfeedSettings.EngagementWeight,
@@ -157,7 +157,7 @@ namespace SOPServer.Service.Services.Implements
                     TotalCount = totalCount,
                     CachedAt = DateTime.UtcNow
                 };
-   
+
                 await _redisService.SetAsync(cacheKey, cacheModel, TimeSpan.FromMinutes(30));
             }
 
@@ -213,7 +213,7 @@ namespace SOPServer.Service.Services.Implements
         private async Task<Post> CreatePostEntityAsync(PostCreateModel model)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(model.UserId);
-            
+
             var newPost = new Post
             {
                 User = user,
@@ -264,7 +264,7 @@ namespace SOPServer.Service.Services.Implements
                 }
 
                 var hashtag = await GetOrCreateHashtagAsync(hashtagName.Trim());
-                
+
                 var postHashtag = new PostHashtags
                 {
                     PostId = postId,
@@ -283,7 +283,7 @@ namespace SOPServer.Service.Services.Implements
         private async Task<Hashtag> GetOrCreateHashtagAsync(string hashtagName)
         {
             var existingHashtag = await _unitOfWork.HashtagRepository.GetByNameAsync(hashtagName);
-            
+
             if (existingHashtag != null)
             {
                 return existingHashtag;
@@ -293,7 +293,7 @@ namespace SOPServer.Service.Services.Implements
             {
                 Name = hashtagName
             };
-            
+
             await _unitOfWork.HashtagRepository.AddAsync(newHashtag);
             await _unitOfWork.SaveAsync();
 
@@ -323,13 +323,13 @@ namespace SOPServer.Service.Services.Implements
                 .ToListAsync();
 
             followedUserIds.Add(userId);
-            
+
             return followedUserIds;
         }
 
         private double CalculateRecencyScore(int hoursSinceCreation, int recencyWindowHours)
         {
-            return Math.Max(0, Math.Min(1, 
+            return Math.Max(0, Math.Min(1,
                 (recencyWindowHours - hoursSinceCreation) / (double)recencyWindowHours));
         }
 
@@ -340,8 +340,8 @@ namespace SOPServer.Service.Services.Implements
         }
 
         private double CalculateRankingScore(
-            int hoursSinceCreation, 
-            int likeCount, 
+            int hoursSinceCreation,
+            int likeCount,
             int commentCount,
             long postId,
             string? sessionId,
@@ -352,16 +352,16 @@ namespace SOPServer.Service.Services.Implements
         {
             var recencyScore = CalculateRecencyScore(hoursSinceCreation, recencyWindowHours);
             var normalizedEngagement = CalculateEngagementScore(likeCount, commentCount, commentMultiplier);
-            
+
             var rankingScore = (recencyWeight * recencyScore) + (engagementWeight * normalizedEngagement);
-            
+
             if (!string.IsNullOrEmpty(sessionId))
             {
                 var hashCode = (sessionId + postId).GetHashCode();
                 var shuffleFactor = (hashCode % 100) / 10000.0;
                 rankingScore += shuffleFactor;
             }
-            
+
             return rankingScore;
         }
 
@@ -373,7 +373,7 @@ namespace SOPServer.Service.Services.Implements
                 .Where(lp => lp.UserId == userId && postIds.Contains(lp.PostId) && !lp.IsDeleted)
                 .Select(lp => lp.PostId)
                 .ToListAsync();
-                
+
             return likedPostIdsList.ToHashSet();
         }
 
@@ -382,7 +382,7 @@ namespace SOPServer.Service.Services.Implements
             return _unitOfWork.PostRepository
                 .GetQueryable()
                 .AsNoTracking()
-                .Where(p => !p.IsDeleted 
+                .Where(p => !p.IsDeleted
                     && p.UserId.HasValue
                     && followedUserIds.Contains(p.UserId.Value)
                     && p.CreatedDate >= lookbackDate)
@@ -546,6 +546,41 @@ namespace SOPServer.Service.Services.Implements
                         pagination.TotalPages,
                         pagination.HasNext,
                         pagination.HasPrevious
+                    }
+                }
+            };
+        }
+
+        public async Task<BaseResponseModel> GetAllPostsAsync(PaginationParameter paginationParameter)
+        {
+            var post = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query
+                    .Include(p => p.User)
+                    .Include(p => p.PostImages)
+                    .Include(p => p.PostHashtags)
+                        .ThenInclude(ph => ph.Hashtag)
+                    .Include(p => p.LikePosts),
+                orderBy: q => q.OrderByDescending(p => p.CreatedDate)
+            );
+
+            var postModels = _mapper.Map<Pagination<PostModel>>(post);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_POST_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = postModels,
+                    MetaData = new
+                    {
+                        postModels.TotalCount,
+                        postModels.PageSize,
+                        postModels.CurrentPage,
+                        postModels.TotalPages,
+                        postModels.HasNext,
+                        postModels.HasPrevious
                     }
                 }
             };

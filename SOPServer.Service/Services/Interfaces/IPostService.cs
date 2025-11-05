@@ -9,6 +9,7 @@ namespace SOPServer.Service.Services.Interfaces
     {
         Task<BaseResponseModel> CreatePostAsync(PostCreateModel model);
         Task<BaseResponseModel> DeletePostByIdAsync(long id);
+        Task<BaseResponseModel> GetAllPostsAsync(PaginationParameter paginationParameter);
         Task<BaseResponseModel> GetPostByIdAsync(long id);
         
         /// <summary>

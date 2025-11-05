@@ -34,28 +34,7 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _postService.DeletePostByIdAsync(id));
         }
-
-        /// <summary>
-        /// Gets personalized newsfeed for user with simple ranking algorithm.
-        /// Posts are ranked by recency (40%) and engagement (60%).
-        /// </summary>
-        /// <param name="paginationParameter">Pagination parameters (pageIndex, pageSize)</param>
-        /// <param name="userId">User ID requesting the feed</param>
-        [HttpGet("feed")]
-        public Task<IActionResult> GetNewsfeed(
-            [FromQuery] PaginationParameter paginationParameter,
-            [FromQuery] long userId,
-            [FromQuery] string? sessionId)
-        {
-            return ValidateAndExecute(async () => 
-                await _postService.GetNewsFeedAsync(paginationParameter, userId, sessionId));
-        }
-
-        /// <summary>
-        /// Gets all posts by a specific user with pagination.
-        /// </summary>
-        /// <param name="paginationParameter">Pagination parameters (pageIndex, pageSize)</param>
-        /// <param name="userId">User ID whose posts to retrieve</param>
+        
         [HttpGet("user/{userId}")]
         public Task<IActionResult> GetPostByUserId(
             [FromQuery] PaginationParameter paginationParameter, 
@@ -64,11 +43,6 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _postService.GetPostByUserIdAsync(paginationParameter, userId));
         }
 
-        /// <summary>
-        /// Gets all posts that contain a specific hashtag with pagination.
-        /// </summary>
-        /// <param name="paginationParameter">Pagination parameters (pageIndex, pageSize)</param>
-        /// <param name="hashtagId">Hashtag ID to filter posts by</param>
         [HttpGet("hashtag/{hashtagId}")]
         public Task<IActionResult> GetPostsByHashtagId(
             [FromQuery] PaginationParameter paginationParameter,

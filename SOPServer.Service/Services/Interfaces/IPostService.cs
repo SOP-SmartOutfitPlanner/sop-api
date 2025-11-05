@@ -11,25 +11,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> DeletePostByIdAsync(long id);
         Task<BaseResponseModel> GetAllPostsAsync(PaginationParameter paginationParameter);
         Task<BaseResponseModel> GetPostByIdAsync(long id);
-        
-        /// <summary>
-        /// Gets personalized newsfeed for user with simple ranking algorithm.
-        /// Posts are ranked by recency (40%) and engagement (60%).
-        /// No Redis caching required - uses direct SQL queries with proper indexes.
-        /// </summary>
-        /// <param name="paginationParameter">Pagination parameters (pageIndex, pageSize)</param>
-        /// <param name="userId">User ID requesting the feed</param>
-        /// <param name="sessionId">Not used - kept for backward compatibility</param>
-        /// <returns>Paginated newsfeed with ranked posts</returns>
-        Task<BaseResponseModel> GetNewsFeedAsync(PaginationParameter paginationParameter, long userId, string? sessionId = null);
         Task<BaseResponseModel> GetPostByUserIdAsync(PaginationParameter paginationParameter, long userId);
-        
-        /// <summary>
-        /// Gets all posts that contain a specific hashtag.
-        /// </summary>
-        /// <param name="paginationParameter">Pagination parameters (pageIndex, pageSize)</param>
-        /// <param name="hashtagId">Hashtag ID to filter posts by</param>
-        /// <returns>Paginated list of posts with the specified hashtag</returns>
         Task<BaseResponseModel> GetPostsByHashtagIdAsync(PaginationParameter paginationParameter, long hashtagId);
     }
 }

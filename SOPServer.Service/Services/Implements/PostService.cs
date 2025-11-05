@@ -199,6 +199,87 @@ namespace SOPServer.Service.Services.Implements
             return CreatePaginatedResponse(postModels, MessageConstants.GET_LIST_POST_BY_USER_SUCCESS);
         }
 
+        public async Task<BaseResponseModel> GetAllPostsAsync(PaginationParameter paginationParameter)
+        {
+            var post = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query
+                    .Include(p => p.User)
+                    .Include(p => p.PostImages)
+                    .Include(p => p.PostHashtags)
+                        .ThenInclude(ph => ph.Hashtag)
+                    .Include(p => p.LikePosts),
+                orderBy: q => q.OrderByDescending(p => p.CreatedDate)
+            );
+
+            var postModels = _mapper.Map<Pagination<PostModel>>(post);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_POST_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = postModels,
+                    MetaData = new
+                    {
+                        postModels.TotalCount,
+                        postModels.PageSize,
+                        postModels.CurrentPage,
+                        postModels.TotalPages,
+                        postModels.HasNext,
+                        postModels.HasPrevious
+                    }
+                }
+            };
+        }
+
+        public async Task<BaseResponseModel> GetPostsByHashtagIdAsync(PaginationParameter paginationParameter, long hashtagId)
+        {
+            // Validate hashtag exists
+            var hashtag = await _unitOfWork.HashtagRepository.GetByIdAsync(hashtagId);
+            if (hashtag == null)
+            {
+                throw new NotFoundException($"Hashtag with ID {hashtagId} not found");
+            }
+
+            // Get posts that contain the specified hashtag
+            var posts = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query
+                    .Include(p => p.User)
+                    .Include(p => p.PostImages)
+                    .Include(p => p.PostHashtags)
+                        .ThenInclude(ph => ph.Hashtag)
+                    .Include(p => p.LikePosts)
+                    .Include(p => p.CommentPosts),
+                filter: p => p.PostHashtags.Any(ph => ph.HashtagId == hashtagId && !ph.IsDeleted),
+                orderBy: q => q.OrderByDescending(p => p.CreatedDate)
+            );
+
+            var postModels = _mapper.Map<Pagination<PostModel>>(posts);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = $"Get posts by hashtag '{hashtag.Name}' successfully",
+                Data = new ModelPaging
+                {
+                    Data = postModels,
+                    MetaData = new
+                    {
+                        postModels.TotalCount,
+                        postModels.PageSize,
+                        postModels.CurrentPage,
+                        postModels.TotalPages,
+                        postModels.HasNext,
+                        postModels.HasPrevious,
+                        HashtagName = hashtag.Name
+                    }
+                }
+            };
+        }
+
         #region Private Helper Methods
 
         private async Task ValidateUserExistsAsync(long userId)
@@ -398,7 +479,14 @@ namespace SOPServer.Service.Services.Implements
                     LikeCount = p.LikePosts.Count(lp => !lp.IsDeleted),
                     CommentCount = p.CommentPosts.Count(cp => !cp.IsDeleted),
                     Images = p.PostImages.Select(pi => pi.ImgUrl).ToList(),
-                    Hashtags = p.PostHashtags.Select(ph => ph.Hashtag != null ? ph.Hashtag.Name : "").ToList(),
+                    Hashtags = p.PostHashtags
+   .Where(ph => ph.Hashtag != null)
+    .Select(ph => new HashtagProjection 
+                   { 
+   Id = ph.Hashtag.Id, 
+    Name = ph.Hashtag.Name 
+ })
+           .ToList(),
                     HoursSinceCreation = EF.Functions.DateDiffHour(p.CreatedDate, currentTime)
                 });
         }
@@ -483,7 +571,14 @@ namespace SOPServer.Service.Services.Implements
                     Body = p.Body,
                     CreatedAt = p.CreatedDate,
                     UpdatedAt = p.UpdatedDate,
-                    Hashtags = p.Hashtags.Where(h => !string.IsNullOrEmpty(h)).ToList(),
+                    Hashtags = p.Hashtags
+         .Where(h => !string.IsNullOrEmpty(h.Name))
+  .Select(h => new HashtagModel 
+        { 
+    Id = h.Id, 
+ Name = h.Name 
+    })
+        .ToList(),
                     Images = p.Images.Where(i => !string.IsNullOrEmpty(i)).ToList(),
                     LikeCount = p.LikeCount,
                     CommentCount = p.CommentCount,
@@ -550,42 +645,6 @@ namespace SOPServer.Service.Services.Implements
                 }
             };
         }
-
-        public async Task<BaseResponseModel> GetAllPostsAsync(PaginationParameter paginationParameter)
-        {
-            var post = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
-                paginationParameter,
-                include: query => query
-                    .Include(p => p.User)
-                    .Include(p => p.PostImages)
-                    .Include(p => p.PostHashtags)
-                        .ThenInclude(ph => ph.Hashtag)
-                    .Include(p => p.LikePosts),
-                orderBy: q => q.OrderByDescending(p => p.CreatedDate)
-            );
-
-            var postModels = _mapper.Map<Pagination<PostModel>>(post);
-
-            return new BaseResponseModel
-            {
-                StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.GET_LIST_POST_SUCCESS,
-                Data = new ModelPaging
-                {
-                    Data = postModels,
-                    MetaData = new
-                    {
-                        postModels.TotalCount,
-                        postModels.PageSize,
-                        postModels.CurrentPage,
-                        postModels.TotalPages,
-                        postModels.HasNext,
-                        postModels.HasPrevious
-                    }
-                }
-            };
-        }
-
         #endregion
     }
 }

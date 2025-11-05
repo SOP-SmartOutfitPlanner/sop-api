@@ -64,6 +64,19 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _postService.GetPostByUserIdAsync(paginationParameter, userId));
         }
 
+        /// <summary>
+        /// Gets all posts that contain a specific hashtag with pagination.
+        /// </summary>
+        /// <param name="paginationParameter">Pagination parameters (pageIndex, pageSize)</param>
+        /// <param name="hashtagId">Hashtag ID to filter posts by</param>
+        [HttpGet("hashtag/{hashtagId}")]
+        public Task<IActionResult> GetPostsByHashtagId(
+            [FromQuery] PaginationParameter paginationParameter,
+            long hashtagId)
+        {
+            return ValidateAndExecute(async () => await _postService.GetPostsByHashtagIdAsync(paginationParameter, hashtagId));
+        }
+
         [HttpGet]
         public Task<IActionResult> GetAllPosts(PaginationParameter paginationParameter)
         {

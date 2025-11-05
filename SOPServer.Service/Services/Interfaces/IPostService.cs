@@ -23,5 +23,13 @@ namespace SOPServer.Service.Services.Interfaces
         /// <returns>Paginated newsfeed with ranked posts</returns>
         Task<BaseResponseModel> GetNewsFeedAsync(PaginationParameter paginationParameter, long userId, string? sessionId = null);
         Task<BaseResponseModel> GetPostByUserIdAsync(PaginationParameter paginationParameter, long userId);
+        
+        /// <summary>
+        /// Gets all posts that contain a specific hashtag.
+        /// </summary>
+        /// <param name="paginationParameter">Pagination parameters (pageIndex, pageSize)</param>
+        /// <param name="hashtagId">Hashtag ID to filter posts by</param>
+        /// <returns>Paginated list of posts with the specified hashtag</returns>
+        Task<BaseResponseModel> GetPostsByHashtagIdAsync(PaginationParameter paginationParameter, long hashtagId);
     }
 }

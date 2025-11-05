@@ -88,7 +88,7 @@ namespace SOPServer.Service.Services.Implements
             var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
 
             //get and map
-            var stylesModel = styles.Select(s => new StyleItemModel { Id = s.Id, Name = s.Name });
+            var stylesModel = styles.Where(s => s.CreatedBy == CreatedBy.SYSTEM).Select(s => new StyleItemModel { Id = s.Id, Name = s.Name });
             var occasionsModel = occasions.Select(o => new OccasionItemModel { Id = o.Id, Name = o.Name });
             var seasonsModel = seasons.Select(s => new SeasonItemModel { Id = s.Id, Name = s.Name });
             var categoryModel = categories.Where(x => x.ParentId != null).Select(c => new CategoryItemModel { Id = c.Id, Name = c.Name });

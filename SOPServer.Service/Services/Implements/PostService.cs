@@ -124,8 +124,14 @@ namespace SOPServer.Service.Services.Implements
             return CreatePaginatedResponse(postModels, MessageConstants.GET_LIST_POST_BY_USER_SUCCESS);
         }
 
-        public async Task<BaseResponseModel> GetAllPostsAsync(PaginationParameter paginationParameter)
+        public async Task<BaseResponseModel> GetAllPostsAsync(PaginationParameter paginationParameter, long userId)
         {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
             var post = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
                 paginationParameter,
                 include: query => query
@@ -138,6 +144,13 @@ namespace SOPServer.Service.Services.Implements
             );
 
             var postModels = _mapper.Map<Pagination<PostModel>>(post);
+
+            // Check if user has liked each post
+            foreach (var postModel in postModels)
+            {
+                var likeExists = await _unitOfWork.LikePostRepository.GetByUserAndPost(userId, postModel.Id);
+                postModel.IsLiked = likeExists != null && !likeExists.IsDeleted;
+            }
 
             return new BaseResponseModel
             {

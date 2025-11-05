@@ -31,5 +31,6 @@
 		<PackageReference Include="MimeKit" Version="4.10.0" />
 		<PackageReference Include="Minio" Version="6.0.5" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="Qdrant.Client" Version="1.15.1" />
 	</ItemGroup>
 </Project>

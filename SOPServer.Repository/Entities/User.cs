@@ -18,8 +18,6 @@ public partial class User : BaseEntity
 
     public bool IsVerifiedEmail { get; set; } = false;
 
-    public bool IsStylist { get; set; } = false;
-
     public bool IsPremium { get; set; } = false;
 
     public bool IsLoginWithGoogle { get; set; } = false;
@@ -32,9 +30,9 @@ public partial class User : BaseEntity
 
     public Gender Gender { get; set; }
 
-    public string? PreferedColor { get; set; }
+    public List<string>? PreferedColor { get; set; }
 
-    public string? AvoidedColor { get; set; }
+    public List<string>? AvoidedColor { get; set; }
 
     public string? Location { get; set; }
 
@@ -49,4 +47,18 @@ public partial class User : BaseEntity
     public virtual ICollection<UserStyle> UserStyles { get; set; } = new List<UserStyle>();
 
     public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
+
+    public virtual ICollection<Outfit> Outfits { get; set; } = new List<Outfit>();
+
+    public virtual ICollection<OutfitUsageHistory> OutfitUsageHistories { get; set; } = new List<OutfitUsageHistory>();
+
+    public virtual ICollection<UserOccasion> UserOccasions { get; set; } = new List<UserOccasion>();
+
+    public virtual ICollection<LikePost> LikePosts { get; set; } = new List<LikePost>();
+
+    public virtual ICollection<CommentPost> CommentPosts { get; set; } = new List<CommentPost>();
+
+    public virtual ICollection<Follower> Followers { get; set; } = new List<Follower>();
+
+    public virtual ICollection<Follower> Following { get; set; } = new List<Follower>();
 }

@@ -6,6 +6,8 @@ using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Services.Implements;
 using SOPServer.Service.Services.Interfaces;
+using SOPServer.Service.Utils;
+using System.Security.Claims;
 
 namespace SOPServer.API.Controllers
 {
@@ -27,14 +29,41 @@ namespace SOPServer.API.Controllers
             return await ValidateAndExecute(() => _userService.GetUsers(paginationParameter));
         }
 
-        //[Authorize]
-        //todo add authorize too !!!
-        [HttpGet("profile/{userId}")]
-        public async Task<IActionResult> GetUserProfile(long userId)
+        /// <summary>
+        /// Get user by ID (public information only)
+        /// </summary>
+        [HttpGet("{userId}")]
+        public async Task<IActionResult> GetUserById(long userId)
         {
+            return await ValidateAndExecute(() => _userService.GetUserByIdAsync(userId));
+        }
+
+        /// <summary>
+        /// Get user profile information
+        /// </summary>
+        /// <remarks>
+        /// **Auth Required**
+        ///
+        /// **Note:** UserId is extracted from JWT token automatically
+        /// </remarks>
+        [Authorize]
+        [HttpGet("profile")]
+        public async Task<IActionResult> GetUserProfile()
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+
             return await ValidateAndExecute(() => _userService.GetUserProfileByIdAsync(userId));
         }
 
+        /// <summary>
+        /// Submit onboarding information for first-time user setup
+        /// </summary>
+        /// <remarks>
+        /// **Auth Required** 
+        ///
+        /// **Note:** UserId is extracted from JWT token automatically
+        /// </remarks>
         [Authorize]
         [HttpPost("onboarding")]
         public async Task<IActionResult> Submit([FromBody] OnboardingRequestModel requestModel)

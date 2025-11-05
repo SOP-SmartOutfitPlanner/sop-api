@@ -1,6 +1,8 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
+using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.JobModels;
 using SOPServer.Service.BusinessModels.ResultModels;
@@ -26,26 +28,35 @@ namespace SOPServer.Service.Services.Implements
             _mapper = mapper;
         }
 
-        public async Task<BaseResponseModel> GetAllAsync(string? search = null)
+        public async Task<BaseResponseModel> GetAllAsync(PaginationParameter paginationParameter)
         {
-            IEnumerable<Job> list;
+            var jobs = await _unitOfWork.JobRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                filter: x => !x.IsDeleted &&
+                    (string.IsNullOrWhiteSpace(paginationParameter.Search) ||
+                     x.Name.Contains(paginationParameter.Search)),
+                orderBy: query => query.OrderByDescending(x => x.CreatedDate)
+            );
 
-            if (string.IsNullOrWhiteSpace(search))
-            {
-                list = await _unitOfWork.JobRepository.GetAllAsync();
-            }
-            else
-            {
-                list = await _unitOfWork.JobRepository.SearchByNameAsync(search);
-            }
-
-            var result = _mapper.Map<IEnumerable<JobModel>>(list);
+            var result = _mapper.Map<Pagination<JobModel>>(jobs);
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.GET_LIST_JOB_SUCCESS,
-                Data = result
+                Data = new ModelPaging
+                {
+                    Data = result,
+                    MetaData = new
+                    {
+                        result.TotalCount,
+                        result.PageSize,
+                        result.CurrentPage,
+                        result.TotalPages,
+                        result.HasNext,
+                        result.HasPrevious
+                    }
+                }
             };
         }
 
@@ -72,6 +83,7 @@ namespace SOPServer.Service.Services.Implements
             }
 
             var entity = _mapper.Map<Job>(model);
+            entity.CreatedBy = CreatedBy.SYSTEM; // Admin creates system jobs
             await _unitOfWork.JobRepository.AddAsync(entity);
             await _unitOfWork.SaveAsync();
 

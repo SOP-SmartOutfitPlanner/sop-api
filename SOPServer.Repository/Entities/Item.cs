@@ -19,9 +19,9 @@ public partial class Item : BaseEntity
 
     public string Brand { get; set; }
 
-    public string FrequencyWorn { get; set; }
+    public string? FrequencyWorn { get; set; }
 
-    public DateTime LastWornAt { get; set; }
+    public DateTime? LastWornAt { get; set; }
 
     public string ImgUrl { get; set; }
 
@@ -32,8 +32,6 @@ public partial class Item : BaseEntity
     public string Pattern { get; set; }
 
     public string Fabric { get; set; }
-
-    public string Tag { get; set; }
 
     public virtual ICollection<ItemOccasion> ItemOccasions { get; set; } = new List<ItemOccasion>();
 

@@ -30,29 +30,43 @@ namespace SOPServer.Repository.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsFavorite")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsSaved")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<long?>("UserId")
+                    b.Property<long>("UserId")
                         .HasColumnType("bigint");
 
-                    b.Property<bool>("isFavorite")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("isUsed")
-                        .HasColumnType("bit");
-
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("PK__Outfit__3214EC07");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Outfits");
+                    b.ToTable("Outfit", (string)null);
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.AISetting", b =>
@@ -123,6 +137,83 @@ namespace SOPServer.Repository.Migrations
                     b.HasIndex("ParentId");
 
                     b.ToTable("Category", (string)null);
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.CommentPost", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Comment")
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("ParentCommentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("PostId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id")
+                        .HasName("PK__CommentPost__3214EC07");
+
+                    b.HasIndex("ParentCommentId");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("CommentPost", (string)null);
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.Follower", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("FollowerId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("FollowingId")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id")
+                        .HasName("PK__Follower__3214EC07");
+
+                    b.HasIndex("FollowingId");
+
+                    b.HasIndex("FollowerId", "FollowingId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Follower_FollowerId_FollowingId");
+
+                    b.ToTable("Follower", (string)null);
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Hashtag", b =>
@@ -202,7 +293,7 @@ namespace SOPServer.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<DateTime>("LastWornAt")
+                    b.Property<DateTime?>("LastWornAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
@@ -211,11 +302,6 @@ namespace SOPServer.Repository.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("Pattern")
-                        .HasMaxLength(255)
-                        .IsUnicode(true)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("Tag")
                         .HasMaxLength(255)
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(255)");
@@ -348,6 +434,11 @@ namespace SOPServer.Repository.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<int>("CreatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
@@ -371,6 +462,41 @@ namespace SOPServer.Repository.Migrations
                         .HasName("PK__Job__3214EC07BB559D15");
 
                     b.ToTable("Job", (string)null);
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.LikePost", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("PostId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id")
+                        .HasName("PK__LikePost__3214EC07");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("PostId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_LikePost_PostId_UserId");
+
+                    b.ToTable("LikePost", (string)null);
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Occasion", b =>
@@ -424,13 +550,58 @@ namespace SOPServer.Repository.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("PK__OutfitIt__3214EC07");
 
                     b.HasIndex("ItemId");
 
                     b.HasIndex("OutfitId");
 
-                    b.ToTable("OutfitItems");
+                    b.ToTable("OutfitItems", (string)null);
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.OutfitUsageHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DateUsed")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("OutfitId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("UserOccassionId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id")
+                        .HasName("PK__OutfitUs__3214EC07");
+
+                    b.HasIndex("OutfitId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserOccassionId");
+
+                    b.ToTable("OutfitUsageHistory", (string)null);
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Post", b =>
@@ -567,6 +738,11 @@ namespace SOPServer.Repository.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<int>("CreatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
@@ -601,9 +777,7 @@ namespace SOPServer.Repository.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<string>("AvoidedColor")
-                        .HasMaxLength(255)
-                        .IsUnicode(true)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("AvtUrl")
                         .HasMaxLength(255)
@@ -653,11 +827,6 @@ namespace SOPServer.Repository.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
-                    b.Property<bool>("IsStylist")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
                     b.Property<bool>("IsVerifiedEmail")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -677,9 +846,7 @@ namespace SOPServer.Repository.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PreferedColor")
-                        .HasMaxLength(255)
-                        .IsUnicode(true)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Role")
                         .HasColumnType("int");
@@ -696,6 +863,63 @@ namespace SOPServer.Repository.Migrations
                         .IsUnique();
 
                     b.ToTable("User", (string)null);
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.UserOccasion", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DateOccasion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<long?>("OccasionId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("StartTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("WeatherSnapshot")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.HasKey("Id")
+                        .HasName("PK__UserOcca__3214EC07");
+
+                    b.HasIndex("OccasionId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserOccasion", (string)null);
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.UserStyle", b =>
@@ -734,8 +958,11 @@ namespace SOPServer.Repository.Migrations
             modelBuilder.Entity("Outfit", b =>
                 {
                     b.HasOne("SOPServer.Repository.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId");
+                        .WithMany("Outfits")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_Outfit_User");
 
                     b.Navigation("User");
                 });
@@ -748,6 +975,56 @@ namespace SOPServer.Repository.Migrations
                         .HasConstraintName("FK_Category_Parent");
 
                     b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.CommentPost", b =>
+                {
+                    b.HasOne("SOPServer.Repository.Entities.CommentPost", "ParentComment")
+                        .WithMany("Replies")
+                        .HasForeignKey("ParentCommentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_CommentPost_ParentComment");
+
+                    b.HasOne("SOPServer.Repository.Entities.Post", "Post")
+                        .WithMany("CommentPosts")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_CommentPost_Post");
+
+                    b.HasOne("SOPServer.Repository.Entities.User", "User")
+                        .WithMany("CommentPosts")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_CommentPost_User");
+
+                    b.Navigation("ParentComment");
+
+                    b.Navigation("Post");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.Follower", b =>
+                {
+                    b.HasOne("SOPServer.Repository.Entities.User", "FollowerUser")
+                        .WithMany("Followers")
+                        .HasForeignKey("FollowerId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_Follower_FollowerUser");
+
+                    b.HasOne("SOPServer.Repository.Entities.User", "FollowingUser")
+                        .WithMany("Following")
+                        .HasForeignKey("FollowingId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_Follower_FollowingUser");
+
+                    b.Navigation("FollowerUser");
+
+                    b.Navigation("FollowingUser");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Item", b =>
@@ -818,19 +1095,71 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("Style");
                 });
 
+            modelBuilder.Entity("SOPServer.Repository.Entities.LikePost", b =>
+                {
+                    b.HasOne("SOPServer.Repository.Entities.Post", "Post")
+                        .WithMany("LikePosts")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_LikePost_Post");
+
+                    b.HasOne("SOPServer.Repository.Entities.User", "User")
+                        .WithMany("LikePosts")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_LikePost_User");
+
+                    b.Navigation("Post");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SOPServer.Repository.Entities.OutfitItems", b =>
                 {
                     b.HasOne("SOPServer.Repository.Entities.Item", "Item")
                         .WithMany("OutfitItems")
-                        .HasForeignKey("ItemId");
+                        .HasForeignKey("ItemId")
+                        .HasConstraintName("FK_OutfitItems_Item");
 
                     b.HasOne("Outfit", "Outfit")
                         .WithMany("OutfitItems")
-                        .HasForeignKey("OutfitId");
+                        .HasForeignKey("OutfitId")
+                        .HasConstraintName("FK_OutfitItems_Outfit");
 
                     b.Navigation("Item");
 
                     b.Navigation("Outfit");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.OutfitUsageHistory", b =>
+                {
+                    b.HasOne("Outfit", "Outfit")
+                        .WithMany("OutfitUsageHistories")
+                        .HasForeignKey("OutfitId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_OutfitUsageHistory_Outfit");
+
+                    b.HasOne("SOPServer.Repository.Entities.User", "User")
+                        .WithMany("OutfitUsageHistories")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_OutfitUsageHistory_User");
+
+                    b.HasOne("SOPServer.Repository.Entities.UserOccasion", "UserOccasion")
+                        .WithMany("OutfitUsageHistories")
+                        .HasForeignKey("UserOccassionId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_OutfitUsageHistory_UserOccasion");
+
+                    b.Navigation("Outfit");
+
+                    b.Navigation("User");
+
+                    b.Navigation("UserOccasion");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Post", b =>
@@ -884,6 +1213,26 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("Job");
                 });
 
+            modelBuilder.Entity("SOPServer.Repository.Entities.UserOccasion", b =>
+                {
+                    b.HasOne("SOPServer.Repository.Entities.Occasion", "Occasion")
+                        .WithMany("UserOccasions")
+                        .HasForeignKey("OccasionId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_UserOccasion_Occasion");
+
+                    b.HasOne("SOPServer.Repository.Entities.User", "User")
+                        .WithMany("UserOccasions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_UserOccasion_User");
+
+                    b.Navigation("Occasion");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SOPServer.Repository.Entities.UserStyle", b =>
                 {
                     b.HasOne("SOPServer.Repository.Entities.Style", "Style")
@@ -904,6 +1253,8 @@ namespace SOPServer.Repository.Migrations
             modelBuilder.Entity("Outfit", b =>
                 {
                     b.Navigation("OutfitItems");
+
+                    b.Navigation("OutfitUsageHistories");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Category", b =>
@@ -911,6 +1262,11 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("InverseParent");
 
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.CommentPost", b =>
+                {
+                    b.Navigation("Replies");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Hashtag", b =>
@@ -937,10 +1293,16 @@ namespace SOPServer.Repository.Migrations
             modelBuilder.Entity("SOPServer.Repository.Entities.Occasion", b =>
                 {
                     b.Navigation("ItemOccasions");
+
+                    b.Navigation("UserOccasions");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Post", b =>
                 {
+                    b.Navigation("CommentPosts");
+
+                    b.Navigation("LikePosts");
+
                     b.Navigation("PostHashtags");
 
                     b.Navigation("PostImages");
@@ -960,11 +1322,30 @@ namespace SOPServer.Repository.Migrations
 
             modelBuilder.Entity("SOPServer.Repository.Entities.User", b =>
                 {
+                    b.Navigation("CommentPosts");
+
+                    b.Navigation("Followers");
+
+                    b.Navigation("Following");
+
                     b.Navigation("Items");
+
+                    b.Navigation("LikePosts");
+
+                    b.Navigation("OutfitUsageHistories");
+
+                    b.Navigation("Outfits");
 
                     b.Navigation("Posts");
 
+                    b.Navigation("UserOccasions");
+
                     b.Navigation("UserStyles");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.UserOccasion", b =>
+                {
+                    b.Navigation("OutfitUsageHistories");
                 });
 #pragma warning restore 612, 618
         }

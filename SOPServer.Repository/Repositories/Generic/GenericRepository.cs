@@ -77,11 +77,17 @@ namespace SOPServer.Repository.Repositories.Generic
         public async Task<Pagination<TEntity>> ToPagination(PaginationParameter paginationParameter)
         {
             var itemCount = await _dbSet.CountAsync();
-            var items = await _dbSet.Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
-                                    .Take(paginationParameter.PageSize)
-                                    .AsNoTracking()
-                                    .ToListAsync();
-            var result = new Pagination<TEntity>(items, itemCount, paginationParameter.PageIndex, paginationParameter.PageSize);
+            var query = _dbSet.AsQueryable();
+
+            if (!paginationParameter.TakeAll)
+            {
+                query = query.Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
+                            .Take(paginationParameter.PageSize);
+            }
+
+            var items = await query.AsNoTracking().ToListAsync();
+            var pageSize = paginationParameter.TakeAll ? itemCount : paginationParameter.PageSize;
+            var result = new Pagination<TEntity>(items, itemCount, paginationParameter.PageIndex, pageSize);
 
             return result;
         }
@@ -113,17 +119,20 @@ namespace SOPServer.Repository.Repositories.Generic
             {
                 query = orderBy(query);
             }
-            
+
             var itemCount = await query.CountAsync();
 
 
             // Implement pagination
-            query = query.Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
-                        .Take(paginationParameter.PageSize);
+            if (!paginationParameter.TakeAll)
+            {
+                query = query.Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
+                            .Take(paginationParameter.PageSize);
+            }
 
             var items = await query.AsNoTracking().ToListAsync();
-
-            var result = new Pagination<TEntity>(items, itemCount, paginationParameter.PageIndex, paginationParameter.PageSize);
+            var pageSize = paginationParameter.TakeAll ? itemCount : paginationParameter.PageSize;
+            var result = new Pagination<TEntity>(items, itemCount, paginationParameter.PageIndex, pageSize);
 
             return result;
         }
@@ -147,6 +156,15 @@ namespace SOPServer.Repository.Repositories.Generic
             }
             query = query.Where(e => !e.IsDeleted);
             return await query.FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
+        }
+
+        /// <summary>
+        /// Gets queryable for advanced filtering and querying scenarios.
+        /// Returns non-deleted entities by default.
+        /// </summary>
+        public IQueryable<TEntity> GetQueryable()
+        {
+            return _dbSet.Where(e => !e.IsDeleted);
         }
     }
 }

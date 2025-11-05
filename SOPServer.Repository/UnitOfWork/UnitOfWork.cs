@@ -31,8 +31,10 @@ namespace SOPServer.Repository.UnitOfWork
         private IOutfitRepository _outfitRepository;
         private IAISettingRepository _aiSettingRepository;
         private IJobRepository _jobRepository;
-
-
+        private ILikePostRepository _likePostRepository;
+        private ICommentPostRepository _commentPostRepository;
+        private IFollowerRepository _followerRepository;
+        private IUserOccasionRepository _userOccasionRepository;
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -164,6 +166,38 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _jobRepository ??= new JobRepository(_context);
+            }
+        }
+
+        public ILikePostRepository LikePostRepository
+        {
+            get
+            {
+                return _likePostRepository ??= new LikePostRepository(_context);
+            }
+        }
+
+        public ICommentPostRepository CommentPostRepository
+        {
+            get
+            {
+                return _commentPostRepository ??= new CommentPostRepository(_context);
+            }
+        }
+
+        public IFollowerRepository FollowerRepository
+        {
+            get
+            {
+                return _followerRepository ??= new FollowerRepository(_context);
+            }
+        }
+
+        public IUserOccasionRepository UserOccasionRepository
+        {
+            get
+            {
+                return _userOccasionRepository ??= new UserOccasionRepository(_context);
             }
         }
 

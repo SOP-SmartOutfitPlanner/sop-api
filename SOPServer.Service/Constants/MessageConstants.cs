@@ -53,6 +53,7 @@ namespace SOPServer.Service.Constants
         public const string UPLOAD_FILE_SUCCESS = "File uploaded successfully";
 
         // Category related messages used by CategoryService
+        public const string GET_LIST_CATEGORY_SUCCESS = "Get list categories successfully";
         public const string GET_CATEGORY_BY_ID_SUCCESS = "Get category by id successfully";
         public const string GET_CATEGORY_BY_PARENTID_SUCCESS = "Get categories by parent id successfully";
         public const string GET_ROOT_CATEGORIES_SUCCESS = "Get root categories successfully";
@@ -82,6 +83,8 @@ namespace SOPServer.Service.Constants
         public const string POST_DELETE_SUCCESS = "Post deleted successfully";
         public const string POST_GET_SUCCESS = "Post retrieved successfully";
         public const string POST_NOT_FOUND = "Post not found";
+        public const string GET_LIST_POST_BY_USER_SUCCESS = "Get list posts by user successfully";
+
         public const string GET_LIST_POST_SUCCESS = "Get post successfully";
 
         public const string OTP_SENT_SUCCESS = "OTP sent successfully to your gmail";
@@ -117,8 +120,14 @@ namespace SOPServer.Service.Constants
         // Outfit related messages
         public const string OUTFIT_NOT_FOUND = "Outfit not found";
         public const string OUTFIT_GET_SUCCESS = "Outfit retrieved successfully";
+        public const string OUTFIT_CREATE_SUCCESS = "Outfit created successfully";
+        public const string OUTFIT_UPDATE_SUCCESS = "Outfit updated successfully";
+        public const string OUTFIT_DELETE_SUCCESS = "Outfit deleted successfully";
+        public const string GET_LIST_OUTFIT_SUCCESS = "Get list outfit successfully";
         public const string OUTFIT_TOGGLE_FAVORITE_SUCCESS = "Outfit favorite status toggled successfully";
-        public const string OUTFIT_MARK_USED_SUCCESS = "Outfit marked as used successfully";
+        public const string OUTFIT_TOGGLE_SAVE_SUCCESS = "Outfit save status toggled successfully";
+        public const string OUTFIT_DUPLICATE_ITEMS = "An outfit with the same combination of items already exists";
+        public const string OUTFIT_ACCESS_DENIED = "You don't have permission to access this outfit";
 
         // Reset Password related messages
         public const string RESET_PASSWORD_REQUEST_SENT = "If the email exists, a password reset OTP has been sent";
@@ -131,6 +140,7 @@ namespace SOPServer.Service.Constants
 
         // User Profile related messages
         public const string GET_USER_PROFILE_SUCCESS = "Get user profile successfully";
+        public const string GET_USER_BY_ID_SUCCESS = "Get user by id successfully";
 
         // Style related messages used by StyleService
         public const string GET_STYLE_BY_ID_SUCCESS = "Get style by id successfully";
@@ -170,6 +180,53 @@ namespace SOPServer.Service.Constants
         public const string JOB_UPDATE_SUCCESS = "Job updated successfully";
         public const string JOB_DELETE_SUCCESS = "Job deleted successfully";
 
+        // LikePost related messages
+        public const string LIKE_POST_SUCCESS = "Like post successfully";
+        public const string UNLIKE_POST_SUCCESS = "Unlike post successfully";
+        public const string ALREADY_LIKE_POST = "You have already liked this post";
+        public const string LIKE_POST_NOT_FOUND = "Like not found";
 
+        // CommentPost related messages
+        public const string COMMENT_CREATE_SUCCESS = "Comment created successfully";
+        public const string COMMENT_DELETE_SUCCESS = "Comment deleted successfully";
+        public const string COMMENT_NOT_FOUND = "Comment not found";
+        public const string COMMENT_GET_SUCCESS = "Get comment successfully";
+        public const string GET_LIST_COMMENT_SUCCESS = "Get list comment successfully";
+        public const string PARENT_COMMENT_NOT_FOUND = "Parent comment not found";
+        public const string COMMENT_CANNOT_REPLY_MORE_THAN_ONE_LEVEL = "Cannot reply to a reply comment";
+
+        // Follower related messages
+        public const string FOLLOW_USER_SUCCESS = "Follow user successfully";
+        public const string UNFOLLOW_USER_SUCCESS = "Unfollow user successfully";
+        public const string ALREADY_FOLLOWING = "You are already following this user";
+        public const string FOLLOWER_NOT_FOUND = "Follower relationship not found";
+        public const string GET_FOLLOWER_COUNT_SUCCESS = "Get follower count successfully";
+
+        // UserOccasion related messages
+        public const string USER_OCCASION_NOT_FOUND = "User occasion not found";
+        public const string USER_OCCASION_GET_SUCCESS = "User occasion retrieved successfully";
+        public const string USER_OCCASION_CREATE_SUCCESS = "User occasion created successfully";
+        public const string USER_OCCASION_UPDATE_SUCCESS = "User occasion updated successfully";
+        public const string USER_OCCASION_DELETE_SUCCESS = "User occasion deleted successfully";
+        public const string GET_LIST_USER_OCCASION_SUCCESS = "Get list user occasion successfully";
+        public const string USER_OCCASION_ACCESS_DENIED = "You don't have permission to access this occasion";
+        public const string GET_FOLLOWING_COUNT_SUCCESS = "Get following count successfully";
+        public const string CHECK_FOLLOWING_STATUS_SUCCESS = "Check following status successfully";
+        public const string CANNOT_FOLLOW_YOURSELF = "You cannot follow yourself";
+
+        // Newsfeed related messages
+        public const string NEWSFEED_GET_SUCCESS = "Newsfeed retrieved successfully";
+        public const string NEWSFEED_EMPTY = "No posts available in your feed";
+        public const string NEWSFEED_REFRESH_SUCCESS = "Newsfeed refreshed successfully";
+
+        // OutfitCalendar related messages
+        public const string OUTFIT_CALENDAR_NOT_FOUND = "Outfit calendar entry not found";
+        public const string OUTFIT_CALENDAR_GET_SUCCESS = "Outfit calendar entry retrieved successfully";
+        public const string OUTFIT_CALENDAR_CREATE_SUCCESS = "Outfit calendar entry created successfully";
+        public const string OUTFIT_CALENDAR_UPDATE_SUCCESS = "Outfit calendar entry updated successfully";
+        public const string OUTFIT_CALENDAR_DELETE_SUCCESS = "Outfit calendar entry deleted successfully";
+        public const string GET_LIST_OUTFIT_CALENDAR_SUCCESS = "Get list outfit calendar successfully";
+        public const string OUTFIT_CALENDAR_ACCESS_DENIED = "You don't have permission to access this outfit calendar entry";
+        public const string OUTFIT_CALENDAR_ALREADY_EXISTS = "An outfit is already scheduled for this date";
     }
 }

@@ -12,12 +12,11 @@ namespace SOPServer.Service.BusinessModels.UserModels
         public string? AvtUrl { get; set; }
         public DateOnly? Dob { get; set; }
         public Gender Gender { get; set; }
-        public string? PreferedColor { get; set; }
-        public string? AvoidedColor { get; set; }
+        public List<string>? PreferedColor { get; set; }
+        public List<string>? AvoidedColor { get; set; }
         public string? Location { get; set; }
         public string? Bio { get; set; }
         public bool IsVerifiedEmail { get; set; }
-        public bool IsStylist { get; set; }
         public bool IsPremium { get; set; }
         public bool IsLoginWithGoogle { get; set; }
         public bool? IsFirstTime { get; set; }

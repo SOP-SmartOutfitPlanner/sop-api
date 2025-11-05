@@ -1,4 +1,5 @@
-﻿using SOPServer.Service.BusinessModels.OccasionModels;
+﻿using SOPServer.Service.BusinessModels.CategoryModels;
+using SOPServer.Service.BusinessModels.OccasionModels;
 using SOPServer.Service.BusinessModels.SeasonModels;
 using SOPServer.Service.BusinessModels.StyleModels;
 using System;
@@ -28,7 +29,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public string FrequencyWorn { get; set; }
 
-        public DateTime LastWornAt { get; set; }
+        public DateTime? LastWornAt { get; set; }
 
         public string ImgUrl { get; set; }
 
@@ -39,8 +40,6 @@ namespace SOPServer.Service.BusinessModels.ItemModels
         public string Pattern { get; set; }
 
         public string Fabric { get; set; }
-
-        public string Tag { get; set; }
 
         public List<OccasionItemModel> Occasions { get; set; }
 
@@ -64,9 +63,9 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public string Brand { get; set; }
 
-        public string FrequencyWorn { get; set; }
+        public string? FrequencyWorn { get; set; }
 
-        public DateTime LastWornAt { get; set; }
+        public DateTime? LastWornAt { get; set; }
 
         public string ImgUrl { get; set; }
 
@@ -78,27 +77,46 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public string Fabric { get; set; }
 
-        public string Tag { get; set; }
+        // Optional relationship IDs
+        public List<long> StyleIds { get; set; } = new List<long>();
+        public List<long> OccasionIds { get; set; } = new List<long>();
+        public List<long> SeasonIds { get; set; } = new List<long>();
     }
 
     public class ItemModelAI
     {
-        public string Color { get; set; }
+        public string Name { get; set; }
+        public List<ColorModel> Colors { get; set; }
         public string AiDescription { get; set; }
         public string WeatherSuitable { get; set; }
         public string Condition { get; set; }
         public string Pattern { get; set; }
         public string Fabric { get; set; }
+        public CategoryItemModel Category { get; set; }
+        public List<StyleItemModel> Styles { get; set; }
+        public List<OccasionItemModel> Occasions { get; set; }
+        public List<SeasonItemModel> Seasons { get; set; }
+
     }
 
     public class ItemSummaryModel
     {
-        public string Color { get; set; }
+        public string Name { get; set; }
+        public List<ColorModel> Colors { get; set; }
         public string AiDescription { get; set; }
         public string WeatherSuitable { get; set; }
         public string Condition { get; set; }
         public string Pattern { get; set; }
         public string Fabric { get; set; }
         public string ImageRemBgURL { get; set; }
+        public CategoryItemModel Category { get; set; }
+        public List<StyleItemModel> Styles { get; set; }
+        public List<OccasionItemModel> Occasions { get; set; }
+        public List<SeasonItemModel> Seasons { get; set; }
+    }
+    public class ColorModel
+    {
+        public string Name { get; set; }
+        public string Hex { get; set; }
     }
 }

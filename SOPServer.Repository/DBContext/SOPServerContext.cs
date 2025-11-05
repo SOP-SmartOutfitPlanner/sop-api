@@ -191,9 +191,6 @@ public partial class SOPServerContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(255)
                 .IsUnicode(true);
-            entity.Property(e => e.Other)
-                .HasMaxLength(255)
-                .IsUnicode(true);
             entity.Property(e => e.CreatedBy)
                 .HasDefaultValue(CreatedBy.SYSTEM);
         });
@@ -230,9 +227,6 @@ public partial class SOPServerContext : DbContext
                 .HasMaxLength(255)
                 .IsUnicode(true);
             entity.Property(e => e.Name)
-                .HasMaxLength(255)
-                .IsUnicode(true);
-            entity.Property(e => e.Other)
                 .HasMaxLength(255)
                 .IsUnicode(true);
             entity.Property(e => e.CreatedBy)

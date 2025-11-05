@@ -12,8 +12,6 @@ public partial class Job : BaseEntity
 
     public string Description { get; set; }
 
-    public string? Other { get; set; }
-
     public CreatedBy CreatedBy { get; set; } = CreatedBy.SYSTEM;
 
     public virtual ICollection<User> Users { get; set; } = new List<User>();

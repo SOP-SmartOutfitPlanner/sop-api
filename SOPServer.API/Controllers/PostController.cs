@@ -52,9 +52,9 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpGet]
-        public Task<IActionResult> GetAllPosts(PaginationParameter paginationParameter)
+        public Task<IActionResult> GetAllPosts(PaginationParameter paginationParameter, long userId)
         {
-            return ValidateAndExecute(async () => await _postService.GetAllPostsAsync(paginationParameter));
+            return ValidateAndExecute(async () => await _postService.GetAllPostsAsync(paginationParameter, userId));
         }
     }
 }

@@ -12,8 +12,6 @@ public partial class Style : BaseEntity
 
     public string Description { get; set; }
 
-    public string? Other { get; set; }
-
     public CreatedBy CreatedBy { get; set; } = CreatedBy.SYSTEM;
 
     public virtual ICollection<ItemStyle> ItemStyles { get; set; } = new List<ItemStyle>();

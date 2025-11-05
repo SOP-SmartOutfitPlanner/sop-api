@@ -511,7 +511,6 @@ namespace SOPServer.Service.Services.Implements
                 {
                     Name = requestModel.OtherJob,
                     Description = "User-defined job",
-                    Other = requestModel.OtherJob,
                     CreatedBy = CreatedBy.USER
                 };
                 await _unitOfWork.JobRepository.AddAsync(newJob);
@@ -547,7 +546,6 @@ namespace SOPServer.Service.Services.Implements
                         {
                             Name = otherStyleName,
                             Description = "User-defined style",
-                            Other = otherStyleName,
                             CreatedBy = CreatedBy.USER
                         };
                         await _unitOfWork.StyleRepository.AddAsync(newStyle);

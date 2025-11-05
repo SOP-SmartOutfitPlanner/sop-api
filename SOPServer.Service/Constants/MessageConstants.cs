@@ -85,6 +85,8 @@ namespace SOPServer.Service.Constants
         public const string POST_NOT_FOUND = "Post not found";
         public const string GET_LIST_POST_BY_USER_SUCCESS = "Get list posts by user successfully";
 
+        public const string GET_LIST_POST_SUCCESS = "Get post successfully";
+
         public const string OTP_SENT_SUCCESS = "OTP sent successfully to your gmail";
         public const string OTP_VERIFY_SUCCESS = "Verify OTP successfully";
         public const string OTP_INVALID = "OTP is invalid or expired!";

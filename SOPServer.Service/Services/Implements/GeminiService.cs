@@ -164,7 +164,7 @@ namespace SOPServer.Service.Services.Implements
 
             throw new BadRequestException(MessageConstants.IMAGE_ANALYSIS_FAILED);
         }
-        public List<string> CheckMissingField(ItemModelAI result)
+        private List<string> CheckMissingField(ItemModelAI result)
         {
             var missingFields = new List<string>();
             if (result == null)
@@ -249,6 +249,17 @@ namespace SOPServer.Service.Services.Implements
             };
             var response = await _embeddingModel.EmbedContentAsync(request);
             return response.Embedding.Values;
+        }
+
+        public async Task<CategoryItemAnalysisModel?> AnalyzingCategory(string base64Image, string mimeType, string finalPrompt)
+        {
+            
+
+            var generateRequest = new GenerateContentRequest();
+            generateRequest.AddInlineData(base64Image, mimeType);
+            generateRequest.UseJsonMode<CategoryItemAnalysisModel>();
+            generateRequest.AddText(finalPrompt);
+            return await _generativeModel.GenerateObjectAsync<CategoryItemAnalysisModel>(generateRequest);
         }
     }
 }

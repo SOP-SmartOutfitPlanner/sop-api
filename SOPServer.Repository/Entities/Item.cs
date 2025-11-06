@@ -13,11 +13,11 @@ public partial class Item : BaseEntity
 
     public long? CategoryId { get; set; }
 
-    public string Color { get; set; }
+    public string? Color { get; set; }
 
-    public string AiDescription { get; set; }
+    public string? AiDescription { get; set; }
 
-    public string Brand { get; set; }
+    public string? Brand { get; set; }
 
     public string? FrequencyWorn { get; set; }
 
@@ -25,13 +25,13 @@ public partial class Item : BaseEntity
 
     public string ImgUrl { get; set; }
 
-    public string WeatherSuitable { get; set; }
+    public string? WeatherSuitable { get; set; }
 
-    public string Condition { get; set; }
+    public string? Condition { get; set; }
 
-    public string Pattern { get; set; }
+    public string? Pattern { get; set; }
 
-    public string Fabric { get; set; }
+    public string? Fabric { get; set; }
 
     public virtual ICollection<ItemOccasion> ItemOccasions { get; set; } = new List<ItemOccasion>();
 

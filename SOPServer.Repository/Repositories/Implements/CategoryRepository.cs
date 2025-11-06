@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.DBContext;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Repositories.Generic;
@@ -11,6 +12,13 @@ namespace SOPServer.Repository.Repositories.Implements
         public CategoryRepository(SOPServerContext context) : base(context)
         {
             _context = context;
+        }
+
+        public async Task<List<Category>> GetAllChildrenCategory()
+        {
+            return await _context.Categories
+                .Where(c => c.ParentId != null && !c.IsDeleted)
+                .ToListAsync();
         }
     }
 }

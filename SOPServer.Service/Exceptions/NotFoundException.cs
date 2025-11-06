@@ -11,5 +11,9 @@ namespace SOPServer.Service.Exceptions
         public NotFoundException(string message) : base(message, 404)
         {
         }
+
+        public NotFoundException(string message, object data) : base(message, 404, data)
+        {
+        }
     }
 }

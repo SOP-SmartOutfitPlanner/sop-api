@@ -14,6 +14,7 @@ namespace SOPServer.Repository.Enums
         API_SUGGESTION,
         API_EMBEDDING,
         VALIDATE_ITEM_PROMPT,
-        DESCRIPTION_ITEM_PROMPT
+        DESCRIPTION_ITEM_PROMPT,
+        CATEGORY_ITEM_ANALYSIS_PROMPT
     }
 }

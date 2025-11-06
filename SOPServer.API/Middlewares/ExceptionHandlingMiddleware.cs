@@ -47,6 +47,7 @@ namespace SOPServer.API.Middlewares
             {
                 StatusCode = ex.HttpStatusCode,
                 Message = ex.Message,
+                Data = ex.Data
             };
 
             var jsonResponse = JsonConvert.SerializeObject(response, new JsonSerializerSettings

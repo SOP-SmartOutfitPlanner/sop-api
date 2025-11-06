@@ -2,6 +2,7 @@
 using GenerativeAI;
 using GenerativeAI.Types;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
@@ -34,16 +35,18 @@ namespace SOPServer.Service.Services.Implements
         private readonly EmbeddingModel _embeddingModel;
         private readonly IMapper _mapper;
         private readonly QDrantClientSettings _qdrantClientSettings;
+        private readonly ILogger<GeminiService> _logger;
         private readonly HashSet<string> _allowedMime = new(StringComparer.OrdinalIgnoreCase)
         {
             "image/jpeg", "image/png", "image/webp", "image/gif"
         };
 
-        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IMapper mapper, IOptions<QDrantClientSettings> qdrantClientSettings)
+        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IMapper mapper, IOptions<QDrantClientSettings> qdrantClientSettings, ILogger<GeminiService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _qdrantClientSettings = qdrantClientSettings.Value;
+            _logger = logger;
 
             // AI model for item analyzing
             var apiKeyAnalyzing = GetAiSettingValue(AISettingType.API_ITEM_ANALYZING);
@@ -117,7 +120,83 @@ namespace SOPServer.Service.Services.Implements
             generateRequest.UseJsonMode<ItemModelAI>();
             generateRequest.AddText(promptText);
 
-            return await _generativeModel.GenerateObjectAsync<ItemModelAI>(generateRequest);
+            const int maxRetryAttempts = 5;
+
+            for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
+            {
+                try
+                {
+                    _logger.LogInformation("ImageGenerateContent: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    var result = await _generativeModel.GenerateObjectAsync<ItemModelAI>(generateRequest);
+
+                    var missingFields = CheckMissingField(result);
+
+                    if (missingFields.Any())
+                    {
+                        _logger.LogWarning("ImageGenerateContent: Attempt {Attempt} returned incomplete data. Missing fields: {MissingFields}",
+                            attempt, string.Join(", ", missingFields));
+
+                        if (attempt == maxRetryAttempts)
+                        {
+                            throw new BadRequestException($"{MessageConstants.IMAGE_ANALYSIS_FAILED}: AI model returned incomplete data. Missing: {string.Join(", ", missingFields)}");
+                        }
+                        continue;
+                    }
+
+                    _logger.LogInformation("ImageGenerateContent: Successfully generated content on attempt {Attempt}", attempt);
+                    return result;
+                }
+                catch (BadRequestException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "ImageGenerateContent: Error on attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    if (attempt == maxRetryAttempts)
+                    {
+                        throw new BadRequestException($"{MessageConstants.IMAGE_ANALYSIS_FAILED}: {ex.Message}");
+                    }
+                }
+            }
+
+            throw new BadRequestException(MessageConstants.IMAGE_ANALYSIS_FAILED);
+        }
+        public List<string> CheckMissingField(ItemModelAI result)
+        {
+            var missingFields = new List<string>();
+            if (result == null)
+            {
+                missingFields.Add("result");
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(result.Name))
+                    missingFields.Add("Name");
+                if (result.Category == null)
+                    missingFields.Add("Category");
+                if (result.Colors == null || !result.Colors.Any())
+                    missingFields.Add("Colors");
+                if (string.IsNullOrWhiteSpace(result.AiDescription))
+                    missingFields.Add("AiDescription");
+                if (string.IsNullOrWhiteSpace(result.WeatherSuitable))
+                    missingFields.Add("WeatherSuitable");
+                if (string.IsNullOrWhiteSpace(result.Condition))
+                    missingFields.Add("Condition");
+                if (string.IsNullOrWhiteSpace(result.Pattern))
+                    missingFields.Add("Pattern");
+                if (string.IsNullOrWhiteSpace(result.Fabric))
+                    missingFields.Add("Fabric");
+                if (result.Styles == null)
+                    missingFields.Add("Styles");
+                if (result.Occasions == null)
+                    missingFields.Add("Occasions");
+                if (result.Seasons == null)
+                    missingFields.Add("Seasons");
+            }
+            return missingFields;
         }
 
         public async Task<ImageValidation> ImageValidation(string base64Image, string mimeType)
@@ -128,13 +207,37 @@ namespace SOPServer.Service.Services.Implements
             }
 
             var validatePromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.VALIDATE_ITEM_PROMPT);
-
             var generateRequest = new GenerateContentRequest();
             generateRequest.AddText(validatePromptSetting.Value);
             generateRequest.AddInlineData(base64Image, mimeType);
             generateRequest.UseJsonMode<ImageValidation>();
 
-            return await _generativeModel.GenerateObjectAsync<ImageValidation>(generateRequest);
+            const int maxRetryAttempts = 5;
+
+            for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
+            {
+                try
+                {
+                    _logger.LogInformation("ImageValidation: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    var result = await _generativeModel.GenerateObjectAsync<ImageValidation>(generateRequest);
+
+                    _logger.LogInformation("ImageValidation: Successfully validated on attempt {Attempt}. IsValid: {IsValid}", attempt, result?.IsValid);
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "ImageValidation: Error on attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    if (attempt == maxRetryAttempts)
+                    {
+                        throw new BadRequestException($"{MessageConstants.IMAGE_VALIDATION_FAILED}: {ex.Message}");
+                    }
+
+                }
+            }
+
+            throw new BadRequestException(MessageConstants.IMAGE_VALIDATION_FAILED);
         }
 
         public async Task<List<float>?> EmbeddingText(string textEmbeeding)

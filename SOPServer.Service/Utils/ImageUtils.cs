@@ -53,5 +53,21 @@ namespace SOPServer.Service.Utils
                 ContentType = contentType
             };
         }
+
+        public static async Task<(string base64, string mimetype)> ConvertToBase64Async(string url, HttpClient httpClient)
+        {
+            using var response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            string mimeType = response.Content.Headers.ContentType?.MediaType
+                              ?? "image/jpeg";
+
+            byte[] bytes = await response.Content.ReadAsByteArrayAsync();
+
+            string base64 = Convert.ToBase64String(bytes);
+
+            return (base64, mimeType);
+        }
+
     }
 }

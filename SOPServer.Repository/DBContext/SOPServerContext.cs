@@ -94,17 +94,22 @@ public partial class SOPServerContext : DbContext
             entity.ToTable("Item");
 
             entity.Property(e => e.AiDescription)
-                .IsUnicode(true);
+                .IsUnicode(true)
+                .IsRequired(false);
             entity.Property(e => e.Brand)
                 .HasMaxLength(255)
-                .IsUnicode(true);
+                .IsUnicode(true)
+                .IsRequired(false);
             entity.Property(e => e.Color)
-                .IsUnicode(true);
+                .IsUnicode(true)
+                .IsRequired(false);
             entity.Property(e => e.Condition)
-                .IsUnicode(true);
+                .IsUnicode(true)
+                .IsRequired(false);
             entity.Property(e => e.Fabric)
                 .HasMaxLength(255)
-                .IsUnicode(true);
+                .IsUnicode(true)
+                .IsRequired(false);
             entity.Property(e => e.FrequencyWorn)
                 .HasMaxLength(255)
                 .IsUnicode(true)
@@ -117,13 +122,16 @@ public partial class SOPServerContext : DbContext
                 .IsRequired(false);
             entity.Property(e => e.Name)
                 .HasMaxLength(255)
-                .IsUnicode(true);
+                .IsUnicode(true)
+                .IsRequired(false);
             entity.Property(e => e.Pattern)
                 .HasMaxLength(255)
-                .IsUnicode(true);
+                .IsUnicode(true)
+                .IsRequired(false);
             entity.Property(e => e.WeatherSuitable)
                 .HasMaxLength(255)
-                .IsUnicode(true);
+                .IsUnicode(true)
+                .IsRequired(false);
 
             entity.HasOne(d => d.User).WithMany(p => p.Items)
                 .HasForeignKey(d => d.UserId)

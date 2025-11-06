@@ -1,14 +1,17 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using SOPServer.Repository.Commons;
-using SOPServer.Repository.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using SOPServer.Repository.Commons;
+using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
+using SOPServer.Repository.Entities;
+using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
+using SOPServer.Service.BusinessModels.CategoryModels;
 using SOPServer.Service.BusinessModels.FirebaseModels;
+using SOPServer.Service.BusinessModels.GeminiModels;
 using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.RemBgModels;
 using SOPServer.Service.BusinessModels.ResultModels;
@@ -18,10 +21,13 @@ using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
-using System.Net.Http.Json;
 using System.Linq.Expressions;
+using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Implements
@@ -1158,6 +1164,109 @@ namespace SOPServer.Service.Services.Implements
                 sb.AppendLine($"Seasons: {string.Join(", ", seasons)}");
 
             return sb.ToString().Trim();
+        }
+
+        public async Task<BaseResponseModel> BulkCreateItem(BulkItemRequestModel bulkUploadModel)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(bulkUploadModel.UserId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            var client = _httpClientFactory.CreateClient("AnalysisClient");
+            var invalidCategoryItems = new List<string>();
+            var newItems = new List<Item>();
+
+            var categories = await _unitOfWork.CategoryRepository.GetAllChildrenCategory();
+
+            var serializerOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            };
+
+            var categoriesJson = JsonSerializer.Serialize(_mapper.Map<List<CategoryItemModel>>(categories), serializerOptions);
+
+            var categoryItemPrompt = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.CATEGORY_ITEM_ANALYSIS_PROMPT);
+
+            string finalPrompt = categoryItemPrompt.Value.Replace("{{categories}}", categoriesJson);
+            // Process all images in parallel
+            var tasks = bulkUploadModel.ImageURLs.Select(async imageUrl =>
+            {
+                try
+                {
+                    var (base64Image, mimeType) = await ImageUtils.ConvertToBase64Async(imageUrl, client);
+                    CategoryItemAnalysisModel? categoryAnalysis;
+
+                    // Retry logic for category analysis
+                    while (true)
+                    {
+                        try
+                        {
+                            categoryAnalysis = await _geminiService.AnalyzingCategory(base64Image, mimeType, finalPrompt);
+                            break;
+                        }
+                        catch (Exception ex)
+                        {
+                            // Continue retrying
+                        }
+                    }
+
+                    if (categoryAnalysis.CategoryId == 0)
+                    {
+                        return (imageUrl, null); // Invalid category
+                    }
+
+                    var newItem = new Item
+                    {
+                        Name = "Sop Item",
+                        CategoryId = categoryAnalysis.CategoryId,
+                        UserId = bulkUploadModel.UserId,
+                        ImgUrl = imageUrl
+                    };
+
+                    return (imageUrl, newItem);
+                }
+                catch (Exception ex)
+                {
+                    // Handle any unexpected errors
+                    return (imageUrl, null);
+                }
+            });
+
+            var results = await Task.WhenAll(tasks);
+
+            // Separate valid and invalid items
+            foreach (var (imageUrl, item) in results)
+            {
+                if (item == null)
+                {
+                    invalidCategoryItems.Add(imageUrl);
+                }
+                else
+                {
+                    newItems.Add(item);
+                }
+            }
+
+            // Add all valid items to repository
+            foreach (var item in newItems)
+            {
+                await _unitOfWork.ItemRepository.AddAsync(item);
+            }
+
+            await _unitOfWork.SaveAsync();
+            if (invalidCategoryItems.Any())
+            {
+                throw new NotFoundException(MessageConstants.CATEGORY_NOT_EXIST, invalidCategoryItems);
+            }
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status201Created,
+                Message = MessageConstants.ITEM_CREATE_SUCCESS
+            };
         }
     }
 }

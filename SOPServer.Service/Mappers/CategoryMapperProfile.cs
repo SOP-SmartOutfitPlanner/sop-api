@@ -13,6 +13,7 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.ParentName, opt => opt.MapFrom(src => src.Parent != null ? src.Parent.Name : null));
 
             CreateMap<CategoryModel, Category>();
+            CreateMap<Category, CategoryItemModel>();
             CreateMap<CategoryItemModel, Category>();
 
             CreateMap<CategoryUpdateModel, Category>();

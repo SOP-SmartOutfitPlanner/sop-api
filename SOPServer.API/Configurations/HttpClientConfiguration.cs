@@ -18,6 +18,13 @@ namespace SOPServer.API.Configurations
                 client.Timeout = TimeSpan.FromSeconds(30);
             });
 
+            services.AddHttpClient("AnalysisClient", client =>
+            {
+                client.BaseAddress = new Uri("https://storage.wizlab.io.vn/");
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+
             return services;
         }
     }

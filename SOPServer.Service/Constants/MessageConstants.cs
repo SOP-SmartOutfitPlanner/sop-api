@@ -15,6 +15,8 @@ namespace SOPServer.Service.Constants
         public const string IMAGE_IS_LARGE = "Image is very large";
         public const string IMAGE_IS_NOT_VALID = "Image is not valid";
         public const string IMAGE_IS_VALID = "Image is valid";
+        public const string IMAGE_VALIDATION_FAILED = "Image validation failed after multiple attempts";
+        public const string IMAGE_ANALYSIS_FAILED = "Image analysis failed after multiple attempts";
         public const string GET_SUMMARY_IMAGE_SUCCESS = "Get summary image successfully";
         public const string DELETE_FILE_SUCCESS = "Delete file successfully";
 

@@ -31,6 +31,10 @@ builder.Services.AddServiceConfiguration(builder.Configuration);
 // Database Configuration
 builder.Services.AddDatabaseConfiguration(builder.Configuration);
 
+// Turn off EF Core SQL Command Logging
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.None);
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Infrastructure", LogLevel.None);
+
 var app = builder.Build();
 
 // Swagger UI

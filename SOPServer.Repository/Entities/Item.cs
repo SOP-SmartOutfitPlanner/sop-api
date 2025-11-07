@@ -33,6 +33,8 @@ public partial class Item : BaseEntity
 
     public string? Fabric { get; set; }
 
+    public bool IsAnalyzed { get; set; }
+
     public virtual ICollection<ItemOccasion> ItemOccasions { get; set; } = new List<ItemOccasion>();
 
     public virtual ICollection<ItemSeason> ItemSeasons { get; set; } = new List<ItemSeason>();

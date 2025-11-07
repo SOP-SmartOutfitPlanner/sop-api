@@ -26,59 +26,55 @@ namespace SOPServer.Service.Services.Implements
             _mapper = mapper;
         }
 
-        public async Task<BaseResponseModel> FollowUser(CreateFollowerModel model)
+        public async Task<BaseResponseModel> ToggleFollowUser(CreateFollowerModel model)
         {
             // Check if trying to follow self
             if (model.FollowerId == model.FollowingId)
             {
                 throw new BadRequestException(MessageConstants.CANNOT_FOLLOW_YOURSELF);
             }
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(model.FollowerId);
-            if (user == null)
+
+            // Check if both users exist
+            var followerUser = await _unitOfWork.UserRepository.GetByIdAsync(model.FollowerId);
+            if (followerUser == null)
             {
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
-            // Check if user exists
             var followingUser = await _unitOfWork.UserRepository.GetByIdAsync(model.FollowingId);
             if (followingUser == null)
             {
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
-            // Check if already following
-            var followExists = await _unitOfWork.FollowerRepository.GetByFollowerAndFollowing(model.FollowerId, model.FollowingId);
-            if (followExists != null)
+            var followRelationship = await _unitOfWork.FollowerRepository.GetByFollowerAndFollowingIncludeDeleted(model.FollowerId, model.FollowingId);
+
+            if (followRelationship == null)
             {
-                throw new BadRequestException(MessageConstants.ALREADY_FOLLOWING);
+                // Create new follow relationship
+                var newFollow = _mapper.Map<Follower>(model);
+                await _unitOfWork.FollowerRepository.AddAsync(newFollow);
+                await _unitOfWork.SaveAsync();
+
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status201Created,
+                    Message = MessageConstants.FOLLOW_USER_SUCCESS,
+                    Data = _mapper.Map<FollowerModel>(newFollow)
+                };
             }
 
-            var newFollow = _mapper.Map<Follower>(model);
-            await _unitOfWork.FollowerRepository.AddAsync(newFollow);
+            // Toggle IsDeleted status
+            followRelationship.IsDeleted = !followRelationship.IsDeleted;
+            _unitOfWork.FollowerRepository.UpdateAsync(followRelationship);
             await _unitOfWork.SaveAsync();
 
-            return new BaseResponseModel
-            {
-                StatusCode = StatusCodes.Status201Created,
-                Message = MessageConstants.FOLLOW_USER_SUCCESS,
-                Data = _mapper.Map<FollowerModel>(newFollow)
-            };
-        }
-
-        public async Task<BaseResponseModel> UnfollowUser(long id)
-        {
-            var followExists = await _unitOfWork.FollowerRepository.GetByIdAsync(id);
-            if (followExists == null)
-            {
-                throw new NotFoundException(MessageConstants.FOLLOWER_NOT_FOUND);
-            }
-
-            _unitOfWork.FollowerRepository.SoftDeleteAsync(followExists);
-            await _unitOfWork.SaveAsync();
+            var message = followRelationship.IsDeleted ? MessageConstants.UNFOLLOW_USER_SUCCESS : MessageConstants.FOLLOW_USER_SUCCESS;
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.UNFOLLOW_USER_SUCCESS
+                Message = message,
+                Data = _mapper.Map<FollowerModel>(followRelationship)
             };
         }
 

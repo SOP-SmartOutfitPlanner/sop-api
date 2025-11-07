@@ -10,8 +10,7 @@ namespace SOPServer.Service.Services.Interfaces
 {
     public interface IFollowerService
     {
-        Task<BaseResponseModel> FollowUser(CreateFollowerModel model);
-        Task<BaseResponseModel> UnfollowUser(long id);
+        Task<BaseResponseModel> ToggleFollowUser(CreateFollowerModel model);
         Task<BaseResponseModel> GetFollowerCount(long userId);
         Task<BaseResponseModel> IsFollowing(long followerId, long followingId);
     }

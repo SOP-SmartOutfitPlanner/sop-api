@@ -1,3 +1,4 @@
+using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.FollowerModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using System;
@@ -13,5 +14,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> ToggleFollowUser(CreateFollowerModel model);
         Task<BaseResponseModel> GetFollowerCount(long userId);
         Task<BaseResponseModel> IsFollowing(long followerId, long followingId);
+        Task<BaseResponseModel> GetFollowersByUserId(PaginationParameter paginationParameter, long userId);
+        Task<BaseResponseModel> GetFollowingByUserId(PaginationParameter paginationParameter, long userId);
     }
 }

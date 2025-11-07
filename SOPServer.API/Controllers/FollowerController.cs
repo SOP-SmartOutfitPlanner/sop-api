@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.FollowerModels;
 using SOPServer.Service.Services.Interfaces;
 using System.Threading.Tasks;
@@ -45,6 +46,28 @@ namespace SOPServer.API.Controllers
         public Task<IActionResult> IsFollowing([FromQuery] long followerId, [FromQuery] long followingId)
         {
             return ValidateAndExecute(async () => await _followerService.IsFollowing(followerId, followingId));
+        }
+
+        /// <summary>
+        /// Get list of followers for a specific user with pagination
+        /// </summary>
+        /// <param name="paginationParameter">Pagination parameters</param>
+        /// <param name="userId">User ID</param>
+        [HttpGet("followers/{userId}")]
+        public Task<IActionResult> GetFollowersByUserId([FromQuery] PaginationParameter paginationParameter, long userId)
+        {
+            return ValidateAndExecute(async () => await _followerService.GetFollowersByUserId(paginationParameter, userId));
+        }
+
+        /// <summary>
+        /// Get list of users that a specific user is following with pagination
+        /// </summary>
+        /// <param name="paginationParameter">Pagination parameters</param>
+        /// <param name="userId">User ID</param>
+        [HttpGet("following/{userId}")]
+        public Task<IActionResult> GetFollowingByUserId([FromQuery] PaginationParameter paginationParameter, long userId)
+        {
+            return ValidateAndExecute(async () => await _followerService.GetFollowingByUserId(paginationParameter, userId));
         }
     }
 }

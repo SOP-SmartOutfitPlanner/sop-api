@@ -1,5 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.FollowerModels;
@@ -105,6 +107,112 @@ namespace SOPServer.Service.Services.Implements
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.CHECK_FOLLOWING_STATUS_SUCCESS,
                 Data = new { IsFollowing = isFollowing }
+            };
+        }
+
+        public async Task<BaseResponseModel> GetFollowersByUserId(PaginationParameter paginationParameter, long userId)
+        {
+            // Check if user exists
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Get followers with user details
+            var followers = await _unitOfWork.FollowerRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query.Include(f => f.FollowerUser),
+                filter: f => f.FollowingId == userId,
+                orderBy: q => q.OrderByDescending(f => f.CreatedDate));
+
+            // Manually map to FollowerUserModel to ensure correct navigation property is used
+            var followerModels = followers.Select(f => new FollowerUserModel
+            {
+                Id = f.Id,
+                UserId = f.FollowerId,
+                DisplayName = f.FollowerUser?.DisplayName,
+                AvatarUrl = f.FollowerUser?.AvtUrl,
+                Bio = f.FollowerUser?.Bio,
+                CreatedDate = f.CreatedDate
+            }).ToList();
+
+            var paginatedResult = new Pagination<FollowerUserModel>(
+                followerModels,
+                followers.TotalCount,
+                followers.CurrentPage,
+                followers.PageSize);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_FOLLOWERS_LIST_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = paginatedResult,
+                    MetaData = new
+                    {
+                        paginatedResult.TotalCount,
+                        paginatedResult.PageSize,
+                        paginatedResult.CurrentPage,
+                        paginatedResult.TotalPages,
+                        paginatedResult.HasNext,
+                        paginatedResult.HasPrevious
+                    }
+                }
+            };
+        }
+
+        public async Task<BaseResponseModel> GetFollowingByUserId(PaginationParameter paginationParameter, long userId)
+        {
+            // Check if user exists
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Get following with user details
+            var following = await _unitOfWork.FollowerRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query.Include(f => f.FollowingUser),
+                filter: f => f.FollowerId == userId,
+                orderBy: q => q.OrderByDescending(f => f.CreatedDate));
+
+            // Manually map to FollowerUserModel to ensure correct navigation property is used
+            var followingModels = following.Select(f => new FollowerUserModel
+            {
+                Id = f.Id,
+                UserId = f.FollowingId,
+                DisplayName = f.FollowingUser?.DisplayName,
+                AvatarUrl = f.FollowingUser?.AvtUrl,
+                Bio = f.FollowingUser?.Bio,
+                CreatedDate = f.CreatedDate
+            }).ToList();
+
+            var paginatedResult = new Pagination<FollowerUserModel>(
+                followingModels,
+                following.TotalCount,
+                following.CurrentPage,
+                following.PageSize);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_FOLLOWING_LIST_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = paginatedResult,
+                    MetaData = new
+                    {
+                        paginatedResult.TotalCount,
+                        paginatedResult.PageSize,
+                        paginatedResult.CurrentPage,
+                        paginatedResult.TotalPages,
+                        paginatedResult.HasNext,
+                        paginatedResult.HasPrevious
+                    }
+                }
             };
         }
     }

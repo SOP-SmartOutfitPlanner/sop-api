@@ -86,18 +86,16 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
     public class ItemModelAI
     {
-        public string Name { get; set; }
         public List<ColorModel> Colors { get; set; }
         public string AiDescription { get; set; }
         public string WeatherSuitable { get; set; }
         public string Condition { get; set; }
         public string Pattern { get; set; }
         public string Fabric { get; set; }
-        public CategoryItemModel Category { get; set; }
         public List<StyleItemModel> Styles { get; set; }
         public List<OccasionItemModel> Occasions { get; set; }
         public List<SeasonItemModel> Seasons { get; set; }
-
+        public int Confidence { get; set; }
     }
 
     public class ItemSummaryModel
@@ -119,5 +117,11 @@ namespace SOPServer.Service.BusinessModels.ItemModels
     {
         public string Name { get; set; }
         public string Hex { get; set; }
+    }
+
+    public class ItemConfidenceModel
+    {
+        public int ItemId { get; set; }
+        public float Confidence { get; set; }
     }
 }

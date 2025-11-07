@@ -19,7 +19,7 @@ namespace SOPServer.Repository.Repositories.Implements
         public async Task<Follower?> GetByFollowerAndFollowing(long followerId, long followingId)
         {
             return await _context.Followers
-                .FirstOrDefaultAsync(f => f.FollowerId == followerId && f.FollowingId == followingId && !f.IsDeleted);
+                .FirstOrDefaultAsync(f => f.FollowerId == followerId && f.FollowingId == followingId);
         }
 
         public async Task<Follower?> GetByFollowerAndFollowingIncludeDeleted(long followerId, long followingId)

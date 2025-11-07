@@ -133,7 +133,13 @@ public partial class SOPServerContext : DbContext
                 .IsUnicode(true)
                 .IsRequired(false);
             entity.Property(e => e.IsAnalyzed)
-                .HasDefaultValue(false);
+                .HasDefaultValue(false)
+                .IsRequired(false);
+
+            entity.Property(e => e.AIConfidence)
+                .HasColumnType("int")
+                .IsRequired(false)
+                .HasDefaultValue(0);
 
             entity.HasOne(d => d.User).WithMany(p => p.Items)
                 .HasForeignKey(d => d.UserId)

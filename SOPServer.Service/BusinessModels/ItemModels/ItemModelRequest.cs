@@ -10,5 +10,6 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 {
     public class ItemModelRequest
     {
+        public List<int> ItemIds { get; set; }
     }
 }

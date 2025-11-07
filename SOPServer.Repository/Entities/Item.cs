@@ -33,7 +33,9 @@ public partial class Item : BaseEntity
 
     public string? Fabric { get; set; }
 
-    public bool IsAnalyzed { get; set; }
+    public bool? IsAnalyzed { get; set; }
+
+    public int? AIConfidence { get; set; }
 
     public virtual ICollection<ItemOccasion> ItemOccasions { get; set; } = new List<ItemOccasion>();
 

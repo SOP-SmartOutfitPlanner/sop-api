@@ -5,5 +5,6 @@ namespace SOPServer.Repository.Repositories.Interfaces
 {
     public interface IStyleRepository : IGenericRepository<Style>
     {
+        Task<List<Style>> getAllStyleSystem();
     }
 }

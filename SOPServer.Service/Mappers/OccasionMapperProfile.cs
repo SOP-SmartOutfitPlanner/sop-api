@@ -12,7 +12,7 @@ namespace SOPServer.Service.Mappers
         {
             CreateMap<Occasion, OccasionModel>();
 
-            CreateMap<Occasion, OccasionItemModel>();
+            CreateMap<Occasion, OccasionItemModel>().ReverseMap();
 
             CreateMap<OccasionModel, Occasion>();
 

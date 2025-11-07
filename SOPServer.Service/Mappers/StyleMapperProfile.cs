@@ -15,6 +15,8 @@ namespace SOPServer.Service.Mappers
 
             CreateMap<StyleModel, Style>();
 
+            CreateMap<StyleItemModel, Style>().ReverseMap();
+
             CreateMap<StyleUpdateModel, Style>();
 
             CreateMap<StyleCreateModel, Style>();

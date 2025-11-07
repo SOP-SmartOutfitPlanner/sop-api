@@ -36,11 +36,11 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _itemService.GetItemById(id));
         }
 
-        [HttpPost("analysis")]
-        public Task<IActionResult> ValidationImage(IFormFile file)
-        {
-            return ValidateAndExecute(async () => await _itemService.GetAnalyzeItem(file));
-        }
+        //[HttpPost("analysis")]
+        //public Task<IActionResult> ValidationImage(IFormFile file)
+        //{
+        //    return ValidateAndExecute(async () => await _itemService.GetAnalyzeItem(file));
+        //}
 
         [HttpPost]
         public Task<IActionResult> CreateNewItem(ItemCreateModel model)
@@ -48,8 +48,14 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _itemService.AddNewItem(model));
         }
 
+        [HttpPost("analysis")]
+        public Task<IActionResult> AnalysisItem(ItemModelRequest itemsRequestId)
+        {
+            return ValidateAndExecute(async () => await _itemService.AnalysisItem(itemsRequestId));
+        }
+
         [HttpPut("{id}")]
-        public Task<IActionResult> Update(long id, [FromBody] ItemCreateModel model)
+        public Task<IActionResult> UpdateItem(long id, [FromBody] ItemCreateModel model)
         {
             return ValidateAndExecute(() => _itemService.UpdateItemAsync(id, model));
         }

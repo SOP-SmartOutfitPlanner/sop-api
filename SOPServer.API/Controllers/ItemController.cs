@@ -60,10 +60,16 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _itemService.DeleteItemByIdAsync(id));
         }
 
-        [HttpPost("bulk-upload")]
-        public Task<IActionResult> CreateBulkUpload(BulkItemRequestModel bulkUploadModel)
+        [HttpPost("bulk-upload/auto")]
+        public Task<IActionResult> CreateBulkUploadAuto(BulkItemRequestAutoModel bulkUploadModel)
         {
-            return ValidateAndExecute(async () => await _itemService.BulkCreateItem(bulkUploadModel));
+            return ValidateAndExecute(async () => await _itemService.BulkCreateItemAuto(bulkUploadModel));
+        }
+
+        [HttpPost("bulk-upload/manual")]
+        public Task<IActionResult> CreateBulkUploadManual(BulkItemRequestManualModel bulkUploadModel)
+        {
+            return ValidateAndExecute(async () => await _itemService.BulkCreateItemManual(bulkUploadModel));
         }
     }
 }

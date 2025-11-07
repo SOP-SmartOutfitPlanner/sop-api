@@ -41,6 +41,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public string Fabric { get; set; }
         public bool IsAnalyzed { get; set; }
+        public int AIConfidence { get; set; }
 
         public List<OccasionItemModel> Occasions { get; set; }
 

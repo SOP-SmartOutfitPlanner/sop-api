@@ -114,7 +114,8 @@ namespace SOPServer.Service.Services.Implements
                     .Include(p => p.PostImages)
                     .Include(p => p.PostHashtags)
                         .ThenInclude(ph => ph.Hashtag)
-                    .Include(p => p.LikePosts),
+                    .Include(p => p.LikePosts)
+                    .Include(p => p.CommentPosts),
                 filter: p => p.UserId == userId,
                 orderBy: q => q.OrderByDescending(p => p.CreatedDate)
             );
@@ -139,7 +140,8 @@ namespace SOPServer.Service.Services.Implements
                     .Include(p => p.PostImages)
                     .Include(p => p.PostHashtags)
                         .ThenInclude(ph => ph.Hashtag)
-                    .Include(p => p.LikePosts),
+                    .Include(p => p.LikePosts)
+                    .Include(p => p.CommentPosts),
                 orderBy: q => q.OrderByDescending(p => p.CreatedDate)
             );
 

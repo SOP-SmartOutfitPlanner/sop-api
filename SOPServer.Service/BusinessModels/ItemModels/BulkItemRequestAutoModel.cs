@@ -1,0 +1,27 @@
+﻿using Microsoft.AspNetCore.Http;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SOPServer.Service.BusinessModels.ItemModels
+{
+    public class BulkItemRequestAutoModel
+    {
+        public int UserId { get; set; }
+        public List<string> ImageURLs { get; set; }
+    }
+
+    public class BulkItemRequestManualModel
+    {
+        public int UserId { get; set; }
+        public List<BulkItemModel> ItemsUpload { get; set; }
+    }
+
+    public class BulkItemModel
+    {
+        public string ImageURLs { get; set; }
+        public int CategoryId { get; set; }
+    }
+}

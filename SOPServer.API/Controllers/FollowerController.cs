@@ -38,6 +38,16 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
+        /// Get following count for a specific user
+        /// </summary>
+        /// <param name="userId">User ID</param>
+        [HttpGet("count/following/{userId}")]
+        public Task<IActionResult> GetFollowingCount(long userId)
+        {
+            return ValidateAndExecute(async () => await _followerService.GetFollowingCount(userId));
+        }
+
+        /// <summary>
         /// Check if a user is following another user
         /// </summary>
         /// <param name="followerId">Follower user ID</param>

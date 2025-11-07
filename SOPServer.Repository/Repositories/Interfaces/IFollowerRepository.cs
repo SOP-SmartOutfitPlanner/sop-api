@@ -9,6 +9,7 @@ namespace SOPServer.Repository.Repositories.Interfaces
         Task<Follower?> GetByFollowerAndFollowing(long followerId, long followingId);
         Task<Follower?> GetByFollowerAndFollowingIncludeDeleted(long followerId, long followingId);
         Task<int> GetFollowerCount(long userId);
+        Task<int> GetFollowingCount(long userId);
         Task<bool> IsFollowing(long followerId, long followingId);
     }
 }

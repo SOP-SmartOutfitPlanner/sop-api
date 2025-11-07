@@ -9,8 +9,11 @@ using SOPServer.Service.BusinessModels.CategoryModels;
 using SOPServer.Service.BusinessModels.FirebaseModels;
 using SOPServer.Service.BusinessModels.GeminiModels;
 using SOPServer.Service.BusinessModels.ItemModels;
+using SOPServer.Service.BusinessModels.OccasionModels;
 using SOPServer.Service.BusinessModels.RemBgModels;
 using SOPServer.Service.BusinessModels.ResultModels;
+using SOPServer.Service.BusinessModels.SeasonModels;
+using SOPServer.Service.BusinessModels.StyleModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
@@ -265,59 +268,59 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetAnalyzeItem(IFormFile file)
-        {
-            if (file == null || file.Length == 0)
-                throw new BadRequestException(MessageConstants.IMAGE_IS_NOT_VALID);
+        //public async Task<BaseResponseModel> GetAnalyzeItem(IFormFile file)
+        //{
+        //    if (file == null || file.Length == 0)
+        //        throw new BadRequestException(MessageConstants.IMAGE_IS_NOT_VALID);
 
-            // 1️⃣ Khởi tạo task song song
-            var convertBase64Task = ImageUtils.ConvertToBase64Async(file);
-            var uploadOriginalTask = UploadFileToMinio(file);
+        //    // 1️⃣ Khởi tạo task song song
+        //    var convertBase64Task = ImageUtils.ConvertToBase64Async(file);
+        //    var uploadOriginalTask = UploadFileToMinio(file);
 
-            // 2️⃣ Chờ cả 2 cùng xong
-            await Task.WhenAll(convertBase64Task, uploadOriginalTask);
+        //    // 2️⃣ Chờ cả 2 cùng xong
+        //    await Task.WhenAll(convertBase64Task, uploadOriginalTask);
 
-            var base64Image = await convertBase64Task;
-            var uploadToMinio = await uploadOriginalTask;
+        //    var base64Image = await convertBase64Task;
+        //    var uploadToMinio = await uploadOriginalTask;
 
-            // 3️⃣ Validation image
-            var validation = await _geminiService.ImageValidation(base64Image, file.ContentType);
-            if (!validation.IsValid)
-                throw new BadRequestException(validation.Message);
+        //    // 3️⃣ Validation image
+        //    //var validation = await _geminiService.ImageValidation(base64Image, file.ContentType);
+        //    //if (!validation.IsValid)
+        //    //    throw new BadRequestException(validation.Message);
 
-            // 4️⃣ Remove background (phụ thuộc uploadToMinio)
-            var fileRemoveBackground = await CallRembgAndGetRemovedFile(
-                uploadToMinio.DownloadUrl,
-                uploadToMinio.FileName
-            );
+        //    // 4️⃣ Remove background (phụ thuộc uploadToMinio)
+        //    var fileRemoveBackground = await CallRembgAndGetRemovedFile(
+        //        uploadToMinio.DownloadUrl,
+        //        uploadToMinio.FileName
+        //    );
 
-            // 5️⃣ Song song 2 tác vụ sau khi đã có file remove background:
-            //     - Convert base64 cho file remove background
-            //     - Upload file remove background lên MinIO
-            var convertRemovedBase64Task = ImageUtils.ConvertToBase64Async(fileRemoveBackground);
-            var uploadRemovedFileTask = UploadFileToMinio(fileRemoveBackground);
+        //    // 5️⃣ Song song 2 tác vụ sau khi đã có file remove background:
+        //    //     - Convert base64 cho file remove background
+        //    //     - Upload file remove background lên MinIO
+        //    var convertRemovedBase64Task = ImageUtils.ConvertToBase64Async(fileRemoveBackground);
+        //    var uploadRemovedFileTask = UploadFileToMinio(fileRemoveBackground);
 
-            await Task.WhenAll(convertRemovedBase64Task, uploadRemovedFileTask);
+        //    await Task.WhenAll(convertRemovedBase64Task, uploadRemovedFileTask);
 
-            var base64Removed = await convertRemovedBase64Task;
-            var imageRemBgResponse = await uploadRemovedFileTask;
+        //    var base64Removed = await convertRemovedBase64Task;
+        //    var imageRemBgResponse = await uploadRemovedFileTask;
 
-            // 6️⃣ Gọi Gemini summary (chờ base64Removed)
-            var summaryFromGemini = await _geminiService.ImageGenerateContent(
-                base64Removed, fileRemoveBackground.ContentType
-            );
+        //    // 6️⃣ Gọi Gemini summary (chờ base64Removed)
+        //    var summaryFromGemini = await _geminiService.ImageGenerateContent(
+        //        base64Removed, fileRemoveBackground.ContentType
+        //    );
 
-            // 7️⃣ Map và trả response
-            var itemSummary = _mapper.Map<ItemSummaryModel>(summaryFromGemini);
-            itemSummary.ImageRemBgURL = imageRemBgResponse.DownloadUrl;
+        //    // 7️⃣ Map và trả response
+        //    var itemSummary = _mapper.Map<ItemSummaryModel>(summaryFromGemini);
+        //    itemSummary.ImageRemBgURL = imageRemBgResponse.DownloadUrl;
 
-            return new BaseResponseModel
-            {
-                StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.GET_SUMMARY_IMAGE_SUCCESS,
-                Data = itemSummary
-            };
-        }
+        //    return new BaseResponseModel
+        //    {
+        //        StatusCode = StatusCodes.Status200OK,
+        //        Message = MessageConstants.GET_SUMMARY_IMAGE_SUCCESS,
+        //        Data = itemSummary
+        //    };
+        //}
 
         // Helper: upload file to firebase and return ImageUploadResult
         private async Task<ImageUploadResult> UploadFileToMinio(IFormFile file)
@@ -751,6 +754,106 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status201Created,
                 Message = MessageConstants.ITEM_CREATE_SUCCESS
+            };
+        }
+
+        public async Task<BaseResponseModel> AnalysisItem(ItemModelRequest request)
+        {
+            var descriptionPromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.DESCRIPTION_ITEM_PROMPT);
+
+            var styles = await _unitOfWork.StyleRepository.getAllStyleSystem();
+            var occasions = await _unitOfWork.OccasionRepository.GetAllAsync();
+            var seasons = await _unitOfWork.SeasonRepository.GetAllAsync();
+
+            // JSON serializer options
+            var serializerOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            };
+
+            //mapped to json
+            var stylesJson = JsonSerializer.Serialize(_mapper.Map<List<StyleItemModel>>(styles), serializerOptions);
+            var occasionsJson = JsonSerializer.Serialize(_mapper.Map<List<OccasionItemModel>>(occasions), serializerOptions);
+            var seasonsJson = JsonSerializer.Serialize(_mapper.Map<List<SeasonItemModel>>(seasons), serializerOptions);
+
+            var promptText = descriptionPromptSetting.Value;
+            promptText = promptText.Replace("{{styles}}", stylesJson);
+            promptText = promptText.Replace("{{occasions}}", occasionsJson);
+            promptText = promptText.Replace("{{seasons}}", seasonsJson);
+
+            // Step 1: Fetch all items first
+            var items = new List<Item>();
+            foreach (var itemId in request.ItemIds)
+            {
+                var item = await _unitOfWork.ItemRepository.GetByIdAsync(itemId);
+                if (item == null)
+                {
+                    throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+                }
+                if((bool)!item.IsAnalyzed) items.Add(item);
+            }
+
+            // Step 2: Process all images in parallel (no DB operations here)
+            var analysisResults = await Task.WhenAll(items.Select(async item =>
+            {
+                var imgResponse = await ImageUtils.ConvertToBase64Async(item.ImgUrl, _httpClientFactory.CreateClient("AnalysisClient"));
+                var analysis = await _geminiService.ImageGenerateContent(imgResponse.base64, imgResponse.mimetype, promptText);
+
+                return new 
+                    {
+                        Item = item,
+                        Analysis = analysis
+                    };
+            }));
+
+            // Step 3: Update all items with analysis results
+            foreach (var result in analysisResults)
+            {
+                var item = result.Item;
+                var analysis = result.Analysis;
+
+                // Map basic fields
+                item.AiDescription = analysis.AiDescription;
+                item.WeatherSuitable = analysis.WeatherSuitable;
+                item.Condition = analysis.Condition;
+                item.Pattern = analysis.Pattern;
+                item.Fabric = analysis.Fabric;
+                item.IsAnalyzed = true;
+                item.AIConfidence = analysis.Confidence;
+                item.Color = JsonSerializer.Serialize(analysis.Colors, serializerOptions);
+
+                _unitOfWork.ItemRepository.UpdateAsync(item);
+            }
+
+            // Save all item updates
+            await _unitOfWork.SaveAsync();
+
+            // Step 4: Update relationships for all items
+            foreach (var result in analysisResults)
+            {
+                var item = result.Item;
+                var analysis = result.Analysis;
+
+                var styleIds = analysis.Styles?.Select(s => (long)s.Id).ToList() ?? new List<long>();
+                var occasionIds = analysis.Occasions?.Select(o => (long)o.Id).ToList() ?? new List<long>();
+                var seasonIds = analysis.Seasons?.Select(s => (long)s.Id).ToList() ?? new List<long>();
+
+                await UpdateItemRelationshipsAsync(item.Id, styleIds, occasionIds, seasonIds);
+            }
+
+            // Step 5: Build confidence model response
+            var itemConfidenceModel = analysisResults.Select(result => new ItemConfidenceModel
+            {
+                ItemId = (int)result.Item.Id,
+                Confidence = result.Analysis.Confidence
+            }).ToList();
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.ITEM_UPDATE_SUCCESS,
+                Data = itemConfidenceModel
             };
         }
     }

@@ -81,44 +81,12 @@ namespace SOPServer.Service.Services.Implements
             return setting.Value;
         }
 
-        public async Task<ItemModelAI?> ImageGenerateContent(string base64Image, string mimeType)
+        public async Task<ItemModelAI?> ImageGenerateContent(string base64Image, string mimeType, string prompt)
         {
-            var descriptionPromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.DESCRIPTION_ITEM_PROMPT);
-
-            var styles = await _unitOfWork.StyleRepository.GetAllAsync();
-            var occasions = await _unitOfWork.OccasionRepository.GetAllAsync();
-            var seasons = await _unitOfWork.SeasonRepository.GetAllAsync();
-            var categories = await _unitOfWork.CategoryRepository.GetAllAsync();
-
-            //get and map
-            var stylesModel = styles.Where(s => s.CreatedBy == CreatedBy.SYSTEM && !s.IsDeleted).Select(s => new StyleItemModel { Id = s.Id, Name = s.Name });
-            var occasionsModel = occasions.Where(o => !o.IsDeleted).Select(o => new OccasionItemModel { Id = o.Id, Name = o.Name });
-            var seasonsModel = seasons.Where(s => !s.IsDeleted).Select(s => new SeasonItemModel { Id = s.Id, Name = s.Name });
-            var categoryModel = categories.Where(x => x.ParentId != null && !x.IsDeleted).Select(c => new CategoryItemModel { Id = c.Id, Name = c.Name });
-
-            // JSON serializer options
-            var serializerOptions = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            };
-
-            //mapped to json
-            var stylesJson = JsonSerializer.Serialize(stylesModel, serializerOptions);
-            var occasionsJson = JsonSerializer.Serialize(occasionsModel, serializerOptions);
-            var seasonsJson = JsonSerializer.Serialize(seasonsModel, serializerOptions);
-            var categoriesJson = JsonSerializer.Serialize(categoryModel, serializerOptions);
-
-            var promptText = descriptionPromptSetting.Value;
-            promptText = promptText.Replace("{{styles}}", stylesJson);
-            promptText = promptText.Replace("{{occasions}}", occasionsJson);
-            promptText = promptText.Replace("{{seasons}}", seasonsJson);
-            promptText = promptText.Replace("{{categories}}", categoriesJson);
-
             var generateRequest = new GenerateContentRequest();
             generateRequest.AddInlineData(base64Image, mimeType);
             generateRequest.UseJsonMode<ItemModelAI>();
-            generateRequest.AddText(promptText);
+            generateRequest.AddText(prompt);
 
             const int maxRetryAttempts = 5;
 
@@ -173,10 +141,6 @@ namespace SOPServer.Service.Services.Implements
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(result.Name))
-                    missingFields.Add("Name");
-                if (result.Category == null)
-                    missingFields.Add("Category");
                 if (result.Colors == null || !result.Colors.Any())
                     missingFields.Add("Colors");
                 if (string.IsNullOrWhiteSpace(result.AiDescription))

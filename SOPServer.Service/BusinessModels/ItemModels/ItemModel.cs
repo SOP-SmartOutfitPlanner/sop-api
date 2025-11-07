@@ -40,6 +40,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
         public string Pattern { get; set; }
 
         public string Fabric { get; set; }
+        public bool IsAnalyzed { get; set; }
 
         public List<OccasionItemModel> Occasions { get; set; }
 

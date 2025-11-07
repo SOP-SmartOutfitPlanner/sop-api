@@ -17,23 +17,13 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
-        /// Follow a user
+        /// Toggle follow/unfollow a user
         /// </summary>
         /// <param name="model">Follower and Following user IDs</param>
         [HttpPost]
-        public Task<IActionResult> FollowUser([FromBody] CreateFollowerModel model)
+        public Task<IActionResult> ToggleFollowUser([FromBody] CreateFollowerModel model)
         {
-            return ValidateAndExecute(async () => await _followerService.FollowUser(model));
-        }
-
-        /// <summary>
-        /// Unfollow a user
-        /// </summary>
-        /// <param name="id">Follower relationship ID</param>
-        [HttpDelete("{id}")]
-        public Task<IActionResult> UnfollowUser(long id)
-        {
-            return ValidateAndExecute(async () => await _followerService.UnfollowUser(id));
+            return ValidateAndExecute(async () => await _followerService.ToggleFollowUser(model));
         }
 
         /// <summary>

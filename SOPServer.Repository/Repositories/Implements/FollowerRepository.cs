@@ -34,6 +34,12 @@ namespace SOPServer.Repository.Repositories.Implements
                 .CountAsync(f => f.FollowingId == userId && !f.IsDeleted);
         }
 
+        public async Task<int> GetFollowingCount(long userId)
+        {
+            return await _context.Followers
+                .CountAsync(f => f.FollowerId == userId && !f.IsDeleted);
+        }
+
         public async Task<bool> IsFollowing(long followerId, long followingId)
         {
             return await _context.Followers

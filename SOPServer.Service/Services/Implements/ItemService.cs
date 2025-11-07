@@ -661,7 +661,8 @@ namespace SOPServer.Service.Services.Implements
                         Name = "Sop Item",
                         CategoryId = categoryAnalysis.CategoryId,
                         UserId = bulkUploadModel.UserId,
-                        ImgUrl = imageUrl
+                        ImgUrl = imageUrl,
+                        IsAnalyzed = false
                     };
 
                     return (imageUrl, newItem);
@@ -732,7 +733,8 @@ namespace SOPServer.Service.Services.Implements
                         Name = "Sop Item",
                         CategoryId = itemUpload.CategoryId,
                         UserId = bulkUploadModel.UserId,
-                        ImgUrl = itemUpload.ImageURLs
+                        ImgUrl = itemUpload.ImageURLs,
+                        IsAnalyzed = false
                     };
                     await _unitOfWork.ItemRepository.AddAsync(newItem);
                 }

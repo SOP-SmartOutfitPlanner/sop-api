@@ -132,6 +132,8 @@ public partial class SOPServerContext : DbContext
                 .HasMaxLength(255)
                 .IsUnicode(true)
                 .IsRequired(false);
+            entity.Property(e => e.IsAnalyzed)
+                .HasDefaultValue(false);
 
             entity.HasOne(d => d.User).WithMany(p => p.Items)
                 .HasForeignKey(d => d.UserId)

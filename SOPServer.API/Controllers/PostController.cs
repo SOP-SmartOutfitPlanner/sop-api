@@ -24,7 +24,7 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpPost]
-        public Task<IActionResult> CreatePost([FromBody] PostCreateModel model)
+        public Task<IActionResult> CreatePost([FromForm] PostCreateModel model)
         {
             return ValidateAndExecute(async () => await _postService.CreatePostAsync(model));
         }

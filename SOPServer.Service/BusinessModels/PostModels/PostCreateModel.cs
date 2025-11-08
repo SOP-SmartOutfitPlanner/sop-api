@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -13,6 +14,6 @@ namespace SOPServer.Service.BusinessModels.PostModels
         
         public List<string> Hashtags { get; set; } = new List<string>();
 
-        public List<string> ImageUrls { get; set; } = new List<string>();
+        public List<IFormFile> Images { get; set; } = new List<IFormFile>();
     }
 }

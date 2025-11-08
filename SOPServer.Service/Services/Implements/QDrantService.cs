@@ -1,17 +1,11 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
-using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.QDrantModels;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
 using SOPServer.Service.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -35,14 +29,14 @@ namespace SOPServer.Service.Services.Implements
         {
             // Kiểm tra xem collection đã tồn tại chưa
             var collection = await _client.CollectionExistsAsync(_qdrantSettings.Collection);
-            
+
             if (!collection)
             {
                 await _client.CreateCollectionAsync(
                     collectionName: _qdrantSettings.Collection,
                     vectorsConfig: new VectorParams
                     {
-                        Size = ulong.Parse(_qdrantSettings.Size),               
+                        Size = ulong.Parse(_qdrantSettings.Size),
                         Distance = Distance.Cosine
                     }
                 );
@@ -56,7 +50,7 @@ namespace SOPServer.Service.Services.Implements
                 Id = (ulong)id,
                 Vectors = embedding.ToArray()
             };
-            
+
             foreach (var kvp in payload)
             {
                 pointStruct.Payload.Add(kvp.Key, QdrantUtils.ConvertToQdrantValue(kvp.Value));
@@ -74,7 +68,7 @@ namespace SOPServer.Service.Services.Implements
         {
             var result = await _client.DeleteAsync(
                 collectionName: _qdrantSettings.Collection,
-                id: (ulong) id
+                id: (ulong)id
             );
 
             return result.Status == UpdateStatus.Completed;
@@ -119,7 +113,7 @@ namespace SOPServer.Service.Services.Implements
 
             foreach (var item in searchResult)
             {
-                if(item.Score > 0.6)
+                if (item.Score > 0.6)
                 {
                     result.Add(new QDrantSearchModels
                     {
@@ -127,7 +121,7 @@ namespace SOPServer.Service.Services.Implements
                         score = item.Score
                     });
                 }
-                
+
             }
 
             return result;

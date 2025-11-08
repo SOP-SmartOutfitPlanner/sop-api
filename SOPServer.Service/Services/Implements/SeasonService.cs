@@ -1,18 +1,14 @@
-﻿using AutoMapper;
+using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
-using SOPServer.Service.BusinessModels.SeasonModels;
 using SOPServer.Service.BusinessModels.ResultModels;
+using SOPServer.Service.BusinessModels.SeasonModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
-using System.Linq.Expressions;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Collections.Generic;
-using Microsoft.AspNetCore.Http;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -56,7 +52,7 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> GetSeasonByIdAsync(long id)
         {
-            var season = await _unitOfWork.SeasonRepository.GetByIdIncludeAsync(id, 
+            var season = await _unitOfWork.SeasonRepository.GetByIdIncludeAsync(id,
                 include: q => q.Include(x => x.ItemSeasons)
                               .ThenInclude(x => x.Item)
                               .ThenInclude(x => x.Category)
@@ -98,7 +94,7 @@ namespace SOPServer.Service.Services.Implements
             {
                 throw new NotFoundException(MessageConstants.SEASON_NOT_EXIST);
             }
-            
+
             // Check if season has active items
             if (season.ItemSeasons != null)
             {
@@ -108,7 +104,7 @@ namespace SOPServer.Service.Services.Implements
                     throw new BadRequestException(MessageConstants.SEASON_HAS_ITEM);
                 }
             }
-            
+
             _unitOfWork.SeasonRepository.SoftDeleteAsync(season);
             await _unitOfWork.SaveAsync();
 

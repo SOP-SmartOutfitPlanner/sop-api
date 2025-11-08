@@ -1,16 +1,9 @@
-﻿using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Configuration;
+using System.Text.Json;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
 using StackExchange.Redis;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-
 namespace SOPServer.Service.Services.Implements
 {
     public class RedisService : IRedisService

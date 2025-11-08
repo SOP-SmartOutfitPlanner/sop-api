@@ -202,7 +202,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetItemByUserPaginationAsync(PaginationParameter paginationParameter, long userId)
+        public async Task<BaseResponseModel> GetItemByUserPaginationAsync(PaginationParameter paginationParameter, long userId, bool? isAnalyzed)
         {
             var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter,
         include: query => query.Include(x => x.Category)
@@ -210,7 +210,7 @@ namespace SOPServer.Service.Services.Implements
                  .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
             .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
             .Include(x => x.ItemStyles).ThenInclude(x => x.Style),
-            filter: x => x.UserId == userId,
+            filter: x => x.UserId == userId && (isAnalyzed == null || x.IsAnalyzed == isAnalyzed),
           orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
             var itemModels = _mapper.Map<Pagination<ItemModel>>(items);

@@ -86,7 +86,7 @@ namespace SOPServer.Service.Constants
         public const string POST_GET_SUCCESS = "Post retrieved successfully";
         public const string POST_NOT_FOUND = "Post not found";
         public const string GET_LIST_POST_BY_USER_SUCCESS = "Get list posts by user successfully";
-
+        public const string GET_TOP_CONTRIBUTORS_SUCCESS = "Get top contributors successfully";
         public const string GET_LIST_POST_SUCCESS = "Get post successfully";
 
         public const string OTP_SENT_SUCCESS = "OTP sent successfully to your gmail";

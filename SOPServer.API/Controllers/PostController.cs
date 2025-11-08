@@ -56,5 +56,11 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _postService.GetAllPostsAsync(paginationParameter, userId));
         }
+
+        [HttpGet("top-contributors")]
+        public Task<IActionResult> GetTopContributors([FromQuery] PaginationParameter paginationParameter)
+        {
+            return ValidateAndExecute(async () => await _postService.GetTopContributorsAsync(paginationParameter));
+        }
     }
 }

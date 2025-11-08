@@ -228,9 +228,14 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetTopContributorsAsync(PaginationParameter paginationParameter)
+        public async Task<BaseResponseModel> GetTopContributorsAsync(PaginationParameter paginationParameter, long? userId = null)
         {
-            int numberOfDays = 30; //config o cho nay
+            if (userId.HasValue)
+            {
+                await ValidateUserExistsAsync(userId.Value);
+            }
+
+            int numberOfDays = 30;//config o cho nay
 
             var topContributorsQuery = _unitOfWork.PostRepository.GetQueryable()
                 .Where(p => p.CreatedDate >= DateTime.UtcNow.AddDays(-numberOfDays) && p.UserId.HasValue)
@@ -251,6 +256,22 @@ namespace SOPServer.Service.Services.Implements
                 .Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
                 .Take(paginationParameter.PageSize)
                 .ToListAsync();
+
+            if (userId.HasValue)
+            {
+                foreach (var contributor in contributors)
+                {
+                    var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(userId.Value, contributor.UserId);
+                    contributor.IsFollowing = isFollowing;
+                }
+            }
+            else
+            {
+                foreach (var contributor in contributors)
+                {
+                    contributor.IsFollowing = false;
+                }
+            }
 
             var pageSize = paginationParameter.TakeAll ? totalCount : paginationParameter.PageSize;
             var pagination = new Pagination<TopContributorModel>(

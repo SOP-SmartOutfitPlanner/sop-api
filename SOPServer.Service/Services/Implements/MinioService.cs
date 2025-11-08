@@ -59,8 +59,12 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.FILE_NOT_FOUND);
 
             var ext = Path.GetExtension(file.FileName).ToLowerInvariant().Trim();
-            if (ext is not (".jpg" or ".jpeg" or ".png"))
+
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".tiff", ".heic" };
+            if (!allowedExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase))
+            {
                 throw new BadRequestException(MessageConstants.IMAGE_EXTENSION_NOT_SUPPORT);
+            }
 
             await EnsureBucketAsync();
 

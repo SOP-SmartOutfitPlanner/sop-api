@@ -58,9 +58,9 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpGet("top-contributors")]
-        public Task<IActionResult> GetTopContributors([FromQuery] PaginationParameter paginationParameter)
+        public Task<IActionResult> GetTopContributors([FromQuery] PaginationParameter paginationParameter, [FromQuery] long? userId = null)
         {
-            return ValidateAndExecute(async () => await _postService.GetTopContributorsAsync(paginationParameter));
+            return ValidateAndExecute(async () => await _postService.GetTopContributorsAsync(paginationParameter, userId));
         }
     }
 }

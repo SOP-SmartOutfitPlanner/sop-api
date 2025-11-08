@@ -228,6 +228,58 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<BaseResponseModel> GetTopContributorsAsync(PaginationParameter paginationParameter)
+        {
+            int numberOfDays = 30; //config o cho nay
+
+            var topContributorsQuery = _unitOfWork.PostRepository.GetQueryable()
+                .Where(p => p.CreatedDate >= DateTime.UtcNow.AddDays(-numberOfDays) && p.UserId.HasValue)
+                .GroupBy(p => new { p.UserId, p.User.DisplayName, p.User.AvtUrl })
+                .Select(g => new TopContributorModel
+                {
+                    UserId = g.Key.UserId.Value,
+                    DisplayName = g.Key.DisplayName ?? "Unknown",
+                    AvatarUrl = g.Key.AvtUrl ?? string.Empty,
+                    PostCount = g.Count()
+                })
+                .OrderByDescending(c => c.PostCount)
+                .AsQueryable();
+
+            var totalCount = await topContributorsQuery.CountAsync();
+
+            var contributors = await topContributorsQuery
+                .Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
+                .Take(paginationParameter.PageSize)
+                .ToListAsync();
+
+            var pageSize = paginationParameter.TakeAll ? totalCount : paginationParameter.PageSize;
+            var pagination = new Pagination<TopContributorModel>(
+                contributors,
+                totalCount,
+                paginationParameter.PageIndex,
+                pageSize
+            );
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_TOP_CONTRIBUTORS_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = pagination,
+                    MetaData = new
+                    {
+                        pagination.TotalCount,
+                        pagination.PageSize,
+                        pagination.CurrentPage,
+                        pagination.TotalPages,
+                        pagination.HasNext,
+                        pagination.HasPrevious
+                    }
+                }
+            };
+        }
+
         #region Private Helper Methods
 
         private async Task ValidateUserExistsAsync(long userId)

@@ -13,6 +13,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> GetPostByIdAsync(long id);
         Task<BaseResponseModel> GetPostByUserIdAsync(PaginationParameter paginationParameter, long userId);
         Task<BaseResponseModel> GetPostsByHashtagIdAsync(PaginationParameter paginationParameter, long hashtagId);
-        Task<BaseResponseModel> GetTopContributorsAsync(PaginationParameter paginationParameter);
+        Task<BaseResponseModel> GetTopContributorsAsync(PaginationParameter paginationParameter, long? userId = null);
     }
 }

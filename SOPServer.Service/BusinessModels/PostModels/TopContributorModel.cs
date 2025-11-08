@@ -8,5 +8,6 @@ namespace SOPServer.Service.BusinessModels.PostModels
         public string DisplayName { get; set; }
         public string AvatarUrl { get; set; }
         public int PostCount { get; set; }
+        public bool IsFollowing { get; set; }
     }
 }

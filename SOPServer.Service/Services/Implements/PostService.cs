@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
+using SOPServer.Service.BusinessModels.FirebaseModels;
 using SOPServer.Service.BusinessModels.PostModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
@@ -24,17 +25,20 @@ namespace SOPServer.Service.Services.Implements
         private readonly IMapper _mapper;
         private readonly NewsfeedSettings _newsfeedSettings;
         private readonly IRedisService _redisService;
+        private readonly IMinioService _minioService;
 
         public PostService(
             IUnitOfWork unitOfWork,
             IMapper mapper,
             IOptions<NewsfeedSettings> newsfeedSettings,
-            IRedisService redisService)
+            IRedisService redisService,
+            IMinioService minioService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _newsfeedSettings = newsfeedSettings.Value;
             _redisService = redisService;
+            _minioService = minioService;
         }
 
         public async Task<BaseResponseModel> CreatePostAsync(PostCreateModel model)
@@ -42,7 +46,11 @@ namespace SOPServer.Service.Services.Implements
             await ValidateUserExistsAsync(model.UserId);
 
             var newPost = await CreatePostEntityAsync(model);
-            await AddPostImagesAsync(newPost.Id, model.ImageUrls);
+            
+            // Upload images to MinIO and get URLs
+            var imageUrls = await UploadImagesAsync(model.Images);
+            
+            await AddPostImagesAsync(newPost.Id, imageUrls);
             await HandlePostHashtagsAsync(newPost.Id, model.Hashtags);
 
             var createdPost = await GetPostWithRelationsAsync(newPost.Id);
@@ -246,6 +254,33 @@ namespace SOPServer.Service.Services.Implements
             await _unitOfWork.SaveAsync();
 
             return newPost;
+        }
+
+        private async Task<List<string>> UploadImagesAsync(List<IFormFile> images)
+        {
+            var imageUrls = new List<string>();
+
+            if (images == null || !images.Any())
+            {
+                return imageUrls;
+            }
+
+            foreach (var image in images)
+            {
+                if (image == null || image.Length == 0)
+                {
+                    continue;
+                }
+
+                var uploadResult = await _minioService.UploadImageAsync(image);
+                
+                if (uploadResult?.Data is ImageUploadResult uploadData && !string.IsNullOrEmpty(uploadData.DownloadUrl))
+                {
+                    imageUrls.Add(uploadData.DownloadUrl);
+                }
+            }
+
+            return imageUrls;
         }
 
         private async Task AddPostImagesAsync(long postId, List<string> imageUrls)

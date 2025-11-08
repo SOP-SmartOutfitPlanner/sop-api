@@ -141,6 +141,11 @@ public partial class SOPServerContext : DbContext
                 .IsRequired(false)
                 .HasDefaultValue(0);
 
+            entity.Property(e => e.AIAnalyzeJson)
+                .HasColumnType("nvarchar(max)")
+                .IsUnicode(true)
+                .IsRequired(false);
+
             entity.HasOne(d => d.User).WithMany(p => p.Items)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK_Item_User");

@@ -25,9 +25,9 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpGet("user/{userId}")]
-        public Task<IActionResult> GetListItem([FromQuery] PaginationParameter paginationParameter, long userId)
+        public Task<IActionResult> GetListItem([FromQuery] PaginationParameter paginationParameter, long userId, bool? isAnalyzed)
         {
-            return ValidateAndExecute(async () => await _itemService.GetItemByUserPaginationAsync(paginationParameter, userId));
+            return ValidateAndExecute(async () => await _itemService.GetItemByUserPaginationAsync(paginationParameter, userId, isAnalyzed));
         }
 
         [HttpGet("{id}")]

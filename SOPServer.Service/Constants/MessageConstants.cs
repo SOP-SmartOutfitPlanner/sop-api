@@ -22,6 +22,7 @@ namespace SOPServer.Service.Constants
 
         public const string ITEM_NOT_EXISTED = "Item is not existed";
         public const string ITEM_CREATE_SUCCESS = "Item created successfully";
+        public const string ITEM_CREATE_PARTIAL_SUCCESS = "Items created with some failures";
         public const string DELETE_ITEM_SUCCESS = "Item deleted successfully";
         public const string GET_LIST_ITEM_SUCCESS = "Get list item successfully";
         public const string ITEM_ALREADY_EXISTS = "Item already exists";
@@ -66,6 +67,7 @@ namespace SOPServer.Service.Constants
         public const string CATEGORY_NOT_EXIST = "Category is not existed";
         public const string CATEGORY_PARENT_NOT_EXIST = "Category is not existed";
         public const string CATEGORY_MAX_DEPTH_EXCEEDED = "Cannot create category: maximum depth of 2 levels exceeded. Child categories can only be created under root categories";
+        public static string CANNOT_IDENTIFY_CATEGORY = "Cannot identify item category";
 
         // Season related messages used by SeasonService
         public const string GET_SEASON_BY_ID_SUCCESS = "Get season by id successfully";
@@ -82,6 +84,7 @@ namespace SOPServer.Service.Constants
 
         // Post related messages
         public const string POST_CREATE_SUCCESS = "Post created successfully";
+        public const string POST_UPDATE_SUCCESS = "Post updated successfully";
         public const string POST_DELETE_SUCCESS = "Post deleted successfully";
         public const string POST_GET_SUCCESS = "Post retrieved successfully";
         public const string POST_NOT_FOUND = "Post not found";
@@ -234,5 +237,7 @@ namespace SOPServer.Service.Constants
         public const string OUTFIT_CALENDAR_ALREADY_EXISTS = "An outfit is already scheduled for this date";
 
         public static string GET_USER_STATS_SUCCESS = "Get user stats successfully";
+
+        
     }
 }

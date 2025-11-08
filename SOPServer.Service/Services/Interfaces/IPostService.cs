@@ -8,6 +8,7 @@ namespace SOPServer.Service.Services.Interfaces
     public interface IPostService
     {
         Task<BaseResponseModel> CreatePostAsync(PostCreateModel model);
+        Task<BaseResponseModel> UpdatePostAsync(long id, PostUpdateModel model);
         Task<BaseResponseModel> DeletePostByIdAsync(long id);
         Task<BaseResponseModel> GetAllPostsAsync(PaginationParameter paginationParameter, long userId);
         Task<BaseResponseModel> GetPostByIdAsync(long id);

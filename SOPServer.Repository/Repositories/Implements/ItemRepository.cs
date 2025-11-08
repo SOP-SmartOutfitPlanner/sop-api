@@ -19,6 +19,20 @@ namespace SOPServer.Repository.Repositories.Implements
             _context = context;
         }
 
+        public async Task<int> CountItemByUserId(long userId)
+        {
+            return await _context.Items.CountAsync(x => !x.IsDeleted && x.UserId == userId);
+        }
+
+        public async Task<int> CountItemByUserIdAndCategoryParent(long userId, long categoryId)
+        {
+            return await _context.Items
+                .Where(x => !x.IsDeleted && x.UserId == userId)
+                .Include(i => i.Category)
+                .Where(i => i.Category != null && i.Category.ParentId == categoryId)
+                .CountAsync();
+        }
+
         public async Task<bool> ExistsByNameAsync(string name, long userId, long? excludeId = null)
         {
             var query = _context.Items.Where(x => !x.IsDeleted && x.UserId == userId && x.Name == name);

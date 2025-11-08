@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -939,6 +940,43 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.ITEM_UPDATE_SUCCESS,
                 Data = itemConfidenceModel
             };
+        }
+
+        public async Task<BaseResponseModel> GetUserStats(long userId)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            var totalItems = await _unitOfWork.ItemRepository.CountItemByUserId(userId);
+
+            var rootCategory = await _unitOfWork.CategoryRepository.GetAllParentCategory();
+
+            Dictionary<string, int> categoryCounts = new Dictionary<string, int>();
+            foreach (var item in rootCategory)
+            {
+                var result = await _unitOfWork.ItemRepository.CountItemByUserIdAndCategoryParent(userId, item.Id);
+                var dickey = categoryCounts.ContainsKey(item.Name);
+                if (!dickey)
+                {
+                    categoryCounts.Add(item.Name, result);
+                }
+            }
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_USER_STATS_SUCCESS,
+                Data = new
+                {
+                    TotalItems = totalItems,
+                    CategoryCounts = categoryCounts
+                }
+            };
+
+
         }
     }
 }

@@ -77,5 +77,11 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _itemService.BulkCreateItemManual(bulkUploadModel));
         }
+
+        [HttpGet("stats/{userId}")]
+        public Task<IActionResult> GetStatsWardobe(long userId)
+        {
+            return ValidateAndExecute(async () => await _itemService.GetUserStats(userId));
+        }
     }
 }

@@ -36,6 +36,7 @@ public partial class Item : BaseEntity
     public bool? IsAnalyzed { get; set; }
 
     public int? AIConfidence { get; set; }
+    public string? AIAnalyzeJson { get; set; }
 
     public virtual ICollection<ItemOccasion> ItemOccasions { get; set; } = new List<ItemOccasion>();
 

@@ -665,7 +665,8 @@ namespace SOPServer.Service.Services.Implements
                         CategoryId = categoryAnalysis.CategoryId,
                         UserId = bulkUploadModel.UserId,
                         ImgUrl = imageUrl,
-                        IsAnalyzed = false
+                        IsAnalyzed = false,
+                        AIAnalyzeJson = JsonSerializer.Serialize(categoryAnalysis, serializerOptions)
                     };
 
                     return (imageUrl, newItem);
@@ -791,21 +792,21 @@ namespace SOPServer.Service.Services.Implements
                 {
                     throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
                 }
-                if((bool)!item.IsAnalyzed) items.Add(item);
+                if ((bool)!item.IsAnalyzed) items.Add(item);
             }
 
             // Step 2: Process all images in parallel (no DB operations here)
             var analysisResults = await Task.WhenAll(items.Select(async item =>
-            {
-                var imgResponse = await ImageUtils.ConvertToBase64Async(item.ImgUrl, _httpClientFactory.CreateClient("AnalysisClient"));
-                var analysis = await _geminiService.ImageGenerateContent(imgResponse.base64, imgResponse.mimetype, promptText);
+                  {
+                      var imgResponse = await ImageUtils.ConvertToBase64Async(item.ImgUrl, _httpClientFactory.CreateClient("AnalysisClient"));
+                      var analysis = await _geminiService.ImageGenerateContent(imgResponse.base64, imgResponse.mimetype, promptText);
 
-                return new 
-                    {
-                        Item = item,
-                        Analysis = analysis
-                    };
-            }));
+                      return new
+                      {
+                          Item = item,
+                          Analysis = analysis
+                      };
+                  }));
 
             // Step 3: Update all items with analysis results
             foreach (var result in analysisResults)
@@ -822,6 +823,42 @@ namespace SOPServer.Service.Services.Implements
                 item.IsAnalyzed = true;
                 item.AIConfidence = analysis.Confidence;
                 item.Color = JsonSerializer.Serialize(analysis.Colors, serializerOptions);
+
+                // Merge category from existing AIAnalyzeJson with new analysis
+                long categoryId = item.CategoryId ?? 0;
+                if (!string.IsNullOrEmpty(item.AIAnalyzeJson))
+                {
+                    try
+                    {
+                        var existingAnalysis = JsonSerializer.Deserialize<CategoryItemAnalysisModel>(item.AIAnalyzeJson, serializerOptions);
+                        if (existingAnalysis != null && existingAnalysis.CategoryId != 0)
+                        {
+                            categoryId = existingAnalysis.CategoryId;
+                        }
+                    }
+                    catch
+                    {
+                        // If deserialization fails, use current CategoryId
+                    }
+                }
+
+                // Create complete AI analysis model
+                var completeAnalysis = new ItemAIAnalysisModel
+                {
+                    CategoryId = categoryId,
+                    Colors = analysis.Colors,
+                    AiDescription = analysis.AiDescription,
+                    WeatherSuitable = analysis.WeatherSuitable,
+                    Condition = analysis.Condition,
+                    Pattern = analysis.Pattern,
+                    Fabric = analysis.Fabric,
+                    Styles = analysis.Styles,
+                    Occasions = analysis.Occasions,
+                    Seasons = analysis.Seasons,
+                    Confidence = analysis.Confidence
+                };
+
+                item.AIAnalyzeJson = JsonSerializer.Serialize(completeAnalysis, serializerOptions);
 
                 _unitOfWork.ItemRepository.UpdateAsync(item);
             }
@@ -848,6 +885,37 @@ namespace SOPServer.Service.Services.Implements
                 ItemId = (int)result.Item.Id,
                 Confidence = result.Analysis.Confidence
             }).ToList();
+
+            foreach (var item in analysisResults)
+            {
+                var newItemInclude = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(item.Item.Id,
+                                            include: query => query
+                                                    .Include(x => x.Category).ThenInclude(x => x.Parent)
+                                                    .Include(x => x.User)
+                                                    .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+                                                    .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+                                                    .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
+
+                var stringItem = ConvertItemToEmbeddingString(newItemInclude);
+
+                var embeddingText = await _geminiService.EmbeddingText(stringItem);
+
+                if (embeddingText != null && embeddingText.Any())
+                {
+                    // Prepare payload for Qdrant
+                    var payload = new Dictionary<string, object>
+                    {
+                        { "UserId", newItemInclude.UserId ?? 0 },
+                        { "Name", newItemInclude.Name ?? "" },
+                        { "Category", newItemInclude.Category?.Parent.Name ?? "" },
+                        { "Color", newItemInclude.Color ?? "" },
+                        { "Brand", newItemInclude.Brand ?? "" }
+                    };
+
+                    // Upload to Qdrant
+                    await _qdrantService.UpSertItem(embeddingText, payload, newItemInclude.Id);
+                }
+            }
 
             return new BaseResponseModel
             {

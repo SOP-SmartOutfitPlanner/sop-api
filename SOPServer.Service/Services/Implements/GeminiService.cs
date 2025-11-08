@@ -217,8 +217,6 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<CategoryItemAnalysisModel?> AnalyzingCategory(string base64Image, string mimeType, string finalPrompt)
         {
-            
-
             var generateRequest = new GenerateContentRequest();
             generateRequest.AddInlineData(base64Image, mimeType);
             generateRequest.UseJsonMode<CategoryItemAnalysisModel>();

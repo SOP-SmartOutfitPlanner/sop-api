@@ -82,6 +82,7 @@ namespace SOPServer.Service.Constants
 
         // Post related messages
         public const string POST_CREATE_SUCCESS = "Post created successfully";
+        public const string POST_UPDATE_SUCCESS = "Post updated successfully";
         public const string POST_DELETE_SUCCESS = "Post deleted successfully";
         public const string POST_GET_SUCCESS = "Post retrieved successfully";
         public const string POST_NOT_FOUND = "Post not found";

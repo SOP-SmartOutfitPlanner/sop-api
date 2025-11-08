@@ -29,6 +29,12 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _postService.CreatePostAsync(model));
         }
 
+        [HttpPut("{id}")]
+        public Task<IActionResult> UpdatePost(long id, [FromForm] PostUpdateModel model)
+        {
+            return ValidateAndExecute(async () => await _postService.UpdatePostAsync(id, model));
+        }
+
         [HttpDelete("{id}")]
         public Task<IActionResult> DeletePost(long id)
         {

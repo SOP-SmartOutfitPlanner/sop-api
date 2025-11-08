@@ -632,7 +632,7 @@ namespace SOPServer.Service.Services.Implements
             }
 
             var client = _httpClientFactory.CreateClient("AnalysisClient");
-            var invalidCategoryItems = new List<string>();
+            var invalidCategoryItems = new List<object>();
             var newItems = new List<Item>();
 
             var categories = await _unitOfWork.CategoryRepository.GetAllChildrenCategory();
@@ -701,7 +701,7 @@ namespace SOPServer.Service.Services.Implements
             {
                 if (item == null)
                 {
-                    invalidCategoryItems.Add(imageUrl);
+                    invalidCategoryItems.Add(new { ImageUrl = imageUrl, Reason = MessageConstants.CANNOT_IDENTIFY_CATEGORY });
                 }
                 else
                 {
@@ -716,15 +716,42 @@ namespace SOPServer.Service.Services.Implements
             }
 
             await _unitOfWork.SaveAsync();
+
+            // Collect IDs of successfully added items
+            var successfulItemIds = newItems.Select(item => item.Id).ToList();
+
             if (invalidCategoryItems.Any())
             {
-                throw new NotFoundException(MessageConstants.CATEGORY_NOT_EXIST, invalidCategoryItems);
+                // Return response with both successful and failed items
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status404NotFound,
+                    Message = MessageConstants.ITEM_CREATE_PARTIAL_SUCCESS,
+                    Data = new
+                    {
+                        SuccessfulItems = new
+                        {
+                            Count = successfulItemIds.Count,
+                            ItemIds = successfulItemIds
+                        },
+                        FailedItems = new
+                        {
+                            Count = invalidCategoryItems.Count,
+                            Items = invalidCategoryItems
+                        }
+                    }
+                };
             }
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status201Created,
-                Message = MessageConstants.ITEM_CREATE_SUCCESS
+                Message = MessageConstants.ITEM_CREATE_SUCCESS,
+                Data = new
+                {
+                    Count = successfulItemIds.Count,
+                    ItemIds = successfulItemIds
+                }
             };
         }
 
@@ -736,7 +763,8 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
-            var invalidCategoryItems = new List<string>();
+            var invalidCategoryItems = new List<object>();
+            var validItems = new List<Item>();
 
             // Validate all categories first and collect invalid ones
             foreach (var itemUpload in bulkUploadModel.ItemsUpload)
@@ -744,7 +772,12 @@ namespace SOPServer.Service.Services.Implements
                 var category = await _unitOfWork.CategoryRepository.GetByIdAsync(itemUpload.CategoryId);
                 if (category == null)
                 {
-                    invalidCategoryItems.Add(itemUpload.ImageURLs);
+                    invalidCategoryItems.Add(new
+                    {
+                        ImageUrl = itemUpload.ImageURLs,
+                        CategoryId = itemUpload.CategoryId,
+                        Reason = MessageConstants.CATEGORY_NOT_EXIST
+                    });
                 }
                 else
                 {
@@ -756,21 +789,48 @@ namespace SOPServer.Service.Services.Implements
                         ImgUrl = itemUpload.ImageURLs,
                         IsAnalyzed = false
                     };
+                    validItems.Add(newItem);
                     await _unitOfWork.ItemRepository.AddAsync(newItem);
                 }
             }
 
             await _unitOfWork.SaveAsync();
 
+            // Collect IDs of successfully added items
+            var successfulItemIds = validItems.Select(item => item.Id).ToList();
+
             if (invalidCategoryItems.Any())
             {
-                throw new NotFoundException(MessageConstants.CATEGORY_NOT_EXIST, invalidCategoryItems);
+                // Return response with both successful and failed items
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status207MultiStatus,
+                    Message = MessageConstants.ITEM_CREATE_PARTIAL_SUCCESS,
+                    Data = new
+                    {
+                        SuccessfulItems = new
+                        {
+                            Count = successfulItemIds.Count,
+                            ItemIds = successfulItemIds
+                        },
+                        FailedItems = new
+                        {
+                            Count = invalidCategoryItems.Count,
+                            Items = invalidCategoryItems
+                        }
+                    }
+                };
             }
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status201Created,
-                Message = MessageConstants.ITEM_CREATE_SUCCESS
+                Message = MessageConstants.ITEM_CREATE_SUCCESS,
+                Data = new
+                {
+                    Count = successfulItemIds.Count,
+                    ItemIds = successfulItemIds
+                }
             };
         }
 

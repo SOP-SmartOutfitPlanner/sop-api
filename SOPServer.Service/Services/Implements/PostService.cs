@@ -64,6 +64,45 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<BaseResponseModel> UpdatePostAsync(long postId, PostUpdateModel model)
+        {
+            var post = await _unitOfWork.PostRepository.GetByIdIncludeAsync(
+                postId,
+                include: query => query
+                    .Include(p => p.PostImages)
+                    .Include(p => p.PostHashtags)
+                        .ThenInclude(ph => ph.Hashtag)
+            );
+
+            if (post == null)
+            {
+                throw new NotFoundException(MessageConstants.POST_NOT_FOUND);
+            }
+
+            post.Body = model.Body;
+            
+            // Filter only non-deleted records before passing to update methods
+            var activeImages = post.PostImages.Where(img => !img.IsDeleted).ToList();
+            var activeHashtags = post.PostHashtags.Where(ph => !ph.IsDeleted).ToList();
+            
+            await UpdatePostImagesAsync(post.Id, activeImages, model.Images);
+            await UpdatePostHashtagsAsync(post.Id, activeHashtags, model.Hashtags);
+
+            // Update the post entity
+            _unitOfWork.PostRepository.UpdateAsync(post);
+            await _unitOfWork.SaveAsync();
+
+            var updatedPost = await GetPostWithRelationsAsync(post.Id);
+            var postModel = _mapper.Map<PostModel>(updatedPost);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.POST_UPDATE_SUCCESS,
+                Data = postModel
+            };
+        }
+
         public async Task<BaseResponseModel> DeletePostByIdAsync(long id)
         {
             var post = await _unitOfWork.PostRepository.GetByIdAsync(id);
@@ -427,6 +466,104 @@ namespace SOPServer.Service.Services.Implements
             await _unitOfWork.SaveAsync();
 
             return newHashtag;
+        }
+
+        private async Task UpdatePostImagesAsync(long postId, List<PostImage> existingImages, List<IFormFile> newImages)
+        {
+            // Delete old images from MinIO and soft delete from database
+            // existingImages already filtered for non-deleted records
+            if (existingImages != null && existingImages.Any())
+            {
+                foreach (var existingImage in existingImages)
+                {
+                    if (!string.IsNullOrEmpty(existingImage.ImgUrl))
+                    {
+                        var fileName = ExtractFileNameFromUrl(existingImage.ImgUrl);
+                        if (!string.IsNullOrEmpty(fileName))
+                        {
+                            try
+                            {
+                                await _minioService.DeleteImageAsync(fileName);
+                            }
+                            catch
+                            {
+                                // Continue even if delete fails (file might not exist)
+                            }
+                        }
+                    }
+
+                    _unitOfWork.PostImageRepository.SoftDeleteAsync(existingImage);
+                }
+                await _unitOfWork.SaveAsync();
+            }
+
+            // Upload and add new images
+            if (newImages != null && newImages.Any())
+            {
+                var imageUrls = await UploadImagesAsync(newImages);
+                await AddPostImagesAsync(postId, imageUrls);
+            }
+        }
+
+        private async Task UpdatePostHashtagsAsync(long postId, List<PostHashtags> existingHashtags, List<string> newHashtagNames)
+        {
+            // Get the new hashtag names (trimmed and normalized)
+            var normalizedNewHashtags = newHashtagNames
+                .Where(h => !string.IsNullOrWhiteSpace(h))
+                .Select(h => h.Trim())
+                .Distinct()
+                .ToList();
+
+            // Get existing hashtag names (already filtered for non-deleted records)
+            var existingHashtagNames = existingHashtags
+                .Where(ph => ph.Hashtag != null)
+                .Select(ph => ph.Hashtag.Name)
+                .ToHashSet();
+
+            // Find hashtags to remove (exist but not in new list)
+            var hashtagsToRemove = existingHashtags
+                .Where(ph => !normalizedNewHashtags.Contains(ph.Hashtag?.Name ?? ""))
+                .ToList();
+
+            // Find hashtags to add (in new list but not exist)
+            var hashtagsToAdd = normalizedNewHashtags
+                .Where(name => !existingHashtagNames.Contains(name))
+                .ToList();
+
+            // Remove old hashtags
+            foreach (var hashtagToRemove in hashtagsToRemove)
+            {
+                _unitOfWork.PostHashtagsRepository.SoftDeleteAsync(hashtagToRemove);
+            }
+
+            if (hashtagsToRemove.Any())
+            {
+                await _unitOfWork.SaveAsync();
+            }
+
+            // Add new hashtags
+            if (hashtagsToAdd.Any())
+            {
+                await HandlePostHashtagsAsync(postId, hashtagsToAdd);
+            }
+        }
+
+        private string ExtractFileNameFromUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url))
+                return string.Empty;
+
+            try
+            {
+                var uri = new Uri(url);
+                var segments = uri.Segments;
+                // Return the last segment which should be the filename
+                return segments.Length > 0 ? segments[segments.Length - 1] : string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         private async Task<Post?> GetPostWithRelationsAsync(long postId)

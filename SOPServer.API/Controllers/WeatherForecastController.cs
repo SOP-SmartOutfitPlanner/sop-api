@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-
 namespace SOPServer.API.Controllers
 {
     [ApiController]

@@ -232,5 +232,7 @@ namespace SOPServer.Service.Constants
         public const string GET_LIST_OUTFIT_CALENDAR_SUCCESS = "Get list outfit calendar successfully";
         public const string OUTFIT_CALENDAR_ACCESS_DENIED = "You don't have permission to access this outfit calendar entry";
         public const string OUTFIT_CALENDAR_ALREADY_EXISTS = "An outfit is already scheduled for this date";
+
+        public static string GET_USER_STATS_SUCCESS = "Get user stats successfully";
     }
 }

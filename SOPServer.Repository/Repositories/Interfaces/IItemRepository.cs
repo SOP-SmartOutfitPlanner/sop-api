@@ -11,5 +11,7 @@ namespace SOPServer.Repository.Repositories.Interfaces
     public interface IItemRepository : IGenericRepository<Item>
     {
         Task<bool> ExistsByNameAsync(string name, long userId, long? excludeId = null);
+        Task<int> CountItemByUserId(long userId);
+        Task<int> CountItemByUserIdAndCategoryParent(long userId, long category);
     }
 }

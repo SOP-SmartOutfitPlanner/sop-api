@@ -1,4 +1,9 @@
-﻿using AutoMapper;
+using System.Collections.Generic;
+using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Commons;
@@ -18,10 +23,6 @@ using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.Utils;
-using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -52,7 +53,8 @@ namespace SOPServer.Service.Services.Implements
          .Include(x => x.ItemSeasons)
             .Include(x => x.ItemStyles));
 
-            if (entity == null) throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+            if (entity == null)
+                throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
 
             //if (await _unitOfWork.ItemRepository.ExistsByNameAsync(model.Name, model.UserId, id))
             //    throw new BadRequestException(MessageConstants.ITEM_ALREADY_EXISTS);
@@ -202,16 +204,30 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetItemByUserPaginationAsync(PaginationParameter paginationParameter, long userId, bool? isAnalyzed)
+        public async Task<BaseResponseModel> GetItemByUserPaginationAsync(PaginationParameter paginationParameter, long userid, ItemFilterModel filter)
         {
+            if (filter == null)
+            {
+                throw new BadRequestException("Filter is required");
+            }
+
             var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter,
-        include: query => query.Include(x => x.Category)
-          .Include(x => x.User)
-                 .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
-            .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-            .Include(x => x.ItemStyles).ThenInclude(x => x.Style),
-            filter: x => x.UserId == userId && (isAnalyzed == null || x.IsAnalyzed == isAnalyzed),
-          orderBy: x => x.OrderByDescending(x => x.CreatedDate));
+                                    include: query => query
+          .Include(x => x.Category)
+            .Include(x => x.User)
+     .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+     .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+        .Include(x => x.ItemStyles).ThenInclude(x => x.Style),
+            filter: x => x.UserId == userid
+               && (!filter.IsAnalyzed.HasValue || x.IsAnalyzed == filter.IsAnalyzed.Value)
+    && (!filter.CategoryId.HasValue || x.CategoryId == filter.CategoryId.Value)
+   && (!filter.StyleId.HasValue || x.ItemStyles.Any(isr => !isr.IsDeleted && isr.StyleId == filter.StyleId.Value))
+                 && (!filter.SeasonId.HasValue || x.ItemSeasons.Any(ss => !ss.IsDeleted && ss.SeasonId == filter.SeasonId.Value))
+     && (!filter.OccasionId.HasValue || x.ItemOccasions.Any(ss => !ss.IsDeleted && ss.OccasionId == filter.OccasionId.Value))
+  && (string.IsNullOrEmpty(paginationParameter.Search) || x.Name.Contains(paginationParameter.Search)),
+   orderBy: x => filter.SortByDate.HasValue && filter.SortByDate.Value == Repository.Enums.SortOrder.Ascending
+          ? x.OrderBy(item => item.CreatedDate)
+    : x.OrderByDescending(item => item.CreatedDate));
 
             var itemModels = _mapper.Map<Pagination<ItemModel>>(items);
 
@@ -288,7 +304,7 @@ namespace SOPServer.Service.Services.Implements
         //    //if (!validation.IsValid)
         //    //    throw new BadRequestException(validation.Message);
 
-        //    // 4️⃣ Remove background (phụ thuộc uploadToMinio)
+        //    // 4️⃣ Remove background (ph phụ thuộc uploadToMinio)
         //    var fileRemoveBackground = await CallRembgAndGetRemovedFile(
         //        uploadToMinio.DownloadUrl,
         //        uploadToMinio.FileName
@@ -648,7 +664,7 @@ namespace SOPServer.Service.Services.Implements
                             categoryAnalysis = await _geminiService.AnalyzingCategory(base64Image, mimeType, finalPrompt);
                             break;
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
                             // Continue retrying
                         }
@@ -671,7 +687,7 @@ namespace SOPServer.Service.Services.Implements
 
                     return (imageUrl, newItem);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // Handle any unexpected errors
                     return (imageUrl, null);
@@ -792,7 +808,8 @@ namespace SOPServer.Service.Services.Implements
                 {
                     throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
                 }
-                if ((bool)!item.IsAnalyzed) items.Add(item);
+                if ((bool)!item.IsAnalyzed)
+                    items.Add(item);
             }
 
             // Step 2: Process all images in parallel (no DB operations here)
@@ -923,6 +940,43 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.ITEM_UPDATE_SUCCESS,
                 Data = itemConfidenceModel
             };
+        }
+
+        public async Task<BaseResponseModel> GetUserStats(long userId)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            var totalItems = await _unitOfWork.ItemRepository.CountItemByUserId(userId);
+
+            var rootCategory = await _unitOfWork.CategoryRepository.GetAllParentCategory();
+
+            Dictionary<string, int> categoryCounts = new Dictionary<string, int>();
+            foreach (var item in rootCategory)
+            {
+                var result = await _unitOfWork.ItemRepository.CountItemByUserIdAndCategoryParent(userId, item.Id);
+                var dickey = categoryCounts.ContainsKey(item.Name);
+                if (!dickey)
+                {
+                    categoryCounts.Add(item.Name, result);
+                }
+            }
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_USER_STATS_SUCCESS,
+                Data = new
+                {
+                    TotalItems = totalItems,
+                    CategoryCounts = categoryCounts
+                }
+            };
+
+
         }
     }
 }

@@ -20,10 +20,11 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> AddNewItem(ItemCreateModel model);
         Task<BaseResponseModel> GetItemById(long id);
         Task<BaseResponseModel> GetItemPaginationAsync(PaginationParameter paginationParameter);
-        Task<BaseResponseModel> GetItemByUserPaginationAsync(PaginationParameter paginationParameter, long userId, bool? isAnalyzed);
+        Task<BaseResponseModel> GetItemByUserPaginationAsync(PaginationParameter paginationParameter, long userid, ItemFilterModel filter);
         Task<BaseResponseModel> UpdateItemAsync(long id, ItemCreateModel model);
         Task<BaseResponseModel> BulkCreateItemAuto(BulkItemRequestAutoModel bulkUploadModel);
         Task<BaseResponseModel> BulkCreateItemManual(BulkItemRequestManualModel bulkUploadModel);
         Task<BaseResponseModel> AnalysisItem(ItemModelRequest request);
+        Task<BaseResponseModel> GetUserStats(long userId);
     }
 }

@@ -1,14 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.OnboardingModels;
-using SOPServer.Service.BusinessModels.ResultModels;
-using SOPServer.Service.Constants;
-using SOPServer.Service.Services.Implements;
 using SOPServer.Service.Services.Interfaces;
-using SOPServer.Service.Utils;
-using System.Security.Claims;
-
 namespace SOPServer.API.Controllers
 {
     [Route("api/v1/user")]
@@ -16,7 +10,7 @@ namespace SOPServer.API.Controllers
     public class UserController : BaseController
     {
         private readonly IUserService _userService;
-        public UserController(IUserService userService) 
+        public UserController(IUserService userService)
         {
             _userService = userService;
         }

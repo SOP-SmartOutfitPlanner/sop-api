@@ -9,8 +9,6 @@ using SOPServer.Service.BusinessModels.UserOccasionModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Implements
 {

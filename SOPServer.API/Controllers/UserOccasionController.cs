@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.UserOccasionModels;
 using SOPServer.Service.Services.Interfaces;
-using System.Threading.Tasks;
 
 namespace SOPServer.API.Controllers
 {

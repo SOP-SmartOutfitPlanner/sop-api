@@ -20,5 +20,12 @@ namespace SOPServer.Repository.Repositories.Implements
                 .Where(c => c.ParentId != null && !c.IsDeleted)
                 .ToListAsync();
         }
+
+        public async Task<List<Category>> GetAllParentCategory()
+        {
+            return await _context.Categories
+                .Where(c => c.ParentId == null && !c.IsDeleted)
+                .ToListAsync();
+        }
     }
 }

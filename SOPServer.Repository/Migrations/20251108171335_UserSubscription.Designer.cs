@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SOPServer.Repository.DBContext;
 
@@ -11,9 +12,11 @@ using SOPServer.Repository.DBContext;
 namespace SOPServer.Repository.Migrations
 {
     [DbContext(typeof(SOPServerContext))]
-    partial class SOPServerContextModelSnapshot : ModelSnapshot
+    [Migration("20251108171335_UserSubscription")]
+    partial class UserSubscription
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1051,54 +1054,6 @@ namespace SOPServer.Repository.Migrations
                     b.ToTable("UserSubscriptions");
                 });
 
-            modelBuilder.Entity("SOPServer.Repository.Entities.UserSubscriptionTransaction", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<long>("SubscriptionId")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("TransactionCode")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("UserId")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("UserSubscriptionId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("UserSubscriptionId");
-
-                    b.ToTable("UserSubscriptionTransaction");
-                });
-
             modelBuilder.Entity("Outfit", b =>
                 {
                     b.HasOne("SOPServer.Repository.Entities.User", "User")
@@ -1403,7 +1358,7 @@ namespace SOPServer.Repository.Migrations
                         .IsRequired();
 
                     b.HasOne("SOPServer.Repository.Entities.User", "User")
-                        .WithMany("UserSubscriptions")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1411,21 +1366,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("SubscriptionPlan");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.UserSubscriptionTransaction", b =>
-                {
-                    b.HasOne("SOPServer.Repository.Entities.User", null)
-                        .WithMany("UserSubscriptionTransactions")
-                        .HasForeignKey("UserId");
-
-                    b.HasOne("SOPServer.Repository.Entities.UserSubscription", "UserSubscription")
-                        .WithMany()
-                        .HasForeignKey("UserSubscriptionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("UserSubscription");
                 });
 
             modelBuilder.Entity("Outfit", b =>
@@ -1524,10 +1464,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("UserOccasions");
 
                     b.Navigation("UserStyles");
-
-                    b.Navigation("UserSubscriptionTransactions");
-
-                    b.Navigation("UserSubscriptions");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.UserOccasion", b =>

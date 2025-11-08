@@ -61,4 +61,6 @@ public partial class User : BaseEntity
     public virtual ICollection<Follower> Followers { get; set; } = new List<Follower>();
 
     public virtual ICollection<Follower> Following { get; set; } = new List<Follower>();
+    public virtual ICollection<UserSubscription> UserSubscriptions { get; set; } = new List<UserSubscription>();
+    public virtual ICollection<UserSubscriptionTransaction> UserSubscriptionTransactions { get; set; } = new List<UserSubscriptionTransaction>();
 }

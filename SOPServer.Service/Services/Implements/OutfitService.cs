@@ -12,10 +12,6 @@ using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -23,13 +19,11 @@ namespace SOPServer.Service.Services.Implements
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
-        private readonly SOPServerContext _context;
 
-        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper, SOPServerContext context)
+        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
-            _context = context;
         }
 
         public async Task<BaseResponseModel> GetOutfitByIdAsync(long id, long userId)
@@ -236,8 +230,8 @@ namespace SOPServer.Service.Services.Implements
                 IsSaved = false
             };
 
-            await _context.Set<Outfit>().AddAsync(outfit);
-            await _context.SaveChangesAsync();
+            await _unitOfWork.OutfitRepository.AddAsync(outfit);
+            await _unitOfWork.SaveAsync();
 
             // Add items to OutfitItems
             if (model.ItemIds != null && model.ItemIds.Any())
@@ -249,9 +243,9 @@ namespace SOPServer.Service.Services.Implements
                         OutfitId = outfit.Id,
                         ItemId = itemId
                     };
-                    await _context.Set<OutfitItems>().AddAsync(outfitItem);
+                    await _unitOfWork.OutfitItemRepository.AddAsync(outfitItem);
                 }
-                await _context.SaveChangesAsync();
+                await _unitOfWork.SaveAsync();
             }
 
             var createdOutfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
@@ -339,10 +333,11 @@ namespace SOPServer.Service.Services.Implements
                 }
 
                 // Remove existing items
-                var existingItems = await _context.Set<OutfitItems>()
-                    .Where(oi => oi.OutfitId == id)
-                    .ToListAsync();
-                _context.Set<OutfitItems>().RemoveRange(existingItems);
+                //var existingItems = await _context.Set<OutfitItems>()
+                //    .Where(oi => oi.OutfitId == id)
+                //    .ToListAsync();
+                //_context.Set<OutfitItems>().RemoveRange(existingItems);
+
 
                 // Add new items
                 foreach (var itemId in model.ItemIds)
@@ -352,10 +347,10 @@ namespace SOPServer.Service.Services.Implements
                         OutfitId = id,
                         ItemId = itemId
                     };
-                    await _context.Set<OutfitItems>().AddAsync(outfitItem);
+                    await _unitOfWork.OutfitItemRepository.AddAsync(outfitItem);
                 }
 
-                await _context.SaveChangesAsync();
+                await _unitOfWork.SaveAsync();
             }
 
             var updatedOutfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
@@ -692,6 +687,17 @@ namespace SOPServer.Service.Services.Implements
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.OUTFIT_CALENDAR_DELETE_SUCCESS
             };
+        }
+
+        public async Task<BaseResponseModel> OutfitSuggestion(long userId)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            throw new NotImplementedException();
         }
     }
 }

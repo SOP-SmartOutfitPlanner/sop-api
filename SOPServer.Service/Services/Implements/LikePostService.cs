@@ -5,13 +5,7 @@ using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.LikePostModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
-using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -29,10 +23,10 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> CreateLikePost(CreateLikePostModel model)
         {
             var likeExists = await _unitOfWork.LikePostRepository.GetByUserAndPost(model.UserId, model.PostId);
-            
+
             LikePost likePost;
             string message;
-            
+
             if (likeExists != null)
             {
                 // Toggle like status
@@ -48,9 +42,9 @@ namespace SOPServer.Service.Services.Implements
                 await _unitOfWork.LikePostRepository.AddAsync(likePost);
                 message = MessageConstants.LIKE_POST_SUCCESS;
             }
-            
+
             await _unitOfWork.SaveAsync();
-            
+
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status201Created,

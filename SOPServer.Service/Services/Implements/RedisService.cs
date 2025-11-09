@@ -1,9 +1,9 @@
-using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
 using StackExchange.Redis;
+using System.Text.Json;
 namespace SOPServer.Service.Services.Implements
 {
     public class RedisService : IRedisService

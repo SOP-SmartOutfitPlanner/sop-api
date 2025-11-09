@@ -5,13 +5,11 @@ using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
-using SOPServer.Service.BusinessModels.StyleModels;
 using SOPServer.Service.BusinessModels.ResultModels;
+using SOPServer.Service.BusinessModels.StyleModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Implements
 {

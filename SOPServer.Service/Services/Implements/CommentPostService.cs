@@ -9,11 +9,6 @@ using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -30,7 +25,7 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> CreateNewComment(CreateCommentPostModel model)
         {
-            if(model.ParentCommentId != null)
+            if (model.ParentCommentId != null)
             {
                 var parentComment = await _unitOfWork.CommentPostRepository.GetByIdIncludeAsync((long)model.ParentCommentId, include: x => x.Include(q => q.ParentComment));
                 if (parentComment == null)
@@ -38,7 +33,7 @@ namespace SOPServer.Service.Services.Implements
                     throw new NotFoundException(MessageConstants.PARENT_COMMENT_NOT_FOUND);
                 }
 
-                if(parentComment.ParentComment != null)
+                if (parentComment.ParentComment != null)
                 {
                     throw new BadRequestException(MessageConstants.COMMENT_CANNOT_REPLY_MORE_THAN_ONE_LEVEL);
                 }
@@ -47,7 +42,8 @@ namespace SOPServer.Service.Services.Implements
             var commentPost = _mapper.Map<CommentPost>(model);
             await _unitOfWork.CommentPostRepository.AddAsync(commentPost);
             await _unitOfWork.SaveAsync();
-            return new BaseResponseModel {
+            return new BaseResponseModel
+            {
                 StatusCode = StatusCodes.Status201Created,
                 Message = MessageConstants.COMMENT_CREATE_SUCCESS,
                 Data = _mapper.Map<CommentPostModel>(commentPost)
@@ -56,8 +52,8 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> DeleteCommentPost(int id)
         {
-            var commentPost = await  _unitOfWork.CommentPostRepository.GetByIdAsync(id);
-            if(commentPost == null)
+            var commentPost = await _unitOfWork.CommentPostRepository.GetByIdAsync(id);
+            if (commentPost == null)
             {
                 throw new NotFoundException(MessageConstants.COMMENT_NOT_FOUND);
             }
@@ -107,7 +103,7 @@ namespace SOPServer.Service.Services.Implements
         {
             var postExisted = await _unitOfWork.PostRepository.GetByIdAsync(postId);
 
-            if(postExisted == null)
+            if (postExisted == null)
             {
                 throw new NotFoundException(MessageConstants.POST_NOT_FOUND);
             }

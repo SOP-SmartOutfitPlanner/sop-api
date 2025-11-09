@@ -114,5 +114,125 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.DELETE_FILE_SUCCESS
             };
         }
+
+        public async Task<BaseResponseModel> BulkUploadImageAsync(List<IFormFile> files)
+        {
+            if (files == null || !files.Any())
+                throw new NotFoundException(MessageConstants.FILE_NOT_FOUND);
+
+            await EnsureBucketAsync();
+
+            // Upload tất cả files song song
+            var uploadTasks = files.Select(async file =>
+            {
+                try
+                {
+                    // Validate file
+                    if (file == null || file.Length == 0)
+                    {
+                        return new
+                        {
+                            Success = false,
+                            FileName = file?.FileName ?? "Unknown",
+                            Result = (ImageUploadResult)null,
+                            Error = MessageConstants.FILE_NOT_FOUND
+                        };
+                    }
+
+                    var ext = Path.GetExtension(file.FileName).ToLowerInvariant().Trim();
+                    if (ext is not (".jpg" or ".jpeg" or ".png"))
+                    {
+                        return new
+                        {
+                            Success = false,
+                            FileName = file.FileName,
+                            Result = (ImageUploadResult)null,
+                            Error = MessageConstants.IMAGE_EXTENSION_NOT_SUPPORT
+                        };
+                    }
+
+                    var objectName = $"{Guid.NewGuid()}{ext}";
+
+                    using var stream = file.OpenReadStream();
+
+                    var putObjectArgs = new PutObjectArgs()
+                        .WithBucket(_cfg.Bucket)
+                        .WithObject(objectName)
+                        .WithStreamData(stream)
+                        .WithObjectSize(stream.Length)
+                        .WithContentType(file.ContentType);
+
+                    await _minioClient.PutObjectAsync(putObjectArgs).ConfigureAwait(false);
+
+                    var downloadUrl = $"{_cfg.PublicEndpoint?.TrimEnd('/')}/{_cfg.Bucket}/{objectName}";
+
+                    return new
+                    {
+                        Success = true,
+                        FileName = file.FileName,
+                        Result = new ImageUploadResult
+                        {
+                            FileName = file.FileName,
+                            DownloadUrl = downloadUrl
+                        },
+                        Error = (string)null
+                    };
+                }
+                catch (Exception ex)
+                {
+                    return new
+                    {
+                        Success = false,
+                        FileName = file?.FileName ?? "Unknown",
+                        Result = (ImageUploadResult)null,
+                        Error = ex.Message
+                    };
+                }
+            });
+
+            var results = await Task.WhenAll(uploadTasks);
+
+            // Phân loại kết quả
+            var bulkResult = new BulkImageUploadResult();
+
+            foreach (var result in results)
+            {
+                if (result.Success)
+                {
+                    bulkResult.SuccessfulUploads.Add(result.Result);
+                }
+                else
+                {
+                    bulkResult.FailedUploads.Add(new FailedUploadResult
+                    {
+                        FileName = result.FileName,
+                        Reason = result.Error
+                    });
+                }
+            }
+
+            bulkResult.TotalSuccess = bulkResult.SuccessfulUploads.Count;
+            bulkResult.TotalFailed = bulkResult.FailedUploads.Count;
+
+            // Xác định status code dựa trên kết quả
+            int statusCode = bulkResult.TotalFailed == 0
+                ? StatusCodes.Status200OK
+                : bulkResult.TotalSuccess == 0
+                ? StatusCodes.Status400BadRequest
+                : StatusCodes.Status207MultiStatus;
+
+            string message = bulkResult.TotalFailed == 0
+                ? MessageConstants.UPLOAD_FILE_SUCCESS
+                : bulkResult.TotalSuccess == 0
+                ? "All files failed to upload"
+                : "Some files failed to upload";
+
+            return new BaseResponseModel
+            {
+                StatusCode = statusCode,
+                Message = message,
+                Data = bulkResult
+            };
+        }
     }
 }

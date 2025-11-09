@@ -21,5 +21,11 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _minioService.UploadImageAsync(file));
         }
+
+        [HttpPost("bulk-upload")]
+        public Task<IActionResult> UploadBulkImage(List<IFormFile> files)
+        {
+            return ValidateAndExecute(async () => await _minioService.BulkUploadImageAsync(files));
+        }
     }
 }

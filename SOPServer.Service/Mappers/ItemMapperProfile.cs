@@ -7,6 +7,8 @@ using SOPServer.Service.BusinessModels.SeasonModels;
 using SOPServer.Service.BusinessModels.StyleModels;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace SOPServer.Service.Mappers
 {
@@ -55,7 +57,11 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.User, opt => opt.Ignore())
                 .ForMember(dest => dest.Category, opt => opt.Ignore());
 
-            CreateMap<ItemCreateModel, Item>();
+            CreateMap<ItemCreateModel, Item>()
+                .ForMember(dest => dest.Color, opt => opt.MapFrom(src =>
+                    src.Colors != null && src.Colors.Any()
+                        ? JsonSerializer.Serialize(src.Colors, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull })
+                        : null));
 
             CreateMap<Pagination<Item>, Pagination<ItemModel>>()
                 .ConvertUsing<PaginationConverter<Item, ItemModel>>();

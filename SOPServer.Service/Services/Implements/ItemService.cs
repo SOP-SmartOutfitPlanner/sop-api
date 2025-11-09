@@ -926,6 +926,7 @@ namespace SOPServer.Service.Services.Implements
                 var analysis = result.Analysis;
 
                 // Map basic fields
+                item.Name = analysis.ItemName;
                 item.AiDescription = analysis.AiDescription;
                 item.WeatherSuitable = analysis.WeatherSuitable;
                 item.Condition = analysis.Condition;

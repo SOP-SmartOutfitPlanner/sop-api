@@ -19,11 +19,13 @@ namespace SOPServer.Service.Services.Implements
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IUserService _userService;
 
-        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper)
+        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _userService = userService;
         }
 
         public async Task<BaseResponseModel> GetOutfitByIdAsync(long id, long userId)
@@ -238,7 +240,7 @@ namespace SOPServer.Service.Services.Implements
             {
                 foreach (var itemId in model.ItemIds)
                 {
-                    var outfitItem = new OutfitItems
+                    var outfitItem = new OutfitItem
                     {
                         OutfitId = outfit.Id,
                         ItemId = itemId
@@ -346,7 +348,7 @@ namespace SOPServer.Service.Services.Implements
                 // Add new items
                 foreach (var itemId in model.ItemIds)
                 {
-                    var outfitItem = new OutfitItems
+                    var outfitItem = new OutfitItem
                     {
                         OutfitId = id,
                         ItemId = itemId
@@ -693,13 +695,9 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> OutfitSuggestion(long userId)
+        public async Task<BaseResponseModel> OutfitSuggestion(long userId, long? userOccasionId)
         {
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
-            if (user == null)
-            {
-                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
-            }
+            var userCharacteristic = await _userService.GetUserCharacteristic(userId);
 
             throw new NotImplementedException();
         }

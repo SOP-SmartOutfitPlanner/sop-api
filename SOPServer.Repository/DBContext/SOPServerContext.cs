@@ -50,7 +50,7 @@ public partial class SOPServerContext : DbContext
 
     public virtual DbSet<PostHashtags> PostHashtags { get; set; }
 
-    public virtual DbSet<OutfitItems> OutfitItems { get; set; }
+    public virtual DbSet<OutfitItem> OutfitItems { get; set; }
 
     public virtual DbSet<Outfit> Outfits { get; set; }
 
@@ -407,19 +407,19 @@ public partial class SOPServerContext : DbContext
                 .HasConstraintName("FK_Outfit_User");
         });
 
-        modelBuilder.Entity<OutfitItems>(entity =>
+        modelBuilder.Entity<OutfitItem>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__OutfitIt__3214EC07");
 
-            entity.ToTable("OutfitItems");
+            entity.ToTable("OutfitItem");
 
             entity.HasOne(d => d.Outfit).WithMany(p => p.OutfitItems)
                 .HasForeignKey(d => d.OutfitId)
-                .HasConstraintName("FK_OutfitItems_Outfit");
+                .HasConstraintName("FK_OutfitItem_Outfit");
 
             entity.HasOne(d => d.Item).WithMany(p => p.OutfitItems)
                 .HasForeignKey(d => d.ItemId)
-                .HasConstraintName("FK_OutfitItems_Item");
+                .HasConstraintName("FK_OutfitItem_Item");
         });
 
         modelBuilder.Entity<OutfitUsageHistory>(entity =>

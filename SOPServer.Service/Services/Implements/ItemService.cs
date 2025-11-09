@@ -55,8 +55,43 @@ namespace SOPServer.Service.Services.Implements
             if (entity == null)
                 throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
 
-            //if (await _unitOfWork.ItemRepository.ExistsByNameAsync(model.Name, model.UserId, id))
-            //    throw new BadRequestException(MessageConstants.ITEM_ALREADY_EXISTS);
+            //TODO validate exsited occasion, season, style, category
+            var category = await _unitOfWork.CategoryRepository.GetByIdAsync(model.CategoryId);
+            if (category == null)
+            {
+                throw new NotFoundException(MessageConstants.CATEGORY_NOT_EXIST);
+            }
+            if(category.ParentId == null)
+            {
+                throw new BadRequestException(MessageConstants.CATEGORY_PARENT_NOT_EXIST);
+            }
+
+            foreach(var styleId in model.StyleIds)
+            {
+                var style =  await _unitOfWork.StyleRepository.GetByIdAsync(styleId);
+                if(style == null)
+                {
+                    throw new NotFoundException($"Style with id {styleId} does not exist");
+                }
+            }
+
+            foreach(var occasionId in model.OccasionIds)
+            {
+                var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(occasionId);
+                if (occasion == null)
+                {
+                    throw new NotFoundException($"Occasion with id {occasionId} does not exist");
+                }
+            }
+
+            foreach(var seasonId in model.SeasonIds)
+            {
+                var season = await _unitOfWork.SeasonRepository.GetByIdAsync(seasonId);
+                if (season == null)
+                {
+                    throw new NotFoundException($"Season with id {seasonId} does not exist");
+                }
+            }
 
             _mapper.Map(model, entity);
             _unitOfWork.ItemRepository.UpdateAsync(entity);
@@ -891,6 +926,7 @@ namespace SOPServer.Service.Services.Implements
                 var analysis = result.Analysis;
 
                 // Map basic fields
+                item.Name = analysis.ItemName;
                 item.AiDescription = analysis.AiDescription;
                 item.WeatherSuitable = analysis.WeatherSuitable;
                 item.Condition = analysis.Condition;
@@ -1032,9 +1068,8 @@ namespace SOPServer.Service.Services.Implements
                 {
                     TotalItems = totalItems,
                     CategoryCounts = categoryCounts
-                }
+                } 
             };
-
 
         }
     }

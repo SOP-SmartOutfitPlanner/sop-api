@@ -126,5 +126,57 @@ namespace SOPServer.Service.Services.Implements
 
             return result;
         }
+
+        public async Task<List<QDrantSearchModels>> SearchSimilarityByUserIdAndParentCategory(List<float> embedding, long userId, long parentCategoryId)
+        {
+            List<QDrantSearchModels> result = new List<QDrantSearchModels>();
+            var searchResult = await _client.SearchAsync(
+                collectionName: _qdrantSettings.Collection,
+                vector: embedding.ToArray(),
+                filter: new Filter
+                {
+                    Must =
+                    {
+                        new Condition
+                        {
+                            Field = new FieldCondition
+                            {
+                                Key = "UserId",
+                                Match = new Match
+                                {
+                                    Keyword = userId.ToString()
+                                }
+                            }
+                        },
+                        new Condition
+                        {
+                            Field = new FieldCondition
+                            {
+                                Key = "ParentCategoryId",
+                                Match = new Match
+                                {
+                                    Integer = parentCategoryId
+                                }
+                            }
+                        }
+                    }
+                },
+                limit: 5
+            );
+
+            foreach (var item in searchResult)
+            {
+                if (item.Score > 0.6)
+                {
+                    result.Add(new QDrantSearchModels
+                    {
+                        id = int.Parse(item.Id.ToString()),
+                        score = item.Score
+                    });
+                }
+            }
+
+            return result;
+        }
     }
 }

@@ -35,6 +35,8 @@ namespace SOPServer.Repository.UnitOfWork
         private ICommentPostRepository _commentPostRepository;
         private IFollowerRepository _followerRepository;
         private IUserOccasionRepository _userOccasionRepository;
+        private IOutfitItemRepository _outfitItemRepository;
+        private IOutfitUsageHistoryRepository _outfitUsageHistoryRepository;
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -198,6 +200,22 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _userOccasionRepository ??= new UserOccasionRepository(_context);
+            }
+        }
+
+        public IOutfitItemRepository OutfitItemRepository
+        {
+            get
+            {
+                return _outfitItemRepository ??= new OutfitItemRepository(_context);
+            }
+        }
+
+        public IOutfitUsageHistoryRepository OutfitUsageHistoryRepository
+        {
+            get
+            {
+                return _outfitUsageHistoryRepository ??= new OutfitUsageHistoryRepository(_context);
             }
         }
 

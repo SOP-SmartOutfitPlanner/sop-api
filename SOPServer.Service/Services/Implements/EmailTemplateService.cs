@@ -1,15 +1,6 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using SOPServer.Service.BusinessModels.EmailModels;
-using SOPServer.Service.Constants;
-using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Implements
 {

@@ -1,15 +1,10 @@
-﻿using SOPServer.Service.BusinessModels.EmailModels;
-using SOPServer.Service.Services.Interfaces;
-using SOPServer.Service.SettingModels;
-using MailKit.Net.Smtp;
+﻿using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Options;
 using MimeKit;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using SOPServer.Service.BusinessModels.EmailModels;
+using SOPServer.Service.Services.Interfaces;
+using SOPServer.Service.SettingModels;
 
 namespace SOPServer.Service.Services.Implements
 {

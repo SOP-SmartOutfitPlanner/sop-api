@@ -23,6 +23,8 @@ namespace SOPServer.Repository.UnitOfWork
         IPostHashtagsRepository PostHashtagsRepository { get; }
         IPostImageRepository PostImageRepository { get; }
         IOutfitRepository OutfitRepository { get; }
+        IOutfitItemRepository OutfitItemRepository { get; }
+        IOutfitUsageHistoryRepository OutfitUsageHistoryRepository { get; }
         IAISettingRepository AISettingRepository { get; }
         IJobRepository JobRepository { get; }
         ILikePostRepository LikePostRepository { get; }

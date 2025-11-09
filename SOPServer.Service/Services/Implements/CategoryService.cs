@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
@@ -8,11 +9,6 @@ using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
-using System.Linq.Expressions;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Collections.Generic;
-using Microsoft.AspNetCore.Http;
 
 namespace SOPServer.Service.Services.Implements
 {

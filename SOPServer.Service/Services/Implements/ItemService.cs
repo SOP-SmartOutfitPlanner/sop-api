@@ -1,8 +1,3 @@
-using System.Collections.Generic;
-using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +18,10 @@ using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.Utils;
+using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -725,7 +724,7 @@ namespace SOPServer.Service.Services.Implements
                 // Return response with both successful and failed items
                 return new BaseResponseModel
                 {
-                    StatusCode = StatusCodes.Status404NotFound,
+                    StatusCode = StatusCodes.Status207MultiStatus,
                     Message = MessageConstants.ITEM_CREATE_PARTIAL_SUCCESS,
                     Data = new
                     {

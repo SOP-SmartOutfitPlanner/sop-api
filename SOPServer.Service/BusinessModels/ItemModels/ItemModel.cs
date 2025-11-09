@@ -57,7 +57,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public List<ColorModel> Colors { get; set; }
 
-        public string Brand { get; set; }
+        public string? Brand { get; set; }
 
         public string? FrequencyWorn { get; set; }
 

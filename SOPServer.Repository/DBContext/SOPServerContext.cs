@@ -69,8 +69,12 @@ public partial class SOPServerContext : DbContext
     public virtual DbSet<UserSubscription> UserSubscriptions { get; set; }
     public virtual DbSet<UserSubscriptionTransaction> UserSubscriptionTransaction { get; set; }
 
+    // New DbSets for collections
+    public virtual DbSet<Collection> Collections { get; set; }
+    public virtual DbSet<CollectionOutfit> CollectionOutfits { get; set; }
 
-    //    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+
+    // protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     //#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
     //        => optionsBuilder.UseSqlServer("Data Source=.;Initial Catalog=SOPServer;User ID=sa;Password=sa123456");
 
@@ -481,6 +485,48 @@ public partial class SOPServerContext : DbContext
                 .HasForeignKey(d => d.OccasionId)
                 .HasConstraintName("FK_UserOccasion_Occasion")
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Collection entity mapping
+        modelBuilder.Entity<Collection>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Collection__3214EC07");
+
+            entity.ToTable("Collection");
+
+            entity.Property(e => e.Title)
+                .HasMaxLength(255)
+                .IsUnicode(true);
+
+            entity.Property(e => e.ShortDescription)
+                .HasMaxLength(500)
+                .IsUnicode(true);
+
+            entity.HasOne(d => d.User)
+                .WithMany()
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_Collection_User")
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        // CollectionOutfit entity mapping
+        modelBuilder.Entity<CollectionOutfit>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__CollectionOutfit__3214EC07");
+
+            entity.ToTable("CollectionOutfit");
+
+            entity.Property(e => e.Description)
+                .HasMaxLength(500)
+                .IsUnicode(true);
+
+            entity.HasOne(d => d.Collection).WithMany(p => p.CollectionOutfits)
+                .HasForeignKey(d => d.CollectionId)
+                .HasConstraintName("FK_CollectionOutfit_Collection");
+
+            entity.HasOne(d => d.Outfit).WithMany()
+                .HasForeignKey(d => d.OutfitId)
+                .HasConstraintName("FK_CollectionOutfit_Outfit");
         });
 
         modelBuilder.Entity<AISetting>(entity =>

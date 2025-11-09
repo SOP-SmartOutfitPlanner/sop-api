@@ -31,6 +31,8 @@ namespace SOPServer.Repository.UnitOfWork
         ICommentPostRepository CommentPostRepository { get; }
         IFollowerRepository FollowerRepository { get; }
         IUserOccasionRepository UserOccasionRepository { get; }
+        ICollectionRepository CollectionRepository { get; }
+        ICollectionOutfitRepository CollectionOutfitRepository { get; }
 
         int Save();
         void Commit();

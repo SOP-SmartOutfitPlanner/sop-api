@@ -18,4 +18,5 @@ public partial class Outfit : BaseEntity
     public virtual User User { get; set; }
     public virtual ICollection<OutfitItem> OutfitItems { get; set; } = new List<OutfitItem>();
     public virtual ICollection<OutfitUsageHistory> OutfitUsageHistories { get; set; } = new List<OutfitUsageHistory>();
+    public virtual ICollection<CollectionOutfit> CollectionOutfits { get; set; } = new List<CollectionOutfit>();
 }

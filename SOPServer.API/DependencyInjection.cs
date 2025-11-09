@@ -59,6 +59,15 @@ namespace SOPServer.API
             services.AddScoped<IOutfitRepository, OutfitRepository>();
             services.AddScoped<IOutfitService, OutfitService>();
 
+            services.AddScoped<IOutfitItemRepository, OutfitItemRepository>();
+            services.AddScoped<IOutfitUsageHistoryRepository, OutfitUsageHistoryRepository>();
+
+            // ========== COLLECTION MANAGEMENT ==========
+            services.AddScoped<ICollectionRepository, CollectionRepository>();
+            services.AddScoped<ICollectionService, CollectionService>();
+
+            services.AddScoped<ICollectionOutfitRepository, CollectionOutfitRepository>();
+
             // ========== POST MANAGEMENT ==========
             services.AddScoped<IPostRepository, PostRepository>();
             services.AddScoped<IPostService, PostService>();

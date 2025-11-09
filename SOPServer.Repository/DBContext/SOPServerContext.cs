@@ -50,7 +50,7 @@ public partial class SOPServerContext : DbContext
 
     public virtual DbSet<PostHashtags> PostHashtags { get; set; }
 
-    public virtual DbSet<OutfitItem> OutfitItems { get; set; }
+    public virtual DbSet<OutfitItems> OutfitItems { get; set; }
 
     public virtual DbSet<Outfit> Outfits { get; set; }
 
@@ -403,7 +403,7 @@ public partial class SOPServerContext : DbContext
                 .HasConstraintName("FK_Outfit_User");
         });
 
-        modelBuilder.Entity<OutfitItem>(entity =>
+        modelBuilder.Entity<OutfitItems>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__OutfitIt__3214EC07");
 

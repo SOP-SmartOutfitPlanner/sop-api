@@ -12,5 +12,6 @@ namespace SOPServer.Service.Services.Interfaces
     {
         Task<BaseResponseModel> UploadImageAsync(IFormFile file);
         Task<BaseResponseModel> DeleteImageAsync(string fullPath);
+        Task<BaseResponseModel> BulkUploadImageAsync(List<IFormFile> files);
     }
 }

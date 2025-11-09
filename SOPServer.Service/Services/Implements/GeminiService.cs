@@ -1,30 +1,16 @@
 ﻿using AutoMapper;
 using GenerativeAI;
 using GenerativeAI.Types;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
-using SOPServer.Service.BusinessModels.CategoryModels;
 using SOPServer.Service.BusinessModels.GeminiModels;
 using SOPServer.Service.BusinessModels.ItemModels;
-using SOPServer.Service.BusinessModels.OccasionModels;
-using SOPServer.Service.BusinessModels.ResultModels;
-using SOPServer.Service.BusinessModels.SeasonModels;
-using SOPServer.Service.BusinessModels.StyleModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Implements
 {

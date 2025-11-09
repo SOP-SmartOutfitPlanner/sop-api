@@ -12,10 +12,6 @@ using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -46,10 +42,10 @@ namespace SOPServer.Service.Services.Implements
             await ValidateUserExistsAsync(model.UserId);
 
             var newPost = await CreatePostEntityAsync(model);
-            
+
             // Upload images to MinIO and get URLs
             var imageUrls = await UploadImagesAsync(model.Images);
-            
+
             await AddPostImagesAsync(newPost.Id, imageUrls);
             await HandlePostHashtagsAsync(newPost.Id, model.Hashtags);
 
@@ -80,11 +76,11 @@ namespace SOPServer.Service.Services.Implements
             }
 
             post.Body = model.Body;
-            
+
             // Filter only non-deleted records before passing to update methods
             var activeImages = post.PostImages.Where(img => !img.IsDeleted).ToList();
             var activeHashtags = post.PostHashtags.Where(ph => !ph.IsDeleted).ToList();
-            
+
             await UpdatePostImagesAsync(post.Id, activeImages, model.Images);
             await UpdatePostHashtagsAsync(post.Id, activeHashtags, model.Hashtags);
 
@@ -385,7 +381,7 @@ namespace SOPServer.Service.Services.Implements
                 }
 
                 var uploadResult = await _minioService.UploadImageAsync(image);
-                
+
                 if (uploadResult?.Data is ImageUploadResult uploadData && !string.IsNullOrEmpty(uploadData.DownloadUrl))
                 {
                     imageUrls.Add(uploadData.DownloadUrl);

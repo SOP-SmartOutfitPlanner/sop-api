@@ -1067,9 +1067,8 @@ namespace SOPServer.Service.Services.Implements
                 {
                     TotalItems = totalItems,
                     CategoryCounts = categoryCounts
-                }
+                } 
             };
-
 
         }
     }

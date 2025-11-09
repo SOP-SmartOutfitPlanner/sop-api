@@ -41,6 +41,18 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
+        /// Update an existing comment
+        /// </summary>
+        /// <param name="id">Comment ID</param>
+        /// <param name="model">Comment update model</param>
+        /// <returns>Updated comment</returns>
+        [HttpPut("{id}")]
+        public Task<IActionResult> UpdateComment(long id, [FromBody] UpdateCommentPostModel model)
+        {
+            return ValidateAndExecute(async () => await _commentPostService.UpdateCommentPost(id, model));
+        }
+
+        /// <summary>
         /// Delete a comment
         /// </summary>
         /// <param name="id">Comment ID</param>

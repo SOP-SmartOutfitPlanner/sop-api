@@ -193,6 +193,7 @@ namespace SOPServer.Service.Constants
 
         // CommentPost related messages
         public const string COMMENT_CREATE_SUCCESS = "Comment created successfully";
+        public const string COMMENT_UPDATE_SUCCESS = "Comment updated successfully";
         public const string COMMENT_DELETE_SUCCESS = "Comment deleted successfully";
         public const string COMMENT_NOT_FOUND = "Comment not found";
         public const string COMMENT_GET_SUCCESS = "Get comment successfully";
@@ -238,6 +239,17 @@ namespace SOPServer.Service.Constants
 
         public static string GET_USER_STATS_SUCCESS = "Get user stats successfully";
 
-        
+        // Collection related messages
+        public const string COLLECTION_NOT_FOUND = "Collection not found";
+        public const string COLLECTION_GET_SUCCESS = "Collection retrieved successfully";
+        public const string COLLECTION_CREATE_SUCCESS = "Collection created successfully";
+        public const string COLLECTION_UPDATE_SUCCESS = "Collection updated successfully";
+        public const string COLLECTION_DELETE_SUCCESS = "Collection deleted successfully";
+        public const string GET_LIST_COLLECTION_SUCCESS = "Get list collections successfully";
+        public const string COLLECTION_ACCESS_DENIED = "You don't have permission to access this collection";
+        public const string COLLECTION_OUTFIT_ALREADY_EXISTS = "This outfit is already added to the collection";
+        public const string COLLECTION_OUTFIT_NOT_FOUND = "This outfit is not in the collection";
+        public const string ADD_OUTFIT_TO_COLLECTION_SUCCESS = "Outfit added to collection successfully";
+        public const string REMOVE_OUTFIT_FROM_COLLECTION_SUCCESS = "Outfit removed from collection successfully";
     }
 }

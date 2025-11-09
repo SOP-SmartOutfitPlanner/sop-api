@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SOPServer.Repository.DBContext;
 
@@ -11,9 +12,11 @@ using SOPServer.Repository.DBContext;
 namespace SOPServer.Repository.Migrations
 {
     [DbContext(typeof(SOPServerContext))]
-    partial class SOPServerContextModelSnapshot : ModelSnapshot
+    [Migration("20251109145414_Collection")]
+    partial class Collection
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -205,9 +208,6 @@ namespace SOPServer.Repository.Migrations
                     b.Property<long>("OutfitId")
                         .HasColumnType("bigint");
 
-                    b.Property<long?>("OutfitId1")
-                        .HasColumnType("bigint");
-
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
@@ -217,8 +217,6 @@ namespace SOPServer.Repository.Migrations
                     b.HasIndex("CollectionId");
 
                     b.HasIndex("OutfitId");
-
-                    b.HasIndex("OutfitId1");
 
                     b.ToTable("CollectionOutfit", (string)null);
                 });
@@ -1232,10 +1230,6 @@ namespace SOPServer.Repository.Migrations
                         .IsRequired()
                         .HasConstraintName("FK_CollectionOutfit_Outfit");
 
-                    b.HasOne("Outfit", null)
-                        .WithMany("CollectionOutfits")
-                        .HasForeignKey("OutfitId1");
-
                     b.Navigation("Collection");
 
                     b.Navigation("Outfit");
@@ -1550,8 +1544,6 @@ namespace SOPServer.Repository.Migrations
 
             modelBuilder.Entity("Outfit", b =>
                 {
-                    b.Navigation("CollectionOutfits");
-
                     b.Navigation("OutfitItems");
 
                     b.Navigation("OutfitUsageHistories");

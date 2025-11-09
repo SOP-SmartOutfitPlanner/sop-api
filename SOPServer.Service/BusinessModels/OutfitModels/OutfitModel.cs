@@ -34,7 +34,6 @@ namespace SOPServer.Service.BusinessModels.OutfitModels
 
     public class OutfitItemModel
     {
-        public long Id { get; set; }
         public long ItemId { get; set; }
         public string Name { get; set; }
         public long CategoryId { get; set; }
@@ -49,6 +48,5 @@ namespace SOPServer.Service.BusinessModels.OutfitModels
         public string Condition { get; set; }
         public string Pattern { get; set; }
         public string Fabric { get; set; }
-        public string Tag { get; set; }
     }
 }

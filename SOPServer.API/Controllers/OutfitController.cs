@@ -296,10 +296,31 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _outfitService.DeleteOutfitCalendarAsync(id, userId));
         }
 
+        /// <summary>
+        /// Get AI-powered outfit suggestions based on user profile and occasion
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Query Parameters:**
+        /// - `user-occasion-id`: Optional ID of a specific occasion to generate outfit for
+        ///
+        /// **Process:**
+        /// 1. Retrieves user characteristics (gender, style preferences, favorite colors, profession)
+        /// 2. Uses Gemini AI to generate outfit description based on context
+        /// 3. Searches user's wardrobe using Qdrant vector search for matching items
+        /// 4. Uses Gemini AI to select the best outfit combination
+        ///
+        /// **Note:**
+        /// - For Full-Body outfits (category ID 41), separate Top/Bottom items are skipped
+        /// - Returns selected items with AI explanation of the outfit choice
+        /// </remarks>
         [HttpPost("suggestion")]
-        public Task<IActionResult> OutfitSuggestion()
+        public Task<IActionResult> OutfitSuggestion([FromQuery(Name = "user-occasion-id")] long? userOccasionId)
         {
-            throw new NotImplementedException();
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+            return ValidateAndExecute(async () => await _outfitService.OutfitSuggestion(userId, userOccasionId));
         }
     }
 }

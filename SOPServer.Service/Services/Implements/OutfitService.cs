@@ -337,7 +337,11 @@ namespace SOPServer.Service.Services.Implements
                 //    .Where(oi => oi.OutfitId == id)
                 //    .ToListAsync();
                 //_context.Set<OutfitItems>().RemoveRange(existingItems);
+                var outfitExisted = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
+                    id,
+                    include: query => query.Include(oi => oi.OutfitItems));
 
+                _unitOfWork.OutfitItemRepository.SoftDeleteRangeAsync(outfitExisted.OutfitItems.ToList());
 
                 // Add new items
                 foreach (var itemId in model.ItemIds)

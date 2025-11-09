@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace SOPServer.Repository.Entities {
-    public partial class OutfitItems : BaseEntity
+    public partial class OutfitItem : BaseEntity
     {
         public long? OutfitId { get; set; }
         public long? ItemId { get; set; }

@@ -16,6 +16,6 @@ public partial class Outfit : BaseEntity
     public bool IsSaved { get; set; }
     public OutfitCreatedBy CreatedBy { get; set; }
     public virtual User User { get; set; }
-    public virtual ICollection<OutfitItems> OutfitItems { get; set; } = new List<OutfitItems>();
+    public virtual ICollection<OutfitItem> OutfitItems { get; set; } = new List<OutfitItem>();
     public virtual ICollection<OutfitUsageHistory> OutfitUsageHistories { get; set; } = new List<OutfitUsageHistory>();
 }

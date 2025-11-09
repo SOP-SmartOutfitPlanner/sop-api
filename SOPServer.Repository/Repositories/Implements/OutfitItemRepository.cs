@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace SOPServer.Repository.Repositories.Implements
 {
-    public class OutfitItemRepository : GenericRepository<OutfitItems>, IOutfitItemRepository
+    public class OutfitItemRepository : GenericRepository<OutfitItem>, IOutfitItemRepository
     {
         private readonly SOPServerContext _context;
 

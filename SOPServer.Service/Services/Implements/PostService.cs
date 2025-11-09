@@ -503,6 +503,12 @@ namespace SOPServer.Service.Services.Implements
 
         private async Task UpdatePostHashtagsAsync(long postId, List<PostHashtags> existingHashtags, List<string> newHashtagNames)
         {
+            // Handle null newHashtagNames - treat as empty list
+            if (newHashtagNames == null)
+            {
+                newHashtagNames = new List<string>();
+            }
+
             // Get the new hashtag names (trimmed and normalized)
             var normalizedNewHashtags = newHashtagNames
                 .Where(h => !string.IsNullOrWhiteSpace(h))

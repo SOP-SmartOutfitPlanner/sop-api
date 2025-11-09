@@ -238,7 +238,7 @@ namespace SOPServer.Service.Services.Implements
             {
                 foreach (var itemId in model.ItemIds)
                 {
-                    var outfitItem = new OutfitItems
+                    var outfitItem = new OutfitItem
                     {
                         OutfitId = outfit.Id,
                         ItemId = itemId
@@ -342,7 +342,7 @@ namespace SOPServer.Service.Services.Implements
                 // Add new items
                 foreach (var itemId in model.ItemIds)
                 {
-                    var outfitItem = new OutfitItems
+                    var outfitItem = new OutfitItem
                     {
                         OutfitId = id,
                         ItemId = itemId

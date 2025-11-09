@@ -9,9 +9,14 @@ using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.OutfitCalendarModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.ResultModels;
+using SOPServer.Service.BusinessModels.UserModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -20,12 +25,16 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IUserService _userService;
+        private readonly IGeminiService _geminiService;
+        private readonly IQdrantService _qdrantService;
 
-        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService)
+        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService, IGeminiService geminiService, IQdrantService qdrantService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _userService = userService;
+            _geminiService = geminiService;
+            _qdrantService = qdrantService;
         }
 
         public async Task<BaseResponseModel> GetOutfitByIdAsync(long id, long userId)
@@ -693,9 +702,179 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> OutfitSuggestion(long userId, long? userOccasionId)
         {
+            // Step 1: Get user characteristics
             var userCharacteristic = await _userService.GetUserCharacteristic(userId);
+            
+            if (userCharacteristic == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
 
-            throw new NotImplementedException();
+            // Step 2: Get occasion and weather information if provided
+            string occasionName = "casual";
+            string weatherInfo = "moderate";
+            
+            if (userOccasionId.HasValue)
+            {
+                var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdIncludeAsync(
+                    userOccasionId.Value,
+                    include: query => query.Include(uo => uo.Occasion));
+                
+                if (userOccasion != null)
+                {
+                    occasionName = userOccasion.Occasion?.Name ?? userOccasion.Name ?? "casual";
+                    weatherInfo = userOccasion.WeatherSnapshot ?? "moderate";
+                }
+            }
+
+            // Step 3: Build user context for Gemini
+            var userContext = BuildUserContext(userCharacteristic, occasionName, weatherInfo);
+
+            // Step 4: Generate outfit description using Gemini
+            var outfitGeneration = await _geminiService.GenerateOutfitDescription(userContext);
+            
+            if (outfitGeneration == null || outfitGeneration.Items == null || !outfitGeneration.Items.Any())
+            {
+                throw new BadRequestException("Failed to generate outfit description");
+            }
+
+            // Step 5: Determine category parent IDs based on outfit type
+            var categoryMapping = new Dictionary<string, long>
+            {
+                { "Top", 1 },
+                { "Bottom", 2 },
+                { "Shoe", 3 },
+                { "Accessory", 4 },
+                { "FullBody", 41 }
+            };
+
+            // Step 6: Search for matching items from user's wardrobe using Qdrant
+            var candidatesByCategory = new List<CategoryItemCandidates>();
+            
+            foreach (var itemDesc in outfitGeneration.Items)
+            {
+                if (!categoryMapping.TryGetValue(itemDesc.Category, out long categoryId))
+                {
+                    continue;
+                }
+
+                // Create embedding for the item description
+                var embedding = await _geminiService.EmbeddingText(itemDesc.Description);
+                
+                if (embedding == null || !embedding.Any())
+                {
+                    continue;
+                }
+
+                // Search for similar items in Qdrant
+                var searchResults = await _qdrantService.SearchSimilarityByUserIdAndCategoryId(
+                    embedding, userId, categoryId);
+
+                if (searchResults == null || !searchResults.Any())
+                {
+                    continue;
+                }
+
+                // Retrieve item details from database
+                var itemIds = searchResults.Select(r => (long)r.id).ToList();
+                var items = await _unitOfWork.ItemRepository.GetQueryable()
+                    .Where(i => itemIds.Contains(i.Id))
+                    .Include(i => i.Category)
+                    .ToListAsync();
+
+                if (items == null || !items.Any())
+                {
+                    continue;
+                }
+
+                // Convert to candidate models
+                var candidates = items.Select(item => new ItemCandidateModel
+                {
+                    Id = item.Id,
+                    Name = item.Name ?? "",
+                    Description = item.AiDescription ?? "",
+                    Color = item.Color ?? "",
+                    Pattern = item.Pattern ?? "",
+                    Fabric = item.Fabric ?? ""
+                }).ToList();
+
+                candidatesByCategory.Add(new CategoryItemCandidates
+                {
+                    Category = itemDesc.Category,
+                    Items = candidates
+                });
+            }
+
+            // Step 7: If no items found, return error
+            if (!candidatesByCategory.Any())
+            {
+                throw new NotFoundException("No matching items found in your wardrobe for this outfit");
+            }
+
+            // Step 8: Use Gemini to select the best outfit combination
+            var selection = await _geminiService.SelectBestOutfit(userContext, candidatesByCategory);
+            
+            if (selection == null || selection.SelectedItemIds == null || !selection.SelectedItemIds.Any())
+            {
+                throw new BadRequestException("Failed to select best outfit combination");
+            }
+
+            // Step 9: Retrieve final selected items
+            var selectedItems = await _unitOfWork.ItemRepository.GetQueryable()
+                .Where(i => selection.SelectedItemIds.Contains(i.Id))
+                .Include(i => i.Category)
+                .ToListAsync();
+
+            if (selectedItems == null || !selectedItems.Any())
+            {
+                throw new NotFoundException("Selected items not found");
+            }
+
+            // Step 10: Build response
+            var response = new OutfitSuggestionResponseModel
+            {
+                SelectedOutfit = new SelectedOutfitModel
+                {
+                    Items = selectedItems.Select(item => new OutfitItemDetailModel
+                    {
+                        Id = item.Id,
+                        Name = item.Name ?? "",
+                        Category = item.Category?.Name ?? "",
+                        ImgUrl = item.ImgUrl ?? ""
+                    }).ToList()
+                },
+                Explanation = selection.Explanation ?? "This outfit was selected based on your style preferences and the occasion."
+            };
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Outfit suggestion generated successfully",
+                Data = response
+            };
+        }
+
+        private string BuildUserContext(UserCharacteristicModel user, string occasion, string weather)
+        {
+            var stylesText = user.Styles != null && user.Styles.Any() 
+                ? string.Join(", ", user.Styles) 
+                : "casual";
+            
+            var colorsText = user.PreferedColor != null && user.PreferedColor.Any() 
+                ? string.Join(", ", user.PreferedColor) 
+                : "neutral tones";
+
+            var age = user.Dob.HasValue 
+                ? DateTime.Today.Year - user.Dob.Value.Year 
+                : 25;
+
+            return $@"User Profile:
+- Gender: {user.Gender}
+- Preferred Styles: {stylesText}
+- Favorite Colors: {colorsText}
+- Profession: {user.Job ?? "not specified"}
+- Current Weather: {weather}
+- Current Occasion: {occasion}";
         }
     }
 }

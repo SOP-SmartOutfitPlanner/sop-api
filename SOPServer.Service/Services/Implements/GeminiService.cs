@@ -7,6 +7,7 @@ using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.GeminiModels;
 using SOPServer.Service.BusinessModels.ItemModels;
+using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
@@ -208,6 +209,108 @@ namespace SOPServer.Service.Services.Implements
             generateRequest.UseJsonMode<CategoryItemAnalysisModel>();
             generateRequest.AddText(finalPrompt);
             return await _generativeModel.GenerateObjectAsync<CategoryItemAnalysisModel>(generateRequest);
+        }
+
+        public async Task<GeminiOutfitGenerationModel?> GenerateOutfitDescription(string userContext)
+        {
+            var prompt = $@"Based on the following user context, generate a complete outfit recommendation in JSON format.
+
+User Context:
+{userContext}
+
+Generate an outfit structure with the following fields:
+- outfitType: either 'Separated' (top, bottom, shoes) or 'FullBody' (one-piece outfit)
+- description: a brief description of the overall outfit
+- items: an array of items, each with:
+  - category: 'Top', 'Bottom', 'Shoe', 'Accessory', or 'FullBody'
+  - description: detailed description of what this item should look like
+- occasion: the occasion this outfit is suitable for
+- colorPalette: an array of color names that work well together for this outfit
+
+Important:
+- If outfitType is 'FullBody', include only one item with category 'FullBody' (no separate Top/Bottom)
+- If outfitType is 'Separated', include Top, Bottom, and Shoe items
+- You may include Accessory items for both outfit types
+- Consider the user's preferred colors, style, weather, and occasion";
+
+            var generateRequest = new GenerateContentRequest();
+            generateRequest.AddText(prompt);
+            generateRequest.UseJsonMode<GeminiOutfitGenerationModel>();
+
+            const int maxRetryAttempts = 3;
+            for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
+            {
+                try
+                {
+                    _logger.LogInformation("GenerateOutfitDescription: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+                    var result = await _generativeModel.GenerateObjectAsync<GeminiOutfitGenerationModel>(generateRequest);
+                    _logger.LogInformation("GenerateOutfitDescription: Successfully generated outfit on attempt {Attempt}", attempt);
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "GenerateOutfitDescription: Error on attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+                    if (attempt == maxRetryAttempts)
+                    {
+                        throw new BadRequestException($"Failed to generate outfit description: {ex.Message}");
+                    }
+                }
+            }
+
+            throw new BadRequestException("Failed to generate outfit description");
+        }
+
+        public async Task<GeminiOutfitSelectionResponse?> SelectBestOutfit(string userContext, List<CategoryItemCandidates> candidates)
+        {
+            var candidatesText = string.Join("\n", candidates.Select(c =>
+                $"Category: {c.Category}\n" +
+                string.Join("\n", c.Items.Select(item =>
+                    $"  - ID: {item.Id}, Name: {item.Name}, Color: {item.Color}, Pattern: {item.Pattern}, Fabric: {item.Fabric}, Description: {item.Description}"))
+            ));
+
+            var prompt = $@"Based on the following user context and available wardrobe items, select the best outfit combination.
+
+User Context:
+{userContext}
+
+Available Items by Category:
+{candidatesText}
+
+Select the best matching items (one from each category) and provide:
+- selectedItemIds: an array of item IDs that form the best outfit
+- explanation: a detailed explanation of why these items work well together and match the user's context, style, and occasion
+
+Consider:
+- Color harmony and the user's preferred colors
+- Style consistency with the user's preferences
+- Appropriateness for the weather and occasion
+- How well the items complement each other";
+
+            var generateRequest = new GenerateContentRequest();
+            generateRequest.AddText(prompt);
+            generateRequest.UseJsonMode<GeminiOutfitSelectionResponse>();
+
+            const int maxRetryAttempts = 3;
+            for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
+            {
+                try
+                {
+                    _logger.LogInformation("SelectBestOutfit: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+                    var result = await _generativeModel.GenerateObjectAsync<GeminiOutfitSelectionResponse>(generateRequest);
+                    _logger.LogInformation("SelectBestOutfit: Successfully selected outfit on attempt {Attempt}", attempt);
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "SelectBestOutfit: Error on attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+                    if (attempt == maxRetryAttempts)
+                    {
+                        throw new BadRequestException($"Failed to select best outfit: {ex.Message}");
+                    }
+                }
+            }
+
+            throw new BadRequestException("Failed to select best outfit");
         }
     }
 }

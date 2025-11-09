@@ -23,8 +23,6 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public string Color { get; set; }
 
-        public string AiDescription { get; set; }
-
         public string Brand { get; set; }
 
         public string FrequencyWorn { get; set; }
@@ -57,11 +55,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public long CategoryId { get; set; }
 
-        public string CategoryName { get; set; }
-
-        public string Color { get; set; }
-
-        public string AiDescription { get; set; }
+        public List<ColorModel> Colors { get; set; }
 
         public string Brand { get; set; }
 

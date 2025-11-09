@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace SOPServer.Repository.Repositories.Interfaces
 {
-    public interface IOutfitItemRepository : IGenericRepository<OutfitItems>
+    public interface IOutfitItemRepository : IGenericRepository<OutfitItem>
     {
     }
 }

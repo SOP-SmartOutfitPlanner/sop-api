@@ -20,12 +20,16 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IUserService _userService;
+        private readonly IGeminiService _geminiService;
+        private readonly IQdrantService _qdrantService;
 
-        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService)
+        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService, IGeminiService geminiService, IQdrantService qdrantService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _userService = userService;
+            _geminiService = geminiService;
+            _qdrantService = qdrantService;
         }
 
         public async Task<BaseResponseModel> GetOutfitByIdAsync(long id, long userId)
@@ -693,9 +697,256 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> OutfitSuggestion(long userId, long? userOccasionId)
         {
+            // Step 1: Retrieve user characteristics
             var userCharacteristic = await _userService.GetUserCharacteristic(userId);
+            
+            if (userCharacteristic == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
 
-            throw new NotImplementedException();
+            // Step 2: Build context object with user and occasion details
+            var context = new OutfitGenerationContextModel
+            {
+                Gender = userCharacteristic.Gender.ToString(),
+                Age = userCharacteristic.Dob.HasValue 
+                    ? DateTime.Now.Year - userCharacteristic.Dob.Value.Year 
+                    : null,
+                Profession = userCharacteristic.Job,
+                PreferredStyles = userCharacteristic.Styles,
+                FavoriteColors = userCharacteristic.PreferedColor,
+                AvoidedColors = userCharacteristic.AvoidedColor,
+                Location = userCharacteristic.Location
+            };
+
+            // If userOccasionId is provided, fetch occasion details
+            if (userOccasionId.HasValue)
+            {
+                var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdIncludeAsync(
+                    userOccasionId.Value,
+                    include: query => query.Include(uo => uo.Occasion));
+
+                if (userOccasion == null)
+                {
+                    throw new NotFoundException(MessageConstants.USER_OCCASION_NOT_FOUND);
+                }
+
+                if (userOccasion.UserId != userId)
+                {
+                    throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
+                }
+
+                context.OccasionName = userOccasion.Occasion?.Name ?? userOccasion.Name;
+                context.OccasionDescription = userOccasion.Description;
+                context.WeatherSnapshot = userOccasion.WeatherSnapshot;
+            }
+
+            // Step 3: Ask Gemini to generate outfit description
+            var outfitGeneration = await _geminiService.GenerateOutfitDescription(context);
+            
+            if (outfitGeneration == null)
+            {
+                throw new BadRequestException("Failed to generate outfit description");
+            }
+
+            // Step 4: Create embeddings and search Qdrant for similar items
+            var shortlistedItems = new ShortlistedItemsModel();
+
+            if (outfitGeneration.OutfitType == "Full-Body" && outfitGeneration.FullBody != null)
+            {
+                // Generate embedding for full-body item
+                var fullBodyDescription = BuildItemDescription(outfitGeneration.FullBody);
+                var fullBodyEmbedding = await _geminiService.EmbeddingText(fullBodyDescription);
+                
+                if (fullBodyEmbedding != null)
+                {
+                    // Search for similar items in parent category 41 (Full-Body)
+                    var searchResults = await _qdrantService.SearchSimilarityByUserIdAndParentCategory(
+                        fullBodyEmbedding, userId, 41);
+                    
+                    shortlistedItems.FullBodyItems = await GetItemDetailsFromSearchResults(searchResults);
+                }
+            }
+            else if (outfitGeneration.OutfitType == "Separated")
+            {
+                // Generate embeddings for top and bottom
+                if (outfitGeneration.Top != null)
+                {
+                    var topDescription = BuildItemDescription(outfitGeneration.Top);
+                    var topEmbedding = await _geminiService.EmbeddingText(topDescription);
+                    
+                    if (topEmbedding != null)
+                    {
+                        // Search for similar items in parent category 1 (Top)
+                        var searchResults = await _qdrantService.SearchSimilarityByUserIdAndParentCategory(
+                            topEmbedding, userId, 1);
+                        
+                        shortlistedItems.TopItems = await GetItemDetailsFromSearchResults(searchResults);
+                    }
+                }
+
+                if (outfitGeneration.Bottom != null)
+                {
+                    var bottomDescription = BuildItemDescription(outfitGeneration.Bottom);
+                    var bottomEmbedding = await _geminiService.EmbeddingText(bottomDescription);
+                    
+                    if (bottomEmbedding != null)
+                    {
+                        // Search for similar items in parent category 2 (Bottom)
+                        var searchResults = await _qdrantService.SearchSimilarityByUserIdAndParentCategory(
+                            bottomEmbedding, userId, 2);
+                        
+                        shortlistedItems.BottomItems = await GetItemDetailsFromSearchResults(searchResults);
+                    }
+                }
+            }
+
+            // Validate that we have shortlisted items
+            var hasFullBodyItems = shortlistedItems.FullBodyItems != null && shortlistedItems.FullBodyItems.Count > 0;
+            var hasTopBottomItems = (shortlistedItems.TopItems != null && shortlistedItems.TopItems.Count > 0) ||
+                                   (shortlistedItems.BottomItems != null && shortlistedItems.BottomItems.Count > 0);
+
+            if (!hasFullBodyItems && !hasTopBottomItems)
+            {
+                throw new NotFoundException("No matching items found in your wardrobe for this occasion");
+            }
+
+            // Step 5: Send shortlisted items to Gemini for final selection
+            var finalSelection = await _geminiService.SelectBestOutfit(context, shortlistedItems);
+            
+            if (finalSelection == null || finalSelection.SelectedOutfit == null)
+            {
+                throw new BadRequestException("Failed to select best outfit");
+            }
+
+            // Step 6: Build response with selected items
+            var response = new OutfitSuggestionResponseModel
+            {
+                Explanation = finalSelection.Explanation,
+                SelectedOutfit = new SelectedOutfitModel()
+            };
+
+            // Get the selected items from the database
+            if (finalSelection.SelectedOutfit.FullBodyId.HasValue)
+            {
+                var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(
+                    finalSelection.SelectedOutfit.FullBodyId.Value,
+                    include: query => query.Include(i => i.Category));
+                
+                if (item != null)
+                {
+                    response.SelectedOutfit.FullBody = new OutfitItemSuggestionModel
+                    {
+                        Id = item.Id,
+                        Name = item.Name,
+                        CategoryName = item.Category?.Name ?? "Unknown",
+                        ImgUrl = item.ImgUrl
+                    };
+                }
+            }
+
+            if (finalSelection.SelectedOutfit.TopId.HasValue)
+            {
+                var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(
+                    finalSelection.SelectedOutfit.TopId.Value,
+                    include: query => query.Include(i => i.Category));
+                
+                if (item != null)
+                {
+                    response.SelectedOutfit.Top = new OutfitItemSuggestionModel
+                    {
+                        Id = item.Id,
+                        Name = item.Name,
+                        CategoryName = item.Category?.Name ?? "Unknown",
+                        ImgUrl = item.ImgUrl
+                    };
+                }
+            }
+
+            if (finalSelection.SelectedOutfit.BottomId.HasValue)
+            {
+                var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(
+                    finalSelection.SelectedOutfit.BottomId.Value,
+                    include: query => query.Include(i => i.Category));
+                
+                if (item != null)
+                {
+                    response.SelectedOutfit.Bottom = new OutfitItemSuggestionModel
+                    {
+                        Id = item.Id,
+                        Name = item.Name,
+                        CategoryName = item.Category?.Name ?? "Unknown",
+                        ImgUrl = item.ImgUrl
+                    };
+                }
+            }
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Outfit suggestion generated successfully",
+                Data = response
+            };
+        }
+
+        private string BuildItemDescription(GeminiItemDescriptionModel itemDescription)
+        {
+            var parts = new List<string>();
+            
+            parts.Add($"Type: {itemDescription.Type}");
+            
+            if (itemDescription.ColorPalette != null && itemDescription.ColorPalette.Count > 0)
+                parts.Add($"Colors: {string.Join(", ", itemDescription.ColorPalette)}");
+            
+            if (itemDescription.Style != null && itemDescription.Style.Count > 0)
+                parts.Add($"Style: {string.Join(", ", itemDescription.Style)}");
+            
+            if (itemDescription.Occasion != null && itemDescription.Occasion.Count > 0)
+                parts.Add($"Occasion: {string.Join(", ", itemDescription.Occasion)}");
+            
+            if (itemDescription.Season != null && itemDescription.Season.Count > 0)
+                parts.Add($"Season: {string.Join(", ", itemDescription.Season)}");
+            
+            return string.Join(". ", parts);
+        }
+
+        private async Task<List<ShortlistedItemModel>> GetItemDetailsFromSearchResults(List<BusinessModels.QDrantModels.QDrantSearchModels> searchResults)
+        {
+            var items = new List<ShortlistedItemModel>();
+
+            foreach (var result in searchResults)
+            {
+                var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(
+                    result.id,
+                    include: query => query
+                        .Include(i => i.Category)
+                        .Include(i => i.ItemStyles)
+                            .ThenInclude(ist => ist.Style)
+                        .Include(i => i.ItemOccasions)
+                            .ThenInclude(io => io.Occasion)
+                        .Include(i => i.ItemSeasons)
+                            .ThenInclude(ise => ise.Season));
+
+                if (item != null)
+                {
+                    items.Add(new ShortlistedItemModel
+                    {
+                        Id = item.Id,
+                        Name = item.Name,
+                        CategoryName = item.Category?.Name ?? "Unknown",
+                        ImgUrl = item.ImgUrl,
+                        Color = item.Color,
+                        AiDescription = item.AiDescription,
+                        Pattern = item.Pattern,
+                        Fabric = item.Fabric,
+                        Styles = item.ItemStyles?.Select(ist => ist.Style?.Name).Where(n => n != null).ToList(),
+                        Occasions = item.ItemOccasions?.Select(io => io.Occasion?.Name).Where(n => n != null).ToList(),
+                        Seasons = item.ItemSeasons?.Select(ise => ise.Season?.Name).Where(n => n != null).ToList()
+                    });
+                }
+            }
+
+            return items;
         }
     }
 }

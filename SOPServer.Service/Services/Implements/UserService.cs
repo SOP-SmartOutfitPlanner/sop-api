@@ -780,6 +780,16 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<UserCharacteristicModel> GetUserCharacteristic(long userId)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdIncludeAsync(userId, include: x => x.Include(x => x.UserStyles).ThenInclude(y => y.Style));
 
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            return _mapper.Map<UserCharacteristicModel>(user);
+        }
     }
 }

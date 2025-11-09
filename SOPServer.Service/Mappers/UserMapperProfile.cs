@@ -34,6 +34,16 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.JobDescription, opt => opt.MapFrom(src => src.Job != null ? src.Job.Description : null))
                 .ForMember(dest => dest.UserStyles, opt => opt.MapFrom(src => src.UserStyles != null ? src.UserStyles.ToList() : new List<UserStyle>()));
 
+            // UserCharacteristic mapping
+            CreateMap<User, UserCharacteristicModel>()
+                .ForMember(dest => dest.Job, opt => opt.MapFrom(src => src.Job != null ? src.Job.Name : null))
+                .ForMember(dest => dest.Styles, opt => opt.MapFrom(src => src.UserStyles != null
+                    ? src.UserStyles
+                        .Where(us => us.Style != null)
+                        .Select(us => us.Style.Name)
+                        .ToList()
+                    : new List<string>()));
+
             CreateMap<UserStyle, UserStyleModel>()
                 .ForMember(dest => dest.StyleId, opt => opt.MapFrom(src => src.StyleId ?? 0))
                 .ForMember(dest => dest.StyleName, opt => opt.MapFrom(src => src.Style != null ? src.Style.Name : string.Empty))

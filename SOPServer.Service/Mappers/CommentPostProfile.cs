@@ -20,6 +20,7 @@ namespace SOPServer.Service.Mappers
                     src.User != null ? src.User.Role.ToString() : null));
 
             CreateMap<CreateCommentPostModel, CommentPost>();
+            CreateMap<UpdateCommentPostModel, CommentPost>();
 
             CreateMap<Pagination<CommentPost>, Pagination<CommentPostModel>>()
                 .ConvertUsing<PaginationConverter<CommentPost, CommentPostModel>>();

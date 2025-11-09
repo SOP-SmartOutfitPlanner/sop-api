@@ -193,6 +193,7 @@ namespace SOPServer.Service.Constants
 
         // CommentPost related messages
         public const string COMMENT_CREATE_SUCCESS = "Comment created successfully";
+        public const string COMMENT_UPDATE_SUCCESS = "Comment updated successfully";
         public const string COMMENT_DELETE_SUCCESS = "Comment deleted successfully";
         public const string COMMENT_NOT_FOUND = "Comment not found";
         public const string COMMENT_GET_SUCCESS = "Get comment successfully";

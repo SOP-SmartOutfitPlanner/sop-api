@@ -11,6 +11,7 @@ namespace SOPServer.Service.Services.Interfaces
     public interface ICommentPostService
     {
         Task<BaseResponseModel> CreateNewComment(CreateCommentPostModel model);
+        Task<BaseResponseModel> UpdateCommentPost(long id, UpdateCommentPostModel model);
         Task<BaseResponseModel> DeleteCommentPost(int id);
         Task<BaseResponseModel> GetCommentByParentId(PaginationParameter paginationParameter, long id);
         Task<BaseResponseModel> GetCommentParentByPostId(PaginationParameter paginationParameter, long postId);

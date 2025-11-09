@@ -50,6 +50,41 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<BaseResponseModel> UpdateCommentPost(long id, UpdateCommentPostModel model)
+        {
+            var commentPost = await _unitOfWork.CommentPostRepository.GetByIdIncludeAsync(
+                id,
+                include: query => query
+                    .Include(c => c.User)
+                    .Include(c => c.ParentComment)
+            );
+
+            if (commentPost == null)
+            {
+                throw new NotFoundException(MessageConstants.COMMENT_NOT_FOUND);
+            }
+
+            commentPost.Comment = model.Comment;
+            commentPost.UpdatedDate = DateTime.UtcNow;
+
+            _unitOfWork.CommentPostRepository.UpdateAsync(commentPost);
+            await _unitOfWork.SaveAsync();
+
+            var updatedComment = await _unitOfWork.CommentPostRepository.GetByIdIncludeAsync(
+                id,
+                include: query => query
+                    .Include(c => c.User)
+                    .Include(c => c.ParentComment)
+            );
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.COMMENT_UPDATE_SUCCESS,
+                Data = _mapper.Map<CommentPostModel>(updatedComment)
+            };
+        }
+
         public async Task<BaseResponseModel> DeleteCommentPost(int id)
         {
             var commentPost = await _unitOfWork.CommentPostRepository.GetByIdAsync(id);

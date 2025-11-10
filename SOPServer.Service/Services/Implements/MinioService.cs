@@ -226,5 +226,21 @@ namespace SOPServer.Service.Services.Implements
                 Data = bulkResult
             };
         }
+
+        public async Task<string> DeleteImageByURLAsync(string imgURL)
+        {
+            if (string.IsNullOrWhiteSpace(imgURL))
+                throw new NotFoundException(MessageConstants.FILE_NOT_FOUND);
+
+            var fileName = imgURL.Split('/').Last();
+
+            var args = new RemoveObjectArgs()
+                .WithBucket(_cfg.Bucket)
+                .WithObject(fileName);
+
+            await _minioClient.RemoveObjectAsync(args);
+
+            return fileName;
+        }
     }
 }

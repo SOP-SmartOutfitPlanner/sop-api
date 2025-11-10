@@ -13,7 +13,10 @@ namespace SOPServer.Repository.Entities
         public string ShortDescription { get; set; }
 
         // Navigation properties
-        public virtual User User { get; set; }
+        virtual public User User { get; set; }
         public virtual ICollection<CollectionOutfit> CollectionOutfits { get; set; } = new HashSet<CollectionOutfit>();
+        public virtual ICollection<CommentCollection> CommentCollections { get; set; } = new HashSet<CommentCollection>();
+        public virtual ICollection<LikeCollection> LikeCollections { get; set; } = new HashSet<LikeCollection>();
+        public virtual ICollection<SaveCollection> SaveCollections { get; set; } = new HashSet<SaveCollection>();
     }
 }

@@ -68,11 +68,11 @@ public partial class SOPServerContext : DbContext
     public virtual DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
     public virtual DbSet<UserSubscription> UserSubscriptions { get; set; }
     public virtual DbSet<UserSubscriptionTransaction> UserSubscriptionTransaction { get; set; }
-
-    // New DbSets for collections
     public virtual DbSet<Collection> Collections { get; set; }
     public virtual DbSet<CollectionOutfit> CollectionOutfits { get; set; }
-
+    public virtual DbSet<CommentCollection> CommentCollections { get; set; }
+    public virtual DbSet<LikeCollection> LikeCollections { get; set; }
+    public virtual DbSet<SaveCollection> SaveCollection { get; set; }
 
     // protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     //#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -503,7 +503,7 @@ public partial class SOPServerContext : DbContext
                 .IsUnicode(true);
 
             entity.HasOne(d => d.User)
-                .WithMany()
+                .WithMany(p => p.Collections)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK_Collection_User")
                 .OnDelete(DeleteBehavior.NoAction);

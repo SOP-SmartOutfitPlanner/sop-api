@@ -14,6 +14,8 @@ namespace SOPServer.Service.BusinessModels.PostModels
         public long Id { get; set; }
         public long UserId { get; set; }
         public string UserDisplayName { get; set; }
+        public string AvatarUrl { get; set; }
+        public string Role { get; set; }
         public string Body { get; set; }
         public List<HashtagModel> Hashtags { get; set; } = new List<HashtagModel>();
         public List<string> Images { get; set; } = new List<string>();

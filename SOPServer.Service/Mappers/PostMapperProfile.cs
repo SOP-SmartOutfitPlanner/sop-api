@@ -19,6 +19,8 @@ namespace SOPServer.Service.Mappers
             CreateMap<Post, PostModel>()
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId ?? 0))
                 .ForMember(dest => dest.UserDisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : "Unknown"))
+                .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.User.AvtUrl != null ? src.User.AvtUrl : null))
+                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.User.Role.ToString()))
                 .ForMember(dest => dest.Hashtags, opt => opt.MapFrom(src => 
                     src.PostHashtags != null 
                     ? src.PostHashtags

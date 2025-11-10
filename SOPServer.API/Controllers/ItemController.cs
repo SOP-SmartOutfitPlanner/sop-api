@@ -83,5 +83,11 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _itemService.GetUserStats(userId));
         }
+
+        [HttpPost("split-item")]
+        public Task<IActionResult> SplitItem(IFormFile file)
+        {
+            return ValidateAndExecute(async () => await _itemService.SplitItem(file));
+        }
     }
 }

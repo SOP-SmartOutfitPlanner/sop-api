@@ -26,5 +26,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> BulkCreateItemManual(BulkItemRequestManualModel bulkUploadModel);
         Task<BaseResponseModel> AnalysisItem(ItemModelRequest request);
         Task<BaseResponseModel> GetUserStats(long userId);
+        Task<BaseResponseModel> SplitItem(IFormFile file);
     }
 }

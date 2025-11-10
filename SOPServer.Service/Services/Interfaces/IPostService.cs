@@ -15,5 +15,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> GetPostByUserIdAsync(PaginationParameter paginationParameter, long userId);
         Task<BaseResponseModel> GetPostsByHashtagIdAsync(PaginationParameter paginationParameter, long hashtagId);
         Task<BaseResponseModel> GetTopContributorsAsync(PaginationParameter paginationParameter, long? userId = null);
+        Task<BaseResponseModel> GetPostLikersAsync(PaginationParameter paginationParameter, long postId, long? userId = null);
     }
 }

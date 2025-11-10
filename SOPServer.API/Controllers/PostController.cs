@@ -68,5 +68,14 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _postService.GetTopContributorsAsync(paginationParameter, userId));
         }
+
+        [HttpGet("{postId}/likers")]
+        public Task<IActionResult> GetPostLikers(
+            [FromQuery] PaginationParameter paginationParameter, 
+            long postId, 
+            [FromQuery] long? userId = null)
+        {
+            return ValidateAndExecute(async () => await _postService.GetPostLikersAsync(paginationParameter, postId, userId));
+        }
     }
 }

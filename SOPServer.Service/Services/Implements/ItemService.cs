@@ -928,7 +928,6 @@ namespace SOPServer.Service.Services.Implements
 
                 // Map basic fields
                 item.Name = analysis.ItemName;
-                item.ImgUrl = analysis.ImgURL;
                 item.AiDescription = analysis.AiDescription;
                 item.WeatherSuitable = analysis.WeatherSuitable;
                 item.Condition = analysis.Condition;

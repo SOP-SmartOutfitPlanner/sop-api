@@ -336,6 +336,83 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<BaseResponseModel> GetPostLikersAsync(PaginationParameter paginationParameter, long postId, long? userId = null)
+        {
+            // Validate post exists
+            var post = await _unitOfWork.PostRepository.GetByIdAsync(postId);
+            if (post == null)
+            {
+                throw new NotFoundException(MessageConstants.POST_NOT_FOUND);
+            }
+
+            // Validate user if provided
+            if (userId.HasValue)
+            {
+                await ValidateUserExistsAsync(userId.Value);
+            }
+
+            // Get likers with user information
+            var likersQuery = _unitOfWork.LikePostRepository.GetQueryable()
+                .Where(lp => lp.PostId == postId && !lp.IsDeleted)
+                .Include(lp => lp.User)
+                .Select(lp => new PostLikerModel
+                {
+                    UserId = lp.UserId,
+                    DisplayName = lp.User.DisplayName ?? "Unknown",
+                    AvatarUrl = lp.User.AvtUrl ?? string.Empty,
+                    IsFollowing = false
+                })
+                .AsQueryable();
+
+            var totalCount = await likersQuery.CountAsync();
+
+            var likers = await likersQuery
+                .Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
+                .Take(paginationParameter.PageSize)
+                .ToListAsync();
+
+            // Check following status if userId is provided
+            if (userId.HasValue)
+            {
+                foreach (var liker in likers)
+                {
+                    // Don't check if liker is the same as requesting user
+                    if (liker.UserId != userId.Value)
+                    {
+                        var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(userId.Value, liker.UserId);
+                        liker.IsFollowing = isFollowing;
+                    }
+                }
+            }
+
+            var pageSize = paginationParameter.TakeAll ? totalCount : paginationParameter.PageSize;
+            var pagination = new Pagination<PostLikerModel>(
+                likers,
+                totalCount,
+                paginationParameter.PageIndex,
+                pageSize
+            );
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_POST_LIKERS_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = pagination,
+                    MetaData = new
+                    {
+                        pagination.TotalCount,
+                        pagination.PageSize,
+                        pagination.CurrentPage,
+                        pagination.TotalPages,
+                        pagination.HasNext,
+                        pagination.HasPrevious
+                    }
+                }
+            };
+        }
+
         #region Private Helper Methods
 
         private async Task ValidateUserExistsAsync(long userId)

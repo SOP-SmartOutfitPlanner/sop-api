@@ -84,6 +84,10 @@ namespace SOPServer.API
             services.AddScoped<ICommentPostRepository, CommentPostRepository>();
             services.AddScoped<ICommentPostService, CommentPostService>();
 
+            // ========== REPORT COMMUNITY ==========
+            services.AddScoped<IReportCommunityRepository, ReportCommunityRepository>();
+            services.AddScoped<IReportCommunityService, ReportCommunityService>();
+
             // ========== FOLLOWER MANAGEMENT ==========
             services.AddScoped<IFollowerRepository, FollowerRepository>();
             services.AddScoped<IFollowerService, FollowerService>();

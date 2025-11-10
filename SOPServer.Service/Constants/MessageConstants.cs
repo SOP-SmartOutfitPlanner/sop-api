@@ -50,7 +50,7 @@ namespace SOPServer.Service.Constants
 
         public const string TOKEN_NOT_VALID = "Token not valid";
         public const string LOGIN_SUCCESS_MESSAGE = "Login successfully";
-        public const string LOGIN_GOOGLE_SUCCESS_MESSAGE = "Login with google successfully";
+        public const string LOGIN_GOOGLE_SUCCESS_MESSAGE = "Login with google successfully.";
         public const string TOKEN_REFRESH_SUCCESS_MESSAGE = "Token refresh successfully";
         public const string FILE_NOT_FOUND = "File not found";
         public const string UPLOAD_FILE_SUCCESS = "File uploaded successfully";
@@ -252,5 +252,11 @@ namespace SOPServer.Service.Constants
         public const string COLLECTION_OUTFIT_NOT_FOUND = "This outfit is not in the collection";
         public const string ADD_OUTFIT_TO_COLLECTION_SUCCESS = "Outfit added to collection successfully";
         public const string REMOVE_OUTFIT_FROM_COLLECTION_SUCCESS = "Outfit removed from collection successfully";
+
+        // ReportCommunity related messages
+        public const string REPORT_COMMUNITY_CREATE_SUCCESS = "Report submitted successfully";
+        public const string REPORT_POST_ID_REQUIRED = "PostId is required when reporting a post";
+        public const string REPORT_COMMENT_ID_REQUIRED = "CommentId is required when reporting a comment";
+        public const string REPORT_ALREADY_EXISTS = "You have already reported this content";
     }
 }

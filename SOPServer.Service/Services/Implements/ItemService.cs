@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
@@ -13,16 +14,19 @@ using SOPServer.Service.BusinessModels.OccasionModels;
 using SOPServer.Service.BusinessModels.RemBgModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.SeasonModels;
+using SOPServer.Service.BusinessModels.SplitImageModels;
 using SOPServer.Service.BusinessModels.StyleModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.Utils;
+using System;
+using System.IO;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -64,21 +68,21 @@ namespace SOPServer.Service.Services.Implements
             {
                 throw new NotFoundException(MessageConstants.CATEGORY_NOT_EXIST);
             }
-            if(category.ParentId == null)
+            if (category.ParentId == null)
             {
                 throw new BadRequestException(MessageConstants.CATEGORY_PARENT_NOT_EXIST);
             }
 
-            foreach(var styleId in model.StyleIds)
+            foreach (var styleId in model.StyleIds)
             {
-                var style =  await _unitOfWork.StyleRepository.GetByIdAsync(styleId);
-                if(style == null)
+                var style = await _unitOfWork.StyleRepository.GetByIdAsync(styleId);
+                if (style == null)
                 {
                     throw new NotFoundException($"Style with id {styleId} does not exist");
                 }
             }
 
-            foreach(var occasionId in model.OccasionIds)
+            foreach (var occasionId in model.OccasionIds)
             {
                 var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(occasionId);
                 if (occasion == null)
@@ -87,7 +91,7 @@ namespace SOPServer.Service.Services.Implements
                 }
             }
 
-            foreach(var seasonId in model.SeasonIds)
+            foreach (var seasonId in model.SeasonIds)
             {
                 var season = await _unitOfWork.SeasonRepository.GetByIdAsync(seasonId);
                 if (season == null)
@@ -941,13 +945,13 @@ namespace SOPServer.Service.Services.Implements
                 item.Color = JsonSerializer.Serialize(analysis.Colors, serializerOptions);
 
                 // Merge category from existing AIAnalyzeJson with new analysis
-                long categoryId = item.CategoryId ??0;
+                long categoryId = item.CategoryId ?? 0;
                 if (!string.IsNullOrEmpty(item.AIAnalyzeJson))
                 {
                     try
                     {
                         var existingAnalysis = JsonSerializer.Deserialize<CategoryItemAnalysisModel>(item.AIAnalyzeJson, serializerOptions);
-                        if (existingAnalysis != null && existingAnalysis.CategoryId !=0)
+                        if (existingAnalysis != null && existingAnalysis.CategoryId != 0)
                         {
                             categoryId = existingAnalysis.CategoryId;
                         }
@@ -1075,7 +1079,7 @@ namespace SOPServer.Service.Services.Implements
                 {
                     TotalItems = totalItems,
                     CategoryCounts = categoryCounts
-                } 
+                }
             };
 
         }
@@ -1125,26 +1129,76 @@ namespace SOPServer.Service.Services.Implements
                 }
 
                 var result = await responseRemBg.Content.ReadFromJsonAsync<RembgResponse>();
-                    if (result == null || string.IsNullOrEmpty(result.Output))
-                    {
-                        continue;
-                    }
+                if (result == null || string.IsNullOrEmpty(result.Output))
+                {
+                    continue;
+                }
 
-                    var fileName = item.ImgUrl.Split('/').Last();
-                    var fileRemoveBackground = ImageUtils.Base64ToFormFile(result.Output, fileName);
+                var fileName = item.ImgUrl.Split('/').Last();
+                var fileRemoveBackground = ImageUtils.Base64ToFormFile(result.Output, fileName);
 
-                    var fileupload = await scopedMinioService.UploadImageAsync(fileRemoveBackground);
-                    if (fileupload?.Data is not ImageUploadResult uploadData || string.IsNullOrEmpty(uploadData.DownloadUrl))
-                    {
-                        // Skip updating this item if upload failed
-                        continue;
-                    }
+                var fileupload = await scopedMinioService.UploadImageAsync(fileRemoveBackground);
+                if (fileupload?.Data is not ImageUploadResult uploadData || string.IsNullOrEmpty(uploadData.DownloadUrl))
+                {
+                    // Skip updating this item if upload failed
+                    continue;
+                }
 
-                    await scopedMinioService.DeleteImageByURLAsync(item.ImgUrl);
-                    item.ImgUrl = uploadData.DownloadUrl;
-                    scopedUnitOfWork.ItemRepository.UpdateAsync(item);
-                    await scopedUnitOfWork.SaveAsync();
+                await scopedMinioService.DeleteImageByURLAsync(item.ImgUrl);
+                item.ImgUrl = uploadData.DownloadUrl;
+                scopedUnitOfWork.ItemRepository.UpdateAsync(item);
+                await scopedUnitOfWork.SaveAsync();
             }
+        }
+
+        public async Task<BaseResponseModel> SplitItem(IFormFile file)
+        {
+            var client = _httpClientFactory.CreateClient("SplitItem");
+            var requestUrl = "be/api/v1/split-image/";
+            using var formData = new MultipartFormDataContent();
+            await using var fileStream = file.OpenReadStream();
+            var fileContent = new StreamContent(fileStream);
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+            formData.Add(fileContent, "image_file", file.FileName);
+
+            var response = await client.PostAsync(requestUrl, formData);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new BadRequestException("Failed to split image");
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            var serializerOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true
+            };
+
+            var splitResult = JsonSerializer.Deserialize<SplitImageResponse>(responseBody, serializerOptions);
+
+            if (splitResult == null || !splitResult.Success)
+            {
+                throw new BadRequestException(splitResult?.Message ?? "Failed to split image");
+            }
+
+            var imageUrls = splitResult.Items
+                       .Where(item => item.Success)
+                    .Select(item => new
+                    {
+                        Category = item.Category,
+                        Url = item.Url,
+                        FileName = item.Filename
+                    })
+                    .ToList();
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = splitResult.Message ?? "Successfully split image",
+                Data = imageUrls
+            };
         }
     }
 }

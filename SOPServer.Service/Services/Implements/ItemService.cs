@@ -918,7 +918,6 @@ namespace SOPServer.Service.Services.Implements
 
                       var responseRemBg = await client.PostAsJsonAsync("predictions", requestBody);
 
-                      var filename = await _minioService.DeleteImageByURLAsync(item.ImgUrl);
 
                       if (!responseRemBg.IsSuccessStatusCode)
                       {
@@ -932,7 +931,7 @@ namespace SOPServer.Service.Services.Implements
                           throw new BadRequestException(MessageConstants.REM_BACKGROUND_IMAGE_FAIL);
                       }
 
-                      var fileRemoveBackground = ImageUtils.Base64ToFormFile(result.Output, filename);
+                      var fileRemoveBackground = ImageUtils.Base64ToFormFile(result.Output, item.ImgUrl.Split("/").Last());
 
                       var fileupload = await _minioService.UploadImageAsync(fileRemoveBackground);
 
@@ -944,6 +943,7 @@ namespace SOPServer.Service.Services.Implements
                       var imgResponse = await ImageUtils.ConvertToBase64Async(uploadData.DownloadUrl, _httpClientFactory.CreateClient("AnalysisClient"));
                       var analysis = await _geminiService.ImageGenerateContent(imgResponse.base64, imgResponse.mimetype, promptText);
                       analysis.ImgURL = uploadData.DownloadUrl;
+                      _ = await _minioService.DeleteImageByURLAsync(item.ImgUrl);
                       return new
                       {
                           Item = item,

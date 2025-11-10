@@ -909,46 +909,15 @@ namespace SOPServer.Service.Services.Implements
             // Step 2: Process all images in parallel (no DB operations here)
             var analysisResults = await Task.WhenAll(items.Select(async item =>
                   {
-                      var client = _httpClientFactory.CreateClient("RembgClient");
-
-                      var requestBody = new RembgRequest
-                      {
-                          Input = new RembgInput { Image = item.ImgUrl }
-                      };
-
-                      var responseRemBg = await client.PostAsJsonAsync("predictions", requestBody);
-
-
-                      if (!responseRemBg.IsSuccessStatusCode)
-                      {
-                          throw new BadRequestException(MessageConstants.CALL_REM_BACKGROUND_FAIL);
-                      }
-
-                      var result = await responseRemBg.Content.ReadFromJsonAsync<RembgResponse>();
-
-                      if (result == null || !string.Equals(result.Status, "succeeded", StringComparison.OrdinalIgnoreCase))
-                      {
-                          throw new BadRequestException(MessageConstants.REM_BACKGROUND_IMAGE_FAIL);
-                      }
-
-                      var fileRemoveBackground = ImageUtils.Base64ToFormFile(result.Output, item.ImgUrl.Split("/").Last());
-
-                      var fileupload = await _minioService.UploadImageAsync(fileRemoveBackground);
-
-                      if (fileupload?.Data is not ImageUploadResult uploadData || string.IsNullOrEmpty(uploadData.DownloadUrl))
-                      {
-                          throw new BadRequestException(MessageConstants.FILE_NOT_FOUND);
-                      }
-
-                      var imgResponse = await ImageUtils.ConvertToBase64Async(uploadData.DownloadUrl, _httpClientFactory.CreateClient("AnalysisClient"));
+                      var imgResponse = await ImageUtils.ConvertToBase64Async(item.ImgUrl, _httpClientFactory.CreateClient("AnalysisClient"));
                       var analysis = await _geminiService.ImageGenerateContent(imgResponse.base64, imgResponse.mimetype, promptText);
-                      analysis.ImgURL = uploadData.DownloadUrl;
-                      _ = await _minioService.DeleteImageByURLAsync(item.ImgUrl);
+
                       return new
                       {
                           Item = item,
                           Analysis = analysis
                       };
+
                   }));
 
             // Step 3: Update all items with analysis results

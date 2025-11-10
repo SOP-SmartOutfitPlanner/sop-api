@@ -25,6 +25,13 @@ namespace SOPServer.API.Configurations
                 client.Timeout = TimeSpan.FromSeconds(30);
             });
 
+            services.AddHttpClient("SplitItem", client =>
+            {
+                client.BaseAddress = new Uri("https://split-item.wizlab.io.vn/");
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+
             return services;
         }
     }

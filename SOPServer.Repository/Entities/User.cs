@@ -67,5 +67,6 @@ public partial class User : BaseEntity
     public virtual ICollection<LikeCollection> LikeCollections { get; set; } = new List<LikeCollection>();
     public virtual ICollection<SaveCollection> SaveCollections { get; set; } = new List<SaveCollection>();
     public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();
+    public virtual ICollection<ReportCommunity> ReportCommunities { get; set; } = new List<ReportCommunity>();
 
 }

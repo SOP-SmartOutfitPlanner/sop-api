@@ -33,6 +33,8 @@ namespace SOPServer.Repository.UnitOfWork
         IUserOccasionRepository UserOccasionRepository { get; }
         ICollectionRepository CollectionRepository { get; }
         ICollectionOutfitRepository CollectionOutfitRepository { get; }
+        ICommentCollectionRepository CommentCollectionRepository { get; }
+        ILikeCollectionRepository LikeCollectionRepository { get; }
         IReportCommunityRepository ReportCommunityRepository { get; }
 
         int Save();

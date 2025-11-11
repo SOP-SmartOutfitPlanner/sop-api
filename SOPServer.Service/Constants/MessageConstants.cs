@@ -192,6 +192,10 @@ namespace SOPServer.Service.Constants
         public const string ALREADY_LIKE_POST = "You have already liked this post";
         public const string LIKE_POST_NOT_FOUND = "Like not found";
 
+        // LikeCollection related messages
+        public const string LIKE_COLLECTION_SUCCESS = "Like collection successfully";
+        public const string UNLIKE_COLLECTION_SUCCESS = "Unlike collection successfully";
+
         // CommentPost related messages
         public const string COMMENT_CREATE_SUCCESS = "Comment created successfully";
         public const string COMMENT_UPDATE_SUCCESS = "Comment updated successfully";

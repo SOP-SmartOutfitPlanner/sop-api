@@ -68,6 +68,14 @@ namespace SOPServer.API
 
             services.AddScoped<ICollectionOutfitRepository, CollectionOutfitRepository>();
 
+            // Register comment collection dependencies
+            services.AddScoped<ICommentCollectionRepository, CommentCollectionRepository>();
+            services.AddScoped<ICommentCollectionService, CommentCollectionService>();
+
+            // Register like collection dependencies
+            services.AddScoped<ILikeCollectionRepository, LikeCollectionRepository>();
+            services.AddScoped<ILikeCollectionService, LikeCollectionService>();
+
             // ========== POST MANAGEMENT ==========
             services.AddScoped<IPostRepository, PostRepository>();
             services.AddScoped<IPostService, PostService>();

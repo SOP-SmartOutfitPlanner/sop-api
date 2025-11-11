@@ -41,7 +41,11 @@ namespace SOPServer.Repository.UnitOfWork
         private ICollectionOutfitRepository _collectionOutfitRepository;
         private ICommentCollectionRepository _commentCollectionRepository;
         private ILikeCollectionRepository _likeCollectionRepository;
+        private ISaveCollectionRepository _saveCollectionRepository;
         private IReportCommunityRepository _reportCommunityRepository;
+        private IUserSubscriptionRepository _userSubscriptionRepository;
+        private ISubscriptionPlanRepository _subscriptionPlanRepository;
+        private IUserSubscriptionTransactionRepository _subscriptionTransactionRepository;
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -256,6 +260,14 @@ namespace SOPServer.Repository.UnitOfWork
             }
         }
 
+        public ISaveCollectionRepository SaveCollectionRepository
+        {
+            get
+            {
+                return _saveCollectionRepository ??= new SaveCollectionRepository(_context);
+            }
+        }
+
         public IReportCommunityRepository ReportCommunityRepository
         {
             get
@@ -264,6 +276,30 @@ namespace SOPServer.Repository.UnitOfWork
             }
         }
 
+        public IUserSubscriptionRepository UserSubscriptionRepository
+        {
+            get
+            {
+                return _userSubscriptionRepository ??= new UserSubscriptionRepository(_context);
+            }
+        }
+
+        public ISubscriptionPlanRepository SubscriptionPlanRepository
+        {
+            get
+            {
+                return _subscriptionPlanRepository ??= new SubscriptionPlanRepository(_context);
+            }
+
+        }
+
+        public IUserSubscriptionTransactionRepository UserSubscriptionTransactionRepository
+        {
+            get
+            {
+                return _subscriptionTransactionRepository ??= new UserSubscriptionTransactionRepository(_context);
+            }
+        }
         public void Commit()
         {
             try

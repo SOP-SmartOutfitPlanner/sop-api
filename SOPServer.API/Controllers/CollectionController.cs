@@ -21,19 +21,40 @@ namespace SOPServer.API.Controllers
         [HttpGet]
         public Task<IActionResult> GetAllCollections([FromQuery] PaginationParameter paginationParameter)
         {
-            return ValidateAndExecute(async () => await _collectionService.GetAllCollectionsPaginationAsync(paginationParameter));
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? callerUserId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                callerUserId = parsedUserId;
+            }
+
+            return ValidateAndExecute(async () => await _collectionService.GetAllCollectionsPaginationAsync(paginationParameter, callerUserId));
         }
 
         [HttpGet("user/{userId}")]
         public Task<IActionResult> GetCollectionsByUser(long userId, [FromQuery] PaginationParameter paginationParameter)
         {
-            return ValidateAndExecute(async () => await _collectionService.GetCollectionsByUserPaginationAsync(paginationParameter, userId));
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? callerUserId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                callerUserId = parsedUserId;
+            }
+
+            return ValidateAndExecute(async () => await _collectionService.GetCollectionsByUserPaginationAsync(paginationParameter, userId, callerUserId));
         }
 
         [HttpGet("{id}")]
         public Task<IActionResult> GetCollectionById(long id)
         {
-            return ValidateAndExecute(async () => await _collectionService.GetCollectionByIdAsync(id));
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? callerUserId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                callerUserId = parsedUserId;
+            }
+
+            return ValidateAndExecute(async () => await _collectionService.GetCollectionByIdAsync(id, callerUserId));
         }
 
         [HttpPost]

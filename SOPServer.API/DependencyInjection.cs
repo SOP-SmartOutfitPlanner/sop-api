@@ -66,6 +66,14 @@ namespace SOPServer.API
             services.AddScoped<ICollectionRepository, CollectionRepository>();
             services.AddScoped<ICollectionService, CollectionService>();
 
+            services.AddScoped<ILikeCollectionRepository, LikeCollectionRepository>();
+            services.AddScoped<ILikeCollectionService, LikeCollectionService>();
+            services.AddScoped<ICommentCollectionRepository, CommentCollectionRepository>();
+            services.AddScoped<ICommentCollectionService, CommentCollectionService>();
+            services.AddScoped<ISaveCollectionRepository, SaveCollectionRepository>();
+            services.AddScoped<ISaveCollectionService, SaveCollectionService>();
+
+
             services.AddScoped<ICollectionOutfitRepository, CollectionOutfitRepository>();
 
             // Register comment collection dependencies
@@ -109,6 +117,7 @@ namespace SOPServer.API
             services.AddScoped<IRedisService, RedisService>();
             services.AddScoped<IMinioService, MinioService>();
             services.AddScoped<IQdrantService, QDrantService>();
+            services.AddScoped<IPayOSService, PayOSService>();
 
             // ========== EMAIL SERVICES ==========
             services.AddScoped<IMailService, MailService>();

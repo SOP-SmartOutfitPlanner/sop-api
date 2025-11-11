@@ -15,7 +15,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> GetFollowerCount(long userId);
         Task<BaseResponseModel> GetFollowingCount(long userId);
         Task<BaseResponseModel> IsFollowing(long followerId, long followingId);
-        Task<BaseResponseModel> GetFollowersByUserId(PaginationParameter paginationParameter, long userId);
-        Task<BaseResponseModel> GetFollowingByUserId(PaginationParameter paginationParameter, long userId);
+        Task<BaseResponseModel> GetFollowersByUserId(PaginationParameter paginationParameter, long userId, long? callerUserId);
+        Task<BaseResponseModel> GetFollowingByUserId(PaginationParameter paginationParameter, long userId, long? callerUserId);
     }
 }

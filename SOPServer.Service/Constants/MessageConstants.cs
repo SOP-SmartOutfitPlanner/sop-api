@@ -196,6 +196,12 @@ namespace SOPServer.Service.Constants
         public const string LIKE_COLLECTION_SUCCESS = "Like collection successfully";
         public const string UNLIKE_COLLECTION_SUCCESS = "Unlike collection successfully";
 
+        // SaveCollection related messages
+        public const string SAVE_COLLECTION_SUCCESS = "Save collection successfully";
+        public const string UNSAVE_COLLECTION_SUCCESS = "Unsave collection successfully";
+        public const string GET_SAVED_COLLECTIONS_SUCCESS = "Get saved collections successfully";
+        public const string CHECK_SAVED_COLLECTION_SUCCESS = "Check saved collection status successfully";
+
         // CommentPost related messages
         public const string COMMENT_CREATE_SUCCESS = "Comment created successfully";
         public const string COMMENT_UPDATE_SUCCESS = "Comment updated successfully";

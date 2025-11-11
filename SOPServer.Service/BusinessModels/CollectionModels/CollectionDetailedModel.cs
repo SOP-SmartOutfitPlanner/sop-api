@@ -12,6 +12,9 @@ namespace SOPServer.Service.BusinessModels.CollectionModels
         public string ShortDescription { get; set; }
         public int LikeCount { get; set; }
         public int CommentCount { get; set; }
+        public bool IsFollowing { get; set; }
+        public bool IsSaved { get; set; }
+        public bool IsLiked { get; set; }
         public List<CollectionOutfitModel> Outfits { get; set; } = new List<CollectionOutfitModel>();
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }

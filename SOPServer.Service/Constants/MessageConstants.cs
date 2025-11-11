@@ -258,5 +258,8 @@ namespace SOPServer.Service.Constants
         public const string REPORT_POST_ID_REQUIRED = "PostId is required when reporting a post";
         public const string REPORT_COMMENT_ID_REQUIRED = "CommentId is required when reporting a comment";
         public const string REPORT_ALREADY_EXISTS = "You have already reported this content";
+
+        // Subscription related messages
+        public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "Plan: ";
     }
 }

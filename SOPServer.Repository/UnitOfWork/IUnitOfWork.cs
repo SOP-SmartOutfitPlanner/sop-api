@@ -34,7 +34,9 @@ namespace SOPServer.Repository.UnitOfWork
         ICollectionRepository CollectionRepository { get; }
         ICollectionOutfitRepository CollectionOutfitRepository { get; }
         IReportCommunityRepository ReportCommunityRepository { get; }
-
+        IUserSubscriptionRepository UserSubscriptionRepository { get; }
+        IUserSubscriptionTransactionRepository UserSubscriptionTransactionRepository { get; }
+        ISubscriptionPlanRepository SubscriptionPlanRepository { get; }
         int Save();
         void Commit();
         void Rollback();

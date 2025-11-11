@@ -14,17 +14,10 @@ namespace SOPServer.API.Controllers
     {
         private readonly IUserService _userService;
         private readonly IOtpService _otpService;
-        private readonly IPayOSService _payOSService;
         public AuthController(IUserService userService, IOtpService otpService, IPayOSService payOSService)
         {
             _userService = userService;
             _otpService = otpService;
-            _payOSService = payOSService;
-        }
-        [HttpPost("payos/{id:int}")]
-        public Task<CreatePaymentLinkResponse> CreatePaymentLink(int id)
-        {
-            return _payOSService.CreatePaymentUrl(id);
         }
         /// <summary>
         /// Login with Google. If user not existed, send OTP through gmail.

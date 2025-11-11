@@ -50,7 +50,7 @@ namespace SOPServer.Service.Constants
 
         public const string TOKEN_NOT_VALID = "Token not valid";
         public const string LOGIN_SUCCESS_MESSAGE = "Login successfully";
-        public const string LOGIN_GOOGLE_SUCCESS_MESSAGE = "Login with google successfully";
+        public const string LOGIN_GOOGLE_SUCCESS_MESSAGE = "Login with google successfully.";
         public const string TOKEN_REFRESH_SUCCESS_MESSAGE = "Token refresh successfully";
         public const string FILE_NOT_FOUND = "File not found";
         public const string UPLOAD_FILE_SUCCESS = "File uploaded successfully";
@@ -91,6 +91,7 @@ namespace SOPServer.Service.Constants
         public const string GET_LIST_POST_BY_USER_SUCCESS = "Get list posts by user successfully";
         public const string GET_TOP_CONTRIBUTORS_SUCCESS = "Get top contributors successfully";
         public const string GET_LIST_POST_SUCCESS = "Get post successfully";
+        public const string GET_POST_LIKERS_SUCCESS = "Get list of post likers successfully";
 
         public const string OTP_SENT_SUCCESS = "OTP sent successfully to your gmail";
         public const string OTP_VERIFY_SUCCESS = "Verify OTP successfully";
@@ -191,6 +192,10 @@ namespace SOPServer.Service.Constants
         public const string ALREADY_LIKE_POST = "You have already liked this post";
         public const string LIKE_POST_NOT_FOUND = "Like not found";
 
+        // LikeCollection related messages
+        public const string LIKE_COLLECTION_SUCCESS = "Like collection successfully";
+        public const string UNLIKE_COLLECTION_SUCCESS = "Unlike collection successfully";
+
         // CommentPost related messages
         public const string COMMENT_CREATE_SUCCESS = "Comment created successfully";
         public const string COMMENT_UPDATE_SUCCESS = "Comment updated successfully";
@@ -251,5 +256,14 @@ namespace SOPServer.Service.Constants
         public const string COLLECTION_OUTFIT_NOT_FOUND = "This outfit is not in the collection";
         public const string ADD_OUTFIT_TO_COLLECTION_SUCCESS = "Outfit added to collection successfully";
         public const string REMOVE_OUTFIT_FROM_COLLECTION_SUCCESS = "Outfit removed from collection successfully";
+
+        // ReportCommunity related messages
+        public const string REPORT_COMMUNITY_CREATE_SUCCESS = "Report submitted successfully";
+        public const string REPORT_POST_ID_REQUIRED = "PostId is required when reporting a post";
+        public const string REPORT_COMMENT_ID_REQUIRED = "CommentId is required when reporting a comment";
+        public const string REPORT_ALREADY_EXISTS = "You have already reported this content";
+
+        // Subscription related messages
+        public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "Plan: ";
     }
 }

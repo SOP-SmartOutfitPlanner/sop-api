@@ -15,4 +15,5 @@ public partial class CommentPost : BaseEntity
     public virtual User User { get; set; }
     public virtual CommentPost ParentComment { get; set; }
     public virtual ICollection<CommentPost> Replies { get; set; } = new List<CommentPost>();
+    public virtual ICollection<ReportCommunity> ReportCommunities { get; set; } = new List<ReportCommunity>();
 }

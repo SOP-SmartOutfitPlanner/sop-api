@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
@@ -13,11 +14,15 @@ using SOPServer.Service.BusinessModels.OccasionModels;
 using SOPServer.Service.BusinessModels.RemBgModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.SeasonModels;
+using SOPServer.Service.BusinessModels.SplitImageModels;
 using SOPServer.Service.BusinessModels.StyleModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.Utils;
+using System;
+using System.IO;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
@@ -33,8 +38,9 @@ namespace SOPServer.Service.Services.Implements
         private readonly IMinioService _minioService;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IQdrantService _qdrantService;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public ItemService(IUnitOfWork unitOfWork, IMapper mapper, IGeminiService geminiService, IMinioService minioService, IHttpClientFactory httpClientFactory, IQdrantService qdrantService)
+        public ItemService(IUnitOfWork unitOfWork, IMapper mapper, IGeminiService geminiService, IMinioService minioService, IHttpClientFactory httpClientFactory, IQdrantService qdrantService, IServiceScopeFactory scopeFactory)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -42,6 +48,7 @@ namespace SOPServer.Service.Services.Implements
             _minioService = minioService;
             _httpClientFactory = httpClientFactory;
             _qdrantService = qdrantService;
+            _scopeFactory = scopeFactory;
         }
 
         public async Task<BaseResponseModel> UpdateItemAsync(long id, ItemCreateModel model)
@@ -61,21 +68,21 @@ namespace SOPServer.Service.Services.Implements
             {
                 throw new NotFoundException(MessageConstants.CATEGORY_NOT_EXIST);
             }
-            if(category.ParentId == null)
+            if (category.ParentId == null)
             {
                 throw new BadRequestException(MessageConstants.CATEGORY_PARENT_NOT_EXIST);
             }
 
-            foreach(var styleId in model.StyleIds)
+            foreach (var styleId in model.StyleIds)
             {
-                var style =  await _unitOfWork.StyleRepository.GetByIdAsync(styleId);
-                if(style == null)
+                var style = await _unitOfWork.StyleRepository.GetByIdAsync(styleId);
+                if (style == null)
                 {
                     throw new NotFoundException($"Style with id {styleId} does not exist");
                 }
             }
 
-            foreach(var occasionId in model.OccasionIds)
+            foreach (var occasionId in model.OccasionIds)
             {
                 var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(occasionId);
                 if (occasion == null)
@@ -84,7 +91,7 @@ namespace SOPServer.Service.Services.Implements
                 }
             }
 
-            foreach(var seasonId in model.SeasonIds)
+            foreach (var seasonId in model.SeasonIds)
             {
                 var season = await _unitOfWork.SeasonRepository.GetByIdAsync(seasonId);
                 if (season == null)
@@ -893,7 +900,7 @@ namespace SOPServer.Service.Services.Implements
             promptText = promptText.Replace("{{occasions}}", occasionsJson);
             promptText = promptText.Replace("{{seasons}}", seasonsJson);
 
-            // Step 1: Fetch all items first
+            // Step1: Fetch all items first
             var items = new List<Item>();
             foreach (var itemId in request.ItemIds)
             {
@@ -906,7 +913,7 @@ namespace SOPServer.Service.Services.Implements
                     items.Add(item);
             }
 
-            // Step 2: Process all images in parallel (no DB operations here)
+            // Step2: Process all images in parallel (no DB operations here)
             var analysisResults = await Task.WhenAll(items.Select(async item =>
                   {
                       var imgResponse = await ImageUtils.ConvertToBase64Async(item.ImgUrl, _httpClientFactory.CreateClient("AnalysisClient"));
@@ -920,7 +927,7 @@ namespace SOPServer.Service.Services.Implements
 
                   }));
 
-            // Step 3: Update all items with analysis results
+            // Step3: Update all items with analysis results
             foreach (var result in analysisResults)
             {
                 var item = result.Item;
@@ -979,7 +986,7 @@ namespace SOPServer.Service.Services.Implements
             // Save all item updates
             await _unitOfWork.SaveAsync();
 
-            // Step 4: Update relationships for all items
+            // Step4: Update relationships for all items
             foreach (var result in analysisResults)
             {
                 var item = result.Item;
@@ -992,7 +999,7 @@ namespace SOPServer.Service.Services.Implements
                 await UpdateItemRelationshipsAsync(item.Id, styleIds, occasionIds, seasonIds);
             }
 
-            // Step 5: Build confidence model response
+            // Step5: Build confidence model response
             var itemConfidenceModel = analysisResults.Select(result => new ItemConfidenceModel
             {
                 ItemId = (int)result.Item.Id,
@@ -1029,6 +1036,9 @@ namespace SOPServer.Service.Services.Implements
                     await _qdrantService.UpSertItem(embeddingText, payload, newItemInclude.Id);
                 }
             }
+
+            // Fire-and-forget background using a new scope to run RemoveBackgroundAndUpdateItem
+            _ = RemoveBackgroundAndUpdateItem(analysisResults.Select(x => x.Item.Id).ToList());
 
             return new BaseResponseModel
             {
@@ -1069,9 +1079,126 @@ namespace SOPServer.Service.Services.Implements
                 {
                     TotalItems = totalItems,
                     CategoryCounts = categoryCounts
-                } 
+                }
             };
 
+        }
+
+        private async Task RemoveBackgroundAndUpdateItem(List<long> itemIds)
+        {
+            if (itemIds == null || !itemIds.Any())
+                return;
+
+            // Create a new scope so we use scoped services safely in a background task
+            using var scope = _scopeFactory.CreateScope();
+            var scopedUnitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var scopedMinioService = scope.ServiceProvider.GetRequiredService<IMinioService>();
+            var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
+
+            foreach (var itemId in itemIds)
+            {
+                var item = await scopedUnitOfWork.ItemRepository.GetByIdAsync(itemId);
+                if (item == null || string.IsNullOrEmpty(item.ImgUrl))
+                    continue;
+
+                var client = httpClientFactory.CreateClient("RembgClient");
+                var requestBody = new RembgRequest
+                {
+                    Input = new RembgInput { Image = item.ImgUrl }
+                };
+
+                HttpResponseMessage? responseRemBg = null;
+                const int maxRetries = 3;
+                int retryCount = 0;
+
+                while (retryCount < maxRetries)
+                {
+                    responseRemBg = await client.PostAsJsonAsync("predictions", requestBody);
+
+                    if (responseRemBg.IsSuccessStatusCode)
+                        break; // ✅ Thành công -> thoát vòng lặp
+
+                    retryCount++;
+                    await Task.Delay(1000 * retryCount); // ⏱ Tăng dần delay (1s, 2s, 3s)
+                }
+
+                if (responseRemBg == null || !responseRemBg.IsSuccessStatusCode)
+                {
+                    // ❌ Nếu retry hết mà vẫn fail thì bỏ qua hoặc throw lỗi
+                    continue;
+                }
+
+                var result = await responseRemBg.Content.ReadFromJsonAsync<RembgResponse>();
+                if (result == null || string.IsNullOrEmpty(result.Output))
+                {
+                    continue;
+                }
+
+                var fileName = item.ImgUrl.Split('/').Last();
+                var fileRemoveBackground = ImageUtils.Base64ToFormFile(result.Output, fileName);
+
+                var fileupload = await scopedMinioService.UploadImageAsync(fileRemoveBackground);
+                if (fileupload?.Data is not ImageUploadResult uploadData || string.IsNullOrEmpty(uploadData.DownloadUrl))
+                {
+                    // Skip updating this item if upload failed
+                    continue;
+                }
+
+                await scopedMinioService.DeleteImageByURLAsync(item.ImgUrl);
+                item.ImgUrl = uploadData.DownloadUrl;
+                scopedUnitOfWork.ItemRepository.UpdateAsync(item);
+                await scopedUnitOfWork.SaveAsync();
+            }
+        }
+
+        public async Task<BaseResponseModel> SplitItem(IFormFile file)
+        {
+            var client = _httpClientFactory.CreateClient("SplitItem");
+            var requestUrl = "be/api/v1/split-image/";
+            using var formData = new MultipartFormDataContent();
+            await using var fileStream = file.OpenReadStream();
+            var fileContent = new StreamContent(fileStream);
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+            formData.Add(fileContent, "image_file", file.FileName);
+
+            var response = await client.PostAsync(requestUrl, formData);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new BadRequestException("Failed to split image");
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            var serializerOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true
+            };
+
+            var splitResult = JsonSerializer.Deserialize<SplitImageResponse>(responseBody, serializerOptions);
+
+            if (splitResult == null || !splitResult.Success)
+            {
+                throw new BadRequestException(splitResult?.Message ?? "Failed to split image");
+            }
+
+            var imageUrls = splitResult.Items
+                       .Where(item => item.Success)
+                    .Select(item => new
+                    {
+                        Category = item.Category,
+                        Url = item.Url,
+                        FileName = item.Filename
+                    })
+                    .ToList();
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = splitResult.Message ?? "Successfully split image",
+                Data = imageUrls
+            };
         }
     }
 }

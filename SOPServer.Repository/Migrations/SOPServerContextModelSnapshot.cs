@@ -867,6 +867,58 @@ namespace SOPServer.Repository.Migrations
                     b.ToTable("PostImage", (string)null);
                 });
 
+            modelBuilder.Entity("SOPServer.Repository.Entities.ReportCommunity", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("Action")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("CommentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("CommentPostId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("PostId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommentPostId");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ReportCommunities");
+                });
+
             modelBuilder.Entity("SOPServer.Repository.Entities.SaveCollection", b =>
                 {
                     b.Property<long>("Id")
@@ -1257,9 +1309,6 @@ namespace SOPServer.Repository.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.Property<long>("SubscriptionId")
-                        .HasColumnType("bigint");
-
                     b.Property<string>("TransactionCode")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1604,6 +1653,29 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("Post");
                 });
 
+            modelBuilder.Entity("SOPServer.Repository.Entities.ReportCommunity", b =>
+                {
+                    b.HasOne("SOPServer.Repository.Entities.CommentPost", "CommentPost")
+                        .WithMany("ReportCommunities")
+                        .HasForeignKey("CommentPostId");
+
+                    b.HasOne("SOPServer.Repository.Entities.Post", "Post")
+                        .WithMany("ReportCommunities")
+                        .HasForeignKey("PostId");
+
+                    b.HasOne("SOPServer.Repository.Entities.User", "User")
+                        .WithMany("ReportCommunities")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CommentPost");
+
+                    b.Navigation("Post");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SOPServer.Repository.Entities.SaveCollection", b =>
                 {
                     b.HasOne("SOPServer.Repository.Entities.Collection", "Collection")
@@ -1696,7 +1768,7 @@ namespace SOPServer.Repository.Migrations
                         .HasForeignKey("UserId");
 
                     b.HasOne("SOPServer.Repository.Entities.UserSubscription", "UserSubscription")
-                        .WithMany()
+                        .WithMany("UserSubscriptionTransactions")
                         .HasForeignKey("UserSubscriptionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1734,6 +1806,8 @@ namespace SOPServer.Repository.Migrations
             modelBuilder.Entity("SOPServer.Repository.Entities.CommentPost", b =>
                 {
                     b.Navigation("Replies");
+
+                    b.Navigation("ReportCommunities");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Hashtag", b =>
@@ -1773,6 +1847,8 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("PostHashtags");
 
                     b.Navigation("PostImages");
+
+                    b.Navigation("ReportCommunities");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Season", b =>
@@ -1816,6 +1892,8 @@ namespace SOPServer.Repository.Migrations
 
                     b.Navigation("Posts");
 
+                    b.Navigation("ReportCommunities");
+
                     b.Navigation("SaveCollections");
 
                     b.Navigation("UserOccasions");
@@ -1830,6 +1908,11 @@ namespace SOPServer.Repository.Migrations
             modelBuilder.Entity("SOPServer.Repository.Entities.UserOccasion", b =>
                 {
                     b.Navigation("OutfitUsageHistories");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.UserSubscription", b =>
+                {
+                    b.Navigation("UserSubscriptionTransactions");
                 });
 #pragma warning restore 612, 618
         }

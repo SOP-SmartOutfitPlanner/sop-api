@@ -76,6 +76,14 @@ namespace SOPServer.API
 
             services.AddScoped<ICollectionOutfitRepository, CollectionOutfitRepository>();
 
+            // Register comment collection dependencies
+            services.AddScoped<ICommentCollectionRepository, CommentCollectionRepository>();
+            services.AddScoped<ICommentCollectionService, CommentCollectionService>();
+
+            // Register like collection dependencies
+            services.AddScoped<ILikeCollectionRepository, LikeCollectionRepository>();
+            services.AddScoped<ILikeCollectionService, LikeCollectionService>();
+
             // ========== POST MANAGEMENT ==========
             services.AddScoped<IPostRepository, PostRepository>();
             services.AddScoped<IPostService, PostService>();
@@ -92,6 +100,10 @@ namespace SOPServer.API
             services.AddScoped<ICommentPostRepository, CommentPostRepository>();
             services.AddScoped<ICommentPostService, CommentPostService>();
 
+            // ========== REPORT COMMUNITY ==========
+            services.AddScoped<IReportCommunityRepository, ReportCommunityRepository>();
+            services.AddScoped<IReportCommunityService, ReportCommunityService>();
+
             // ========== FOLLOWER MANAGEMENT ==========
             services.AddScoped<IFollowerRepository, FollowerRepository>();
             services.AddScoped<IFollowerService, FollowerService>();
@@ -105,6 +117,7 @@ namespace SOPServer.API
             services.AddScoped<IRedisService, RedisService>();
             services.AddScoped<IMinioService, MinioService>();
             services.AddScoped<IQdrantService, QDrantService>();
+            services.AddScoped<IPayOSService, PayOSService>();
 
             // ========== EMAIL SERVICES ==========
             services.AddScoped<IMailService, MailService>();

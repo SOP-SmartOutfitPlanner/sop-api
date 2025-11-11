@@ -15,5 +15,6 @@ namespace SOPServer.Repository.Entities
         public virtual User User { get; set; }
 
         public virtual SubscriptionPlan SubscriptionPlan { get; set; }
+        public virtual ICollection<UserSubscriptionTransaction> UserSubscriptionTransactions { get; set; } = new List<UserSubscriptionTransaction>();
     }
 }

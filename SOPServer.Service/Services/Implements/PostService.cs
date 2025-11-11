@@ -146,7 +146,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetPostByUserIdAsync(PaginationParameter paginationParameter, long userId)
+        public async Task<BaseResponseModel> GetPostByUserIdAsync(PaginationParameter paginationParameter, long userId, long? callerUserId)
         {
             await ValidateUserExistsAsync(userId);
 
@@ -165,15 +165,44 @@ namespace SOPServer.Service.Services.Implements
 
             var postModels = _mapper.Map<Pagination<PostModel>>(posts);
 
+            // Check following status if caller user ID is provided
+            if (callerUserId.HasValue)
+            {
+                foreach (var postModel in postModels)
+                {
+                    // Don't check if post author is the same as caller
+                    if (postModel.UserId != callerUserId.Value)
+                    {
+                        var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(callerUserId.Value, postModel.UserId);
+                        postModel.IsFollowing = isFollowing;
+                    }
+                    else
+                    {
+                        postModel.IsFollowing = false;
+                    }
+                }
+            }
+            else
+            {
+                foreach (var postModel in postModels)
+                {
+                    postModel.IsFollowing = false;
+                }
+            }
+
             return CreatePaginatedResponse(postModels, MessageConstants.GET_LIST_POST_BY_USER_SUCCESS);
         }
 
-        public async Task<BaseResponseModel> GetAllPostsAsync(PaginationParameter paginationParameter, long userId)
+        public async Task<BaseResponseModel> GetAllPostsAsync(PaginationParameter paginationParameter, long? callerUserId)
         {
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
-            if (user == null)
+            // Validate user if provided
+            if (callerUserId.HasValue)
             {
-                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(callerUserId.Value);
+                if (user == null)
+                {
+                    throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+                }
             }
 
             var post = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
@@ -190,11 +219,33 @@ namespace SOPServer.Service.Services.Implements
 
             var postModels = _mapper.Map<Pagination<PostModel>>(post);
 
-            // Check if user has liked each post
-            foreach (var postModel in postModels)
+            // Check if user has liked each post and following status
+            if (callerUserId.HasValue)
             {
-                var likeExists = await _unitOfWork.LikePostRepository.GetByUserAndPost(userId, postModel.Id);
-                postModel.IsLiked = likeExists != null && !likeExists.IsDeleted;
+                foreach (var postModel in postModels)
+                {
+                    var likeExists = await _unitOfWork.LikePostRepository.GetByUserAndPost(callerUserId.Value, postModel.Id);
+                    postModel.IsLiked = likeExists != null && !likeExists.IsDeleted;
+
+                    // Don't check if post author is the same as caller
+                    if (postModel.UserId != callerUserId.Value)
+                    {
+                        var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(callerUserId.Value, postModel.UserId);
+                        postModel.IsFollowing = isFollowing;
+                    }
+                    else
+                    {
+                        postModel.IsFollowing = false;
+                    }
+                }
+            }
+            else
+            {
+                foreach (var postModel in postModels)
+                {
+                    postModel.IsLiked = false;
+                    postModel.IsFollowing = false;
+                }
             }
 
             return new BaseResponseModel
@@ -320,6 +371,83 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.GET_TOP_CONTRIBUTORS_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = pagination,
+                    MetaData = new
+                    {
+                        pagination.TotalCount,
+                        pagination.PageSize,
+                        pagination.CurrentPage,
+                        pagination.TotalPages,
+                        pagination.HasNext,
+                        pagination.HasPrevious
+                    }
+                }
+            };
+        }
+
+        public async Task<BaseResponseModel> GetPostLikersAsync(PaginationParameter paginationParameter, long postId, long? userId = null)
+        {
+            // Validate post exists
+            var post = await _unitOfWork.PostRepository.GetByIdAsync(postId);
+            if (post == null)
+            {
+                throw new NotFoundException(MessageConstants.POST_NOT_FOUND);
+            }
+
+            // Validate user if provided
+            if (userId.HasValue)
+            {
+                await ValidateUserExistsAsync(userId.Value);
+            }
+
+            // Get likers with user information
+            var likersQuery = _unitOfWork.LikePostRepository.GetQueryable()
+                .Where(lp => lp.PostId == postId && !lp.IsDeleted)
+                .Include(lp => lp.User)
+                .Select(lp => new PostLikerModel
+                {
+                    UserId = lp.UserId,
+                    DisplayName = lp.User.DisplayName ?? "Unknown",
+                    AvatarUrl = lp.User.AvtUrl ?? string.Empty,
+                    IsFollowing = false
+                })
+                .AsQueryable();
+
+            var totalCount = await likersQuery.CountAsync();
+
+            var likers = await likersQuery
+                .Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
+                .Take(paginationParameter.PageSize)
+                .ToListAsync();
+
+            // Check following status if userId is provided
+            if (userId.HasValue)
+            {
+                foreach (var liker in likers)
+                {
+                    // Don't check if liker is the same as requesting user
+                    if (liker.UserId != userId.Value)
+                    {
+                        var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(userId.Value, liker.UserId);
+                        liker.IsFollowing = isFollowing;
+                    }
+                }
+            }
+
+            var pageSize = paginationParameter.TakeAll ? totalCount : paginationParameter.PageSize;
+            var pagination = new Pagination<PostLikerModel>(
+                likers,
+                totalCount,
+                paginationParameter.PageIndex,
+                pageSize
+            );
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_POST_LIKERS_SUCCESS,
                 Data = new ModelPaging
                 {
                     Data = pagination,

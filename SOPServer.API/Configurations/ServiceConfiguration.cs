@@ -29,6 +29,8 @@ namespace SOPServer.API.Configurations
             services.Configure<QDrantClientSettings>(
                 configuration.GetSection("QDrantSettings"));
 
+            services.Configure<PayOSSettings>(
+                configuration.GetSection("PayOSSettings"));
             // Add Infrastructure Services
             services.AddInfractstructure(configuration);
 

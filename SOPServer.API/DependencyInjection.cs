@@ -109,6 +109,7 @@ namespace SOPServer.API
             services.AddScoped<IRedisService, RedisService>();
             services.AddScoped<IMinioService, MinioService>();
             services.AddScoped<IQdrantService, QDrantService>();
+            services.AddScoped<IPayOSService, PayOSService>();
 
             // ========== EMAIL SERVICES ==========
             services.AddScoped<IMailService, MailService>();

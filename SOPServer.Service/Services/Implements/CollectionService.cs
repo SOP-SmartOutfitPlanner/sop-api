@@ -33,7 +33,9 @@ namespace SOPServer.Service.Services.Implements
                         .ThenInclude(co => co.Outfit)
                         .ThenInclude(o => o.OutfitItems)
                         .ThenInclude(oi => oi.Item)
-                        .ThenInclude(i => i.Category),
+                        .ThenInclude(i => i.Category)
+                    .Include(x => x.CommentCollections)
+                    .Include(x => x.LikeCollections),
                 filter: string.IsNullOrWhiteSpace(paginationParameter.Search)
                     ? null
                     : c => (c.Title != null && c.Title.Contains(paginationParameter.Search)) ||

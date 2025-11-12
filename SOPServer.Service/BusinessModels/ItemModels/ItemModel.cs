@@ -1,4 +1,5 @@
-﻿using SOPServer.Service.BusinessModels.CategoryModels;
+﻿using SOPServer.Repository.Enums;
+using SOPServer.Service.BusinessModels.CategoryModels;
 using SOPServer.Service.BusinessModels.OccasionModels;
 using SOPServer.Service.BusinessModels.SeasonModels;
 using SOPServer.Service.BusinessModels.StyleModels;
@@ -42,6 +43,8 @@ namespace SOPServer.Service.BusinessModels.ItemModels
         public string Fabric { get; set; }
         public bool IsAnalyzed { get; set; }
         public int AIConfidence { get; set; }
+
+        public ItemType ItemType { get; set; }
 
         public List<OccasionItemModel> Occasions { get; set; }
 

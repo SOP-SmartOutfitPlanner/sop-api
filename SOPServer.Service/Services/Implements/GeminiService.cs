@@ -218,42 +218,33 @@ namespace SOPServer.Service.Services.Implements
             var generateRequest = new GenerateContentRequest();
             generateRequest.UseJsonMode<List<string>>();
             var occasionPart = !string.IsNullOrWhiteSpace(occasion)
-        ? $"- Occasion: {occasion}"
-        : string.Empty;
+                ? $"Occasion: {occasion}"
+                : string.Empty;
 
             var prompt = $@"
-You are a professional fashion stylist with expertise in creating cohesive, stylish outfits.
+                You are a fashion stylist.
 
-Generate a detailed list of individual clothing and accessory item descriptions that together form a complete, wearable outfit.
+                Create a cohesive outfit as a list of clothing and accessories (no fixed slots, layering allowed).
+                Each item = short vivid description with type, color, material, and style.
 
-Each item description should be natural and vivid, including:
-- Item type (e.g., shirt, pants, jacket, shoes, accessories)
-- Color and material/fabric
-- Style characteristics (e.g., casual, formal, minimalist, bold)
-- Pattern or texture if applicable
+                Context:
+                User: {userCharacteristic}
+                {occasionPart}
 
-Context for the outfit:
-- User characteristics: {userCharacteristic}
-{occasionPart}
+                Rules:
+                - Items must match in color, texture, and style.
+                - Fit the occasion or user preference.
+                - Return ONLY a JSON array of strings.
 
-Important guidelines:
-- Create a cohesive outfit where all items complement each other in style, color, and formality
-- Include essential pieces: top, bottom (or full-body item like dress), footwear
-- Add appropriate layers if needed (jacket, cardigan, etc.)
-- Include at least one accessory that completes the look
-- Ensure items match the user's context and occasion
-- Descriptions should be specific enough to match against a wardrobe database
-
-Return ONLY a JSON array of strings, where each string is one detailed item description.
-Example format:
-[
-  ""Navy blue cotton slim-fit chino pants with modern tailored cut"",
-  ""White linen button-down shirt with relaxed fit and minimal design"",
-  ""Brown leather loafers with casual smart style"",
-  ""Silver minimalist watch with leather strap""
-]
-
-Do not include explanations, commentary, or any text outside the JSON array.";
+                Example:
+                [
+                  ""White linen shirt with relaxed fit"",
+                  ""Beige overshirt with wooden buttons"",
+                  ""Light blue jeans"",
+                  ""White sneakers"",
+                  ""Brown leather watch""
+                ]
+            ";
 
             generateRequest.AddText(prompt);
             return await _generativeModel.GenerateObjectAsync<List<string>>(generateRequest);
@@ -324,7 +315,7 @@ Example response format:
 Be selective but creative. Choose items that genuinely complement each other.";
 
             generateRequest.AddText(prompt);
-            
+
             const int maxRetryAttempts = 3;
             for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
             {
@@ -332,15 +323,15 @@ Be selective but creative. Choose items that genuinely complement each other.";
                 {
                     _logger.LogInformation("SelectOutfitFromItems: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
                     var result = await _generativeModel.GenerateObjectAsync<OutfitSelectionModel>(generateRequest);
-                    
+
                     if (result != null && result.ItemIds != null && result.ItemIds.Any() && !string.IsNullOrWhiteSpace(result.Reason))
                     {
                         _logger.LogInformation("SelectOutfitFromItems: Successfully selected outfit on attempt {Attempt}", attempt);
                         return result;
                     }
-                    
+
                     _logger.LogWarning("SelectOutfitFromItems: Attempt {Attempt} returned incomplete data", attempt);
-                    
+
                     if (attempt == maxRetryAttempts)
                     {
                         throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: AI returned incomplete outfit selection");
@@ -353,7 +344,7 @@ Be selective but creative. Choose items that genuinely complement each other.";
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "SelectOutfitFromItems: Error on attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
-                    
+
                     if (attempt == maxRetryAttempts)
                     {
                         throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: {ex.Message}");

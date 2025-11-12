@@ -10,6 +10,7 @@ using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.OutfitCalendarModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.ResultModels;
+using SOPServer.Service.BusinessModels.UserModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
@@ -705,35 +706,20 @@ namespace SOPServer.Service.Services.Implements
         {
             var userCharacteristic = await _userService.GetUserCharacteristic(userId);
 
-            // Build user characteristic string
-            string userCharacteristicString = string.Empty;
-            if (userCharacteristic != null)
-            {
-                var uc = userCharacteristic;
-                var sb = new StringBuilder();
-                if (!string.IsNullOrWhiteSpace(uc.Location)) sb.Append($"Location: {uc.Location}; ");
-                if (!string.IsNullOrWhiteSpace(uc.Bio)) sb.Append($"Bio: {uc.Bio}; ");
-                if (!string.IsNullOrWhiteSpace(uc.Job)) sb.Append($"Job: {uc.Job}; ");
+            // Build comprehensive user characteristic string
+            string userCharacteristicString = BuildUserCharacteristicString(userCharacteristic);
 
-                userCharacteristicString = sb.ToString().Trim();
-            }
-
+            // Build comprehensive occasion string if provided
             string occasionString = string.Empty;
             if (userOccasionId.HasValue)
             {
-                var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdIncludeAsync(userOccasionId.Value, include: x => x.Include(x => x.Occasion));
+                var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdIncludeAsync(
+                    userOccasionId.Value, 
+                    include: x => x.Include(x => x.Occasion));
+                
                 if (userOccasion != null)
                 {
-                    var sbOcc = new StringBuilder();
-                    if (!string.IsNullOrWhiteSpace(userOccasion.Name)) sbOcc.Append($"Name: {userOccasion.Name}; ");
-                    if (userOccasion.Occasion != null && !string.IsNullOrWhiteSpace(userOccasion.Occasion.Name)) sbOcc.Append($"Occasion: {userOccasion.Occasion.Name}; ");
-                    if (!string.IsNullOrWhiteSpace(userOccasion.Description)) sbOcc.Append($"Description: {userOccasion.Description}; ");
-                    sbOcc.Append($"DateOccasion: {userOccasion.DateOccasion:yyyy-MM-dd}; ");
-                    if (userOccasion.StartTime.HasValue) sbOcc.Append($"StartTime: {userOccasion.StartTime.Value:HH:mm}; ");
-                    if (userOccasion.EndTime.HasValue) sbOcc.Append($"EndTime: {userOccasion.EndTime.Value:HH:mm}; ");
-                    if (!string.IsNullOrWhiteSpace(userOccasion.WeatherSnapshot)) sbOcc.Append($"WeatherSnapshot: {userOccasion.WeatherSnapshot}; ");
-
-                    occasionString = sbOcc.ToString().Trim();
+                    occasionString = BuildOccasionString(userOccasion);
                 }
             }
 
@@ -850,6 +836,68 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.OUTFIT_SUGGESTION_SUCCESS,
                 Data = suggestionResponse
             };
+        }
+
+        private string BuildUserCharacteristicString(UserCharacteristicModel userCharacteristic)
+        {
+            if (userCharacteristic == null) return string.Empty;
+
+            var characteristics = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(userCharacteristic.DisplayName))
+                characteristics.Add($"DisplayName: {userCharacteristic.DisplayName}");
+
+            if (userCharacteristic.Dob.HasValue)
+                characteristics.Add($"DateOfBirth: {userCharacteristic.Dob.Value:yyyy-MM-dd}");
+
+            characteristics.Add($"Gender: {userCharacteristic.Gender}");
+
+            if (!string.IsNullOrWhiteSpace(userCharacteristic.Location))
+                characteristics.Add($"Location: {userCharacteristic.Location}");
+
+            if (!string.IsNullOrWhiteSpace(userCharacteristic.Bio))
+                characteristics.Add($"Bio: {userCharacteristic.Bio}");
+
+            if (!string.IsNullOrWhiteSpace(userCharacteristic.Job))
+                characteristics.Add($"Job: {userCharacteristic.Job}");
+
+            if (userCharacteristic.Styles != null && userCharacteristic.Styles.Any())
+                characteristics.Add($"PreferredStyles: {string.Join(", ", userCharacteristic.Styles)}");
+
+            if (userCharacteristic.PreferedColor != null && userCharacteristic.PreferedColor.Any())
+                characteristics.Add($"PreferredColors: {string.Join(", ", userCharacteristic.PreferedColor)}");
+
+            if (userCharacteristic.AvoidedColor != null && userCharacteristic.AvoidedColor.Any())
+                characteristics.Add($"AvoidedColors: {string.Join(", ", userCharacteristic.AvoidedColor)}");
+
+            return string.Join("; ", characteristics);
+        }
+
+        private string BuildOccasionString(UserOccasion userOccasion)
+        {
+            var occasionDetails = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(userOccasion.Name))
+                occasionDetails.Add($"EventName: {userOccasion.Name}");
+
+            if (userOccasion.Occasion != null && !string.IsNullOrWhiteSpace(userOccasion.Occasion.Name))
+                occasionDetails.Add($"OccasionType: {userOccasion.Occasion.Name}");
+
+            if (!string.IsNullOrWhiteSpace(userOccasion.Description))
+                occasionDetails.Add($"Description: {userOccasion.Description}");
+
+            occasionDetails.Add($"Date: {userOccasion.DateOccasion:yyyy-MM-dd}");
+
+            if (userOccasion.StartTime.HasValue)
+                occasionDetails.Add($"StartTime: {userOccasion.StartTime.Value:HH:mm}");
+
+            if (userOccasion.EndTime.HasValue)
+                occasionDetails.Add($"EndTime: {userOccasion.EndTime.Value:HH:mm}");
+
+            if (!string.IsNullOrWhiteSpace(userOccasion.WeatherSnapshot))
+                occasionDetails.Add($"Weather: {userOccasion.WeatherSnapshot}");
+
+            return string.Join("; ", occasionDetails);
         }
     }
 }

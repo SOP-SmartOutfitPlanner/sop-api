@@ -13,6 +13,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task EnsureCollectionExistsAsync();
         Task<bool> UpSertItem(List<float> embedding, Dictionary<string, object> payload, long id);
         Task<bool> DeleteItem(long id);
-        Task<List<QDrantSearchModels>> SearchSimilarityByUserId(List<float> embedding, long userId, SlotItem slotItem);
+        Task<List<QDrantSearchModels>> SearchSimilarityByUserId(List<float> embedding, long userId);
     }
 }

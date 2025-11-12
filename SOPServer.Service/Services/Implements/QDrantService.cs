@@ -74,7 +74,7 @@ namespace SOPServer.Service.Services.Implements
             return result.Status == UpdateStatus.Completed;
         }
 
-        public async Task<List<QDrantSearchModels>> SearchSimilarityByUserId(List<float> embedding, long userId, SlotItem slotItem)
+        public async Task<List<QDrantSearchModels>> SearchSimilarityByUserId(List<float> embedding, long userId)
         {
             List<QDrantSearchModels> result = new List<QDrantSearchModels>();
             var searchResult = await _client.SearchAsync(
@@ -91,18 +91,7 @@ namespace SOPServer.Service.Services.Implements
                                 Key = "UserId",
                                 Match = new Match
                                 {
-                                    Keyword = userId.ToString()
-                                }
-                            }
-                        },
-                        new Condition
-                        {
-                            Field = new FieldCondition
-                            {
-                                Key = "Category",
-                                Match = new Match
-                                {
-                                    Keyword = slotItem.ToString()
+                                   Integer  = userId
                                 }
                             }
                         }
@@ -117,7 +106,7 @@ namespace SOPServer.Service.Services.Implements
                 {
                     result.Add(new QDrantSearchModels
                     {
-                        id = int.Parse(item.Id.ToString()),
+                        id = int.Parse(item.Id.Num.ToString()),
                         score = item.Score
                     });
                 }

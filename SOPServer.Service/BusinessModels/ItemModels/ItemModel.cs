@@ -23,6 +23,8 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public string Color { get; set; }
 
+        public string AiDescription { get; set; }
+
         public string Brand { get; set; }
 
         public string FrequencyWorn { get; set; }

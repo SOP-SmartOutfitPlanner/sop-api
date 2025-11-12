@@ -101,10 +101,16 @@ namespace SOPServer.API.Controllers
         [HttpGet("{postId}/likers")]
         public Task<IActionResult> GetPostLikers(
             [FromQuery] PaginationParameter paginationParameter,
-            long postId,
-            [FromQuery] long? userId = null)
+            long postId)
         {
-            return ValidateAndExecute(async () => await _postService.GetPostLikersAsync(paginationParameter, postId, userId));
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? callerUserId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                callerUserId = parsedUserId;
+            }
+            
+            return ValidateAndExecute(async () => await _postService.GetPostLikersAsync(paginationParameter, postId, callerUserId));
         }
     }
 }

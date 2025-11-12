@@ -155,6 +155,11 @@ public partial class SOPServerContext : DbContext
                 .IsUnicode(true)
                 .IsRequired(false);
 
+            // Map ItemType enum to int in database
+            entity.Property(e => e.ItemType)
+                .HasConversion<int>()
+                .IsRequired(false);
+
             entity.HasOne(d => d.User).WithMany(p => p.Items)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK_Item_User");

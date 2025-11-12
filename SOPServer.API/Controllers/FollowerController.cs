@@ -66,7 +66,14 @@ namespace SOPServer.API.Controllers
         [HttpGet("followers/{userId}")]
         public Task<IActionResult> GetFollowersByUserId([FromQuery] PaginationParameter paginationParameter, long userId)
         {
-            return ValidateAndExecute(async () => await _followerService.GetFollowersByUserId(paginationParameter, userId));
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? callerUserId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                callerUserId = parsedUserId;
+            }
+            
+            return ValidateAndExecute(async () => await _followerService.GetFollowersByUserId(paginationParameter, userId, callerUserId));
         }
 
         /// <summary>
@@ -77,7 +84,14 @@ namespace SOPServer.API.Controllers
         [HttpGet("following/{userId}")]
         public Task<IActionResult> GetFollowingByUserId([FromQuery] PaginationParameter paginationParameter, long userId)
         {
-            return ValidateAndExecute(async () => await _followerService.GetFollowingByUserId(paginationParameter, userId));
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? callerUserId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                callerUserId = parsedUserId;
+            }
+            
+            return ValidateAndExecute(async () => await _followerService.GetFollowingByUserId(paginationParameter, userId, callerUserId));
         }
     }
 }

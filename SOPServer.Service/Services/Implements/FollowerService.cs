@@ -123,13 +123,23 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetFollowersByUserId(PaginationParameter paginationParameter, long userId)
+        public async Task<BaseResponseModel> GetFollowersByUserId(PaginationParameter paginationParameter, long userId, long? callerUserId)
         {
             // Check if user exists
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
             if (user == null)
             {
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Validate caller user if provided
+            if (callerUserId.HasValue)
+            {
+                var callerUser = await _unitOfWork.UserRepository.GetByIdAsync(callerUserId.Value);
+                if (callerUser == null)
+                {
+                    throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+                }
             }
 
             // Get followers with user details
@@ -147,8 +157,23 @@ namespace SOPServer.Service.Services.Implements
                 DisplayName = f.FollowerUser?.DisplayName,
                 AvatarUrl = f.FollowerUser?.AvtUrl,
                 Bio = f.FollowerUser?.Bio,
+                IsFollowing = false,
                 CreatedDate = f.CreatedDate
             }).ToList();
+
+            // Check following status if caller user ID is provided
+            if (callerUserId.HasValue)
+            {
+                foreach (var followerModel in followerModels)
+                {
+                    // Don't check if follower is the same as caller
+                    if (followerModel.UserId != callerUserId.Value)
+                    {
+                        var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(callerUserId.Value, followerModel.UserId);
+                        followerModel.IsFollowing = isFollowing;
+                    }
+                }
+            }
 
             var paginatedResult = new Pagination<FollowerUserModel>(
                 followerModels,
@@ -176,13 +201,23 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetFollowingByUserId(PaginationParameter paginationParameter, long userId)
+        public async Task<BaseResponseModel> GetFollowingByUserId(PaginationParameter paginationParameter, long userId, long? callerUserId)
         {
             // Check if user exists
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
             if (user == null)
             {
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Validate caller user if provided
+            if (callerUserId.HasValue)
+            {
+                var callerUser = await _unitOfWork.UserRepository.GetByIdAsync(callerUserId.Value);
+                if (callerUser == null)
+                {
+                    throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+                }
             }
 
             // Get following with user details
@@ -200,8 +235,23 @@ namespace SOPServer.Service.Services.Implements
                 DisplayName = f.FollowingUser?.DisplayName,
                 AvatarUrl = f.FollowingUser?.AvtUrl,
                 Bio = f.FollowingUser?.Bio,
+                IsFollowing = false,
                 CreatedDate = f.CreatedDate
             }).ToList();
+
+            // Check following status if caller user ID is provided
+            if (callerUserId.HasValue)
+            {
+                foreach (var followingModel in followingModels)
+                {
+                    // Don't check if following user is the same as caller
+                    if (followingModel.UserId != callerUserId.Value)
+                    {
+                        var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(callerUserId.Value, followingModel.UserId);
+                        followingModel.IsFollowing = isFollowing;
+                    }
+                }
+            }
 
             var paginatedResult = new Pagination<FollowerUserModel>(
                 followingModels,

@@ -46,7 +46,14 @@ namespace SOPServer.API.Controllers
             [FromQuery] PaginationParameter paginationParameter, 
             long userId)
         {
-            return ValidateAndExecute(async () => await _postService.GetPostByUserIdAsync(paginationParameter, userId));
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? callerUserId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                callerUserId = parsedUserId;
+            }
+            
+            return ValidateAndExecute(async () => await _postService.GetPostByUserIdAsync(paginationParameter, userId, callerUserId));
         }
 
         [HttpGet("hashtag/{hashtagId}")]
@@ -58,9 +65,16 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpGet]
-        public Task<IActionResult> GetAllPosts(PaginationParameter paginationParameter, long userId)
+        public Task<IActionResult> GetAllPosts(PaginationParameter paginationParameter)
         {
-            return ValidateAndExecute(async () => await _postService.GetAllPostsAsync(paginationParameter, userId));
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? callerUserId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                callerUserId = parsedUserId;
+            }
+            
+            return ValidateAndExecute(async () => await _postService.GetAllPostsAsync(paginationParameter, callerUserId));
         }
 
         [HttpGet("top-contributors")]

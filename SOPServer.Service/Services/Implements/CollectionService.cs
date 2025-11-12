@@ -37,10 +37,10 @@ namespace SOPServer.Service.Services.Implements
                     .Include(x => x.CommentCollections)
                     .Include(x => x.LikeCollections)
                     .Include(x => x.SaveCollections),
-                filter: string.IsNullOrWhiteSpace(paginationParameter.Search)
-                    ? null
-                    : c => (c.Title != null && c.Title.Contains(paginationParameter.Search)) ||
-                           (c.ShortDescription != null && c.ShortDescription.Contains(paginationParameter.Search)),
+                filter: c => c.IsPublished && // Only show published collections
+                           (string.IsNullOrWhiteSpace(paginationParameter.Search) ||
+                            (c.Title != null && c.Title.Contains(paginationParameter.Search)) ||
+                            (c.ShortDescription != null && c.ShortDescription.Contains(paginationParameter.Search))),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
             var collectionModels = _mapper.Map<Pagination<CollectionDetailedModel>>(collections);
@@ -108,6 +108,9 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
+            // Check if caller is viewing their own collections or someone else's
+            bool isOwner = callerUserId.HasValue && callerUserId.Value == userId;
+
             var collections = await _unitOfWork.CollectionRepository.ToPaginationIncludeAsync(
                 paginationParameter,
                 include: query => query
@@ -117,6 +120,8 @@ namespace SOPServer.Service.Services.Implements
                     .Include(c => c.LikeCollections)
                     .Include(c => c.SaveCollections),
                 filter: c => c.UserId == userId &&
+                           // If owner, show all collections; if not owner, only show published
+                           (isOwner || c.IsPublished) &&
                            (string.IsNullOrWhiteSpace(paginationParameter.Search) ||
                             (c.Title != null && c.Title.Contains(paginationParameter.Search)) ||
                             (c.ShortDescription != null && c.ShortDescription.Contains(paginationParameter.Search))),
@@ -403,6 +408,46 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.COLLECTION_DELETE_SUCCESS
+            };
+        }
+
+        public async Task<BaseResponseModel> TogglePublishCollectionAsync(long id, long userId)
+        {
+            var collection = await _unitOfWork.CollectionRepository.GetByIdAsync(id);
+            if (collection == null)
+            {
+                throw new NotFoundException(MessageConstants.COLLECTION_NOT_FOUND);
+            }
+
+            if (collection.UserId.HasValue && collection.UserId.Value != userId)
+            {
+                throw new ForbiddenException(MessageConstants.COLLECTION_ACCESS_DENIED);
+            }
+
+            // Toggle the publish status
+            collection.IsPublished = !collection.IsPublished;
+            _unitOfWork.CollectionRepository.UpdateAsync(collection);
+            await _unitOfWork.SaveAsync();
+
+            var updatedCollection = await _unitOfWork.CollectionRepository.GetByIdIncludeAsync(
+                id,
+                include: query => query
+                    .Include(c => c.User)
+                    .Include(c => c.CollectionOutfits.Where(co => !co.IsDeleted))
+                        .ThenInclude(co => co.Outfit)
+                            .ThenInclude(o => o.OutfitItems.Where(oi => !oi.IsDeleted))
+                                .ThenInclude(oi => oi.Item)
+                                    .ThenInclude(i => i.Category));
+
+            var message = collection.IsPublished 
+                ? MessageConstants.COLLECTION_PUBLISH_SUCCESS 
+                : MessageConstants.COLLECTION_UNPUBLISH_SUCCESS;
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = message,
+                Data = _mapper.Map<CollectionDetailedModel>(updatedCollection)
             };
         }
     }

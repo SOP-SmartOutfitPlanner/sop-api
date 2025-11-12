@@ -10,6 +10,7 @@ namespace SOPServer.Service.BusinessModels.CollectionModels
         public string UserDisplayName { get; set; }
         public string Title { get; set; }
         public string ShortDescription { get; set; }
+        public bool IsPublished { get; set; }
         public int LikeCount { get; set; }
         public int CommentCount { get; set; }
         public bool IsFollowing { get; set; }

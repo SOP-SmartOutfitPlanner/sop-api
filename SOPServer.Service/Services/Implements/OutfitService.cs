@@ -6,12 +6,15 @@ using SOPServer.Repository.DBContext;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
+using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.OutfitCalendarModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.ResultModels;
+using SOPServer.Service.BusinessModels.UserModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
+using System.Text;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -20,12 +23,16 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IUserService _userService;
+        private readonly IGeminiService _geminiService;
+        private readonly IQdrantService _qdrantService;
 
-        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService)
+        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService, IGeminiService geminiService, IQdrantService qdrantService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _userService = userService;
+            _geminiService = geminiService;
+            _qdrantService = qdrantService;
         }
 
         public async Task<BaseResponseModel> GetOutfitByIdAsync(long id, long userId)
@@ -699,7 +706,198 @@ namespace SOPServer.Service.Services.Implements
         {
             var userCharacteristic = await _userService.GetUserCharacteristic(userId);
 
-            throw new NotImplementedException();
+            // Build comprehensive user characteristic string
+            string userCharacteristicString = BuildUserCharacteristicString(userCharacteristic);
+
+            // Build comprehensive occasion string if provided
+            string occasionString = string.Empty;
+            if (userOccasionId.HasValue)
+            {
+                var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdIncludeAsync(
+                    userOccasionId.Value, 
+                    include: x => x.Include(x => x.Occasion));
+                
+                if (userOccasion != null)
+                {
+                    occasionString = BuildOccasionString(userOccasion);
+                }
+            }
+
+            // Step 1: Generate outfit item descriptions from Gemini
+            var itemDescriptions = await _geminiService.GenerateOutfitSuggestItem(userCharacteristicString, occasionString);
+            
+            if (itemDescriptions == null || !itemDescriptions.Any())
+            {
+                throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
+            }
+
+            // Step 2: For each description, search for matching items in user's wardrobe
+            var matchedItemsDict = new Dictionary<string, List<(long itemId, float score)>>
+            ();
+            
+            foreach (var description in itemDescriptions)
+            {
+                var embedding = await _geminiService.EmbeddingText(description);
+                if (embedding == null || !embedding.Any())
+                    continue;
+
+                var searchResults = await _qdrantService.SearchSimilarityByUserId(embedding, userId);
+                
+                if (searchResults != null && searchResults.Any())
+                {
+                    matchedItemsDict[description] = searchResults
+                        .Select(r => ((long)r.id, r.score))
+                        .ToList();
+                }
+            }
+
+            // Step 3: Collect all unique matched items
+            var allMatchedItemIds = matchedItemsDict.Values
+                .SelectMany(matches => matches.Select(m => m.itemId))
+                .Distinct()
+                .ToList();
+
+            if (!allMatchedItemIds.Any())
+            {
+                throw new NotFoundException(MessageConstants.NO_MATCHING_ITEMS_FOUND);
+            }
+
+            // Step 4: Get full item details for all matched items
+            var matchedItems = new List<ItemModel>();
+            foreach (var itemId in allMatchedItemIds)
+            {
+                var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(
+                    itemId,
+                    include: query => query
+                        .Include(x => x.Category).ThenInclude(c => c.Parent)
+                        .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+                        .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+                        .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
+
+                if (item != null && item.UserId == userId)
+                {
+                    matchedItems.Add(_mapper.Map<ItemModel>(item));
+                }
+            }
+
+            if (!matchedItems.Any())
+            {
+                throw new NotFoundException(MessageConstants.NO_MATCHING_ITEMS_FOUND);
+            }
+
+            // Step 5: Let Gemini select the best combination from matched items
+            var outfitSelection = await _geminiService.SelectOutfitFromItems(
+                userCharacteristicString, 
+                occasionString, 
+                matchedItems);
+
+            if (outfitSelection == null || outfitSelection.ItemIds == null || !outfitSelection.ItemIds.Any())
+            {
+                throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
+            }
+
+            // Step 6: Build the response with selected items and their match scores
+            var selectedItems = new List<SuggestedItemModel>();
+            foreach (var itemId in outfitSelection.ItemIds)
+            {
+                var item = matchedItems.FirstOrDefault(i => i.Id == itemId);
+                if (item != null)
+                {
+                    // Find the best match score for this item across all descriptions
+                    var bestScore = matchedItemsDict.Values
+                        .SelectMany(matches => matches)
+                        .Where(m => m.itemId == itemId)
+                        .Select(m => m.score)
+                        .DefaultIfEmpty(0f)
+                        .Max();
+
+                    selectedItems.Add(new SuggestedItemModel
+                    {
+                        ItemId = item.Id,
+                        Name = item.Name,
+                        CategoryName = item.CategoryName,
+                        Color = item.Color,
+                        ImgUrl = item.ImgUrl,
+                        AiDescription = item.AiDescription ?? item.Name,
+                        MatchScore = bestScore
+                    });
+                }
+            }
+
+            var suggestionResponse = new OutfitSuggestionModel
+            {
+                SuggestedItems = selectedItems,
+                Reason = outfitSelection.Reason
+            };
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.OUTFIT_SUGGESTION_SUCCESS,
+                Data = suggestionResponse
+            };
+        }
+
+        private string BuildUserCharacteristicString(UserCharacteristicModel userCharacteristic)
+        {
+            if (userCharacteristic == null) return string.Empty;
+
+            var characteristics = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(userCharacteristic.DisplayName))
+                characteristics.Add($"DisplayName: {userCharacteristic.DisplayName}");
+
+            if (userCharacteristic.Dob.HasValue)
+                characteristics.Add($"DateOfBirth: {userCharacteristic.Dob.Value:yyyy-MM-dd}");
+
+            characteristics.Add($"Gender: {userCharacteristic.Gender}");
+
+            if (!string.IsNullOrWhiteSpace(userCharacteristic.Location))
+                characteristics.Add($"Location: {userCharacteristic.Location}");
+
+            if (!string.IsNullOrWhiteSpace(userCharacteristic.Bio))
+                characteristics.Add($"Bio: {userCharacteristic.Bio}");
+
+            if (!string.IsNullOrWhiteSpace(userCharacteristic.Job))
+                characteristics.Add($"Job: {userCharacteristic.Job}");
+
+            if (userCharacteristic.Styles != null && userCharacteristic.Styles.Any())
+                characteristics.Add($"PreferredStyles: {string.Join(", ", userCharacteristic.Styles)}");
+
+            if (userCharacteristic.PreferedColor != null && userCharacteristic.PreferedColor.Any())
+                characteristics.Add($"PreferredColors: {string.Join(", ", userCharacteristic.PreferedColor)}");
+
+            if (userCharacteristic.AvoidedColor != null && userCharacteristic.AvoidedColor.Any())
+                characteristics.Add($"AvoidedColors: {string.Join(", ", userCharacteristic.AvoidedColor)}");
+
+            return string.Join("; ", characteristics);
+        }
+
+        private string BuildOccasionString(UserOccasion userOccasion)
+        {
+            var occasionDetails = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(userOccasion.Name))
+                occasionDetails.Add($"EventName: {userOccasion.Name}");
+
+            if (userOccasion.Occasion != null && !string.IsNullOrWhiteSpace(userOccasion.Occasion.Name))
+                occasionDetails.Add($"OccasionType: {userOccasion.Occasion.Name}");
+
+            if (!string.IsNullOrWhiteSpace(userOccasion.Description))
+                occasionDetails.Add($"Description: {userOccasion.Description}");
+
+            occasionDetails.Add($"Date: {userOccasion.DateOccasion:yyyy-MM-dd}");
+
+            if (userOccasion.StartTime.HasValue)
+                occasionDetails.Add($"StartTime: {userOccasion.StartTime.Value:HH:mm}");
+
+            if (userOccasion.EndTime.HasValue)
+                occasionDetails.Add($"EndTime: {userOccasion.EndTime.Value:HH:mm}");
+
+            if (!string.IsNullOrWhiteSpace(userOccasion.WeatherSnapshot))
+                occasionDetails.Add($"Weather: {userOccasion.WeatherSnapshot}");
+
+            return string.Join("; ", occasionDetails);
         }
     }
 }

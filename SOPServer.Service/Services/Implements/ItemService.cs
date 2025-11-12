@@ -723,7 +723,8 @@ namespace SOPServer.Service.Services.Implements
                         UserId = bulkUploadModel.UserId,
                         ImgUrl = imageUrl,
                         IsAnalyzed = false,
-                        AIAnalyzeJson = JsonSerializer.Serialize(categoryAnalysis, serializerOptions)
+                        AIAnalyzeJson = JsonSerializer.Serialize(categoryAnalysis, serializerOptions),
+                        ItemType = user.Role == Role.ADMIN ? ItemType.SYSTEM : ItemType.USER
                     };
 
                     return (imageUrl, newItem);
@@ -828,7 +829,8 @@ namespace SOPServer.Service.Services.Implements
                         CategoryId = itemUpload.CategoryId,
                         UserId = bulkUploadModel.UserId,
                         ImgUrl = itemUpload.ImageURLs,
-                        IsAnalyzed = false
+                        IsAnalyzed = false,
+                        ItemType = user.Role == Role.ADMIN ? ItemType.SYSTEM : ItemType.USER
                     };
                     validItems.Add(newItem);
                     await _unitOfWork.ItemRepository.AddAsync(newItem);

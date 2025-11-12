@@ -159,7 +159,9 @@ namespace SOPServer.Service.Services.Implements
                         .ThenInclude(ph => ph.Hashtag)
                     .Include(p => p.LikePosts)
                     .Include(p => p.CommentPosts),
-                filter: p => p.UserId == userId,
+                filter: string.IsNullOrWhiteSpace(paginationParameter.Search)
+                    ? p => p.UserId == userId
+                    : p => p.UserId == userId && p.Body != null && EF.Functions.Collate(p.Body, "Latin1_General_CI_AI").Contains(EF.Functions.Collate(paginationParameter.Search, "Latin1_General_CI_AI")),
                 orderBy: q => q.OrderByDescending(p => p.CreatedDate)
             );
 
@@ -214,6 +216,9 @@ namespace SOPServer.Service.Services.Implements
                         .ThenInclude(ph => ph.Hashtag)
                     .Include(p => p.LikePosts)
                     .Include(p => p.CommentPosts),
+                filter: string.IsNullOrWhiteSpace(paginationParameter.Search)
+                    ? null
+                    : p => p.Body != null && EF.Functions.Collate(p.Body, "Latin1_General_CI_AI").Contains(EF.Functions.Collate(paginationParameter.Search, "Latin1_General_CI_AI")),
                 orderBy: q => q.OrderByDescending(p => p.CreatedDate)
             );
 

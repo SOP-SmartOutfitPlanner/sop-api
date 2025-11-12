@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SOPServer.Repository.DBContext;
 
@@ -11,9 +12,11 @@ using SOPServer.Repository.DBContext;
 namespace SOPServer.Repository.Migrations
 {
     [DbContext(typeof(SOPServerContext))]
-    partial class SOPServerContextModelSnapshot : ModelSnapshot
+    [Migration("20251112150228_AddItemType")]
+    partial class AddItemType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1312,6 +1315,9 @@ namespace SOPServer.Repository.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<long>("SubscriptionId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("TransactionCode")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1771,7 +1777,7 @@ namespace SOPServer.Repository.Migrations
                         .HasForeignKey("UserId");
 
                     b.HasOne("SOPServer.Repository.Entities.UserSubscription", "UserSubscription")
-                        .WithMany("UserSubscriptionTransactions")
+                        .WithMany()
                         .HasForeignKey("UserSubscriptionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1911,11 +1917,6 @@ namespace SOPServer.Repository.Migrations
             modelBuilder.Entity("SOPServer.Repository.Entities.UserOccasion", b =>
                 {
                     b.Navigation("OutfitUsageHistories");
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.UserSubscription", b =>
-                {
-                    b.Navigation("UserSubscriptionTransactions");
                 });
 #pragma warning restore 612, 618
         }

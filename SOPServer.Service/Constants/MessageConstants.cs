@@ -250,6 +250,11 @@ namespace SOPServer.Service.Constants
         public const string OUTFIT_CALENDAR_ACCESS_DENIED = "You don't have permission to access this outfit calendar entry";
         public const string OUTFIT_CALENDAR_ALREADY_EXISTS = "An outfit is already scheduled for this date";
 
+        // Outfit Suggestion related messages
+        public const string OUTFIT_SUGGESTION_SUCCESS = "Outfit suggestion generated successfully";
+        public const string OUTFIT_SUGGESTION_FAILED = "Failed to generate outfit suggestion";
+        public const string NO_MATCHING_ITEMS_FOUND = "No matching items found in your wardrobe for the suggested outfit";
+
         public static string GET_USER_STATS_SUCCESS = "Get user stats successfully";
 
         // Collection related messages

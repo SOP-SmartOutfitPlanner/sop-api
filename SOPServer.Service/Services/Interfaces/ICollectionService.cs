@@ -12,5 +12,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> CreateCollectionAsync(long userId, CollectionCreateModel model);
         Task<BaseResponseModel> UpdateCollectionAsync(long id, long userId, CollectionUpdateModel model);
         Task<BaseResponseModel> DeleteCollectionAsync(long id, long userId);
+        Task<BaseResponseModel> TogglePublishCollectionAsync(long id, long userId);
     }
 }

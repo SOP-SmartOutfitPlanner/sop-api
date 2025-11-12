@@ -80,5 +80,13 @@ namespace SOPServer.API.Controllers
             long.TryParse(userIdClaim, out long userId);
             return ValidateAndExecute(async () => await _collectionService.DeleteCollectionAsync(id, userId));
         }
+
+        [HttpPatch("{id}/toggle-publish")]
+        public Task<IActionResult> TogglePublishCollection(long id)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+            return ValidateAndExecute(async () => await _collectionService.TogglePublishCollectionAsync(id, userId));
+        }
     }
 }

@@ -292,6 +292,8 @@ namespace SOPServer.Service.Constants
         public const string COLLECTION_OUTFIT_NOT_FOUND = "This outfit is not in the collection";
         public const string ADD_OUTFIT_TO_COLLECTION_SUCCESS = "Outfit added to collection successfully";
         public const string REMOVE_OUTFIT_FROM_COLLECTION_SUCCESS = "Outfit removed from collection successfully";
+        public const string COLLECTION_PUBLISH_SUCCESS = "Collection published successfully";
+        public const string COLLECTION_UNPUBLISH_SUCCESS = "Collection unpublished successfully";
 
         // ReportCommunity related messages
         public const string REPORT_COMMUNITY_CREATE_SUCCESS = "Report submitted successfully";

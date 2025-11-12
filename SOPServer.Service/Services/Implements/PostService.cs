@@ -314,6 +314,93 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<BaseResponseModel> GetPostsByHashtagNameAsync(PaginationParameter paginationParameter, string hashtagName, long? callerUserId)
+        {
+            // Validate hashtag name is not null or empty
+            if (string.IsNullOrWhiteSpace(hashtagName))
+            {
+                throw new BadRequestException("Hashtag name cannot be empty");
+            }
+
+            // Validate user if provided
+            if (callerUserId.HasValue)
+            {
+                await ValidateUserExistsAsync(callerUserId.Value);
+            }
+
+            // Get hashtag by name (case-insensitive)
+            var hashtag = await _unitOfWork.HashtagRepository.GetByNameAsync(hashtagName.Trim());
+            if (hashtag == null)
+            {
+                throw new NotFoundException(MessageConstants.HASHTAG_NOT_FOUND);
+            }
+
+            // Get posts that contain the specified hashtag
+            var posts = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query
+                    .Include(p => p.User)
+                    .Include(p => p.PostImages)
+                    .Include(p => p.PostHashtags)
+                        .ThenInclude(ph => ph.Hashtag)
+                    .Include(p => p.LikePosts)
+                    .Include(p => p.CommentPosts),
+                filter: p => p.PostHashtags.Any(ph => ph.HashtagId == hashtag.Id && !ph.IsDeleted),
+                orderBy: q => q.OrderByDescending(p => p.CreatedDate)
+            );
+
+            var postModels = _mapper.Map<Pagination<PostModel>>(posts);
+
+            // Check if user has liked each post and following status
+            if (callerUserId.HasValue)
+            {
+                foreach (var postModel in postModels)
+                {
+                    var likeExists = await _unitOfWork.LikePostRepository.GetByUserAndPost(callerUserId.Value, postModel.Id);
+                    postModel.IsLiked = likeExists != null && !likeExists.IsDeleted;
+
+                    // Don't check if post author is the same as caller
+                    if (postModel.UserId != callerUserId.Value)
+                    {
+                        var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(callerUserId.Value, postModel.UserId);
+                        postModel.IsFollowing = isFollowing;
+                    }
+                    else
+                    {
+                        postModel.IsFollowing = false;
+                    }
+                }
+            }
+            else
+            {
+                foreach (var postModel in postModels)
+                {
+                    postModel.IsLiked = false;
+                    postModel.IsFollowing = false;
+                }
+            }
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_POST_BY_HASHTAG_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = postModels,
+                    MetaData = new
+                    {
+                        postModels.TotalCount,
+                        postModels.PageSize,
+                        postModels.CurrentPage,
+                        postModels.TotalPages,
+                        postModels.HasNext,
+                        postModels.HasPrevious,
+                        HashtagName = hashtag.Name
+                    }
+                }
+            };
+        }
+
         public async Task<BaseResponseModel> GetTopContributorsAsync(PaginationParameter paginationParameter, long? userId = null)
         {
             if (userId.HasValue)

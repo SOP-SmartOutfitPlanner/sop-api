@@ -92,6 +92,8 @@ namespace SOPServer.Service.Constants
         public const string GET_TOP_CONTRIBUTORS_SUCCESS = "Get top contributors successfully";
         public const string GET_LIST_POST_SUCCESS = "Get post successfully";
         public const string GET_POST_LIKERS_SUCCESS = "Get list of post likers successfully";
+        public const string GET_LIST_POST_BY_HASHTAG_SUCCESS = "Get list posts by hashtag successfully";
+        public const string HASHTAG_NOT_FOUND = "Hashtag not found";
 
         public const string OTP_SENT_SUCCESS = "OTP sent successfully to your gmail";
         public const string OTP_VERIFY_SUCCESS = "Verify OTP successfully";

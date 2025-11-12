@@ -40,10 +40,10 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _postService.DeletePostByIdAsync(id));
         }
-        
+
         [HttpGet("user/{userId}")]
         public Task<IActionResult> GetPostByUserId(
-            [FromQuery] PaginationParameter paginationParameter, 
+            [FromQuery] PaginationParameter paginationParameter,
             long userId)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;
@@ -52,7 +52,7 @@ namespace SOPServer.API.Controllers
             {
                 callerUserId = parsedUserId;
             }
-            
+
             return ValidateAndExecute(async () => await _postService.GetPostByUserIdAsync(paginationParameter, userId, callerUserId));
         }
 
@@ -64,6 +64,21 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _postService.GetPostsByHashtagIdAsync(paginationParameter, hashtagId));
         }
 
+        [HttpGet("hashtag/name/{hashtagName}")]
+        public Task<IActionResult> GetPostsByHashtagName(
+            [FromQuery] PaginationParameter paginationParameter,
+            string hashtagName)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? callerUserId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                callerUserId = parsedUserId;
+            }
+
+            return ValidateAndExecute(async () => await _postService.GetPostsByHashtagNameAsync(paginationParameter, hashtagName, callerUserId));
+        }
+
         [HttpGet]
         public Task<IActionResult> GetAllPosts(PaginationParameter paginationParameter)
         {
@@ -73,7 +88,7 @@ namespace SOPServer.API.Controllers
             {
                 callerUserId = parsedUserId;
             }
-            
+
             return ValidateAndExecute(async () => await _postService.GetAllPostsAsync(paginationParameter, callerUserId));
         }
 
@@ -85,11 +100,17 @@ namespace SOPServer.API.Controllers
 
         [HttpGet("{postId}/likers")]
         public Task<IActionResult> GetPostLikers(
-            [FromQuery] PaginationParameter paginationParameter, 
-            long postId, 
-            [FromQuery] long? userId = null)
+            [FromQuery] PaginationParameter paginationParameter,
+            long postId)
         {
-            return ValidateAndExecute(async () => await _postService.GetPostLikersAsync(paginationParameter, postId, userId));
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? callerUserId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                callerUserId = parsedUserId;
+            }
+            
+            return ValidateAndExecute(async () => await _postService.GetPostLikersAsync(paginationParameter, postId, callerUserId));
         }
     }
 }

@@ -46,6 +46,9 @@ namespace SOPServer.Repository.UnitOfWork
         private IUserSubscriptionRepository _userSubscriptionRepository;
         private ISubscriptionPlanRepository _subscriptionPlanRepository;
         private IUserSubscriptionTransactionRepository _subscriptionTransactionRepository;
+        private INotificationRepository _notificationRepository;
+        private IUserNotificationRepository _userNotificationRepository;
+        private IUserDeviceRepository _userDeviceRepository;
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -300,6 +303,31 @@ namespace SOPServer.Repository.UnitOfWork
                 return _subscriptionTransactionRepository ??= new UserSubscriptionTransactionRepository(_context);
             }
         }
+
+        public INotificationRepository NotificationRepository
+        {
+            get
+            {
+                return _notificationRepository ??= new NotificationRepository(_context);
+            }
+        }
+
+        public IUserNotificationRepository UserNotificationRepository
+        {
+            get
+            {
+                return _userNotificationRepository ??= new UserNotificationRepository(_context);
+            }
+        }
+
+        public IUserDeviceRepository UserDeviceRepository
+        {
+            get
+            {
+                return _userDeviceRepository ??= new UserDeviceRepository(_context);
+            }
+        }
+
         public void Commit()
         {
             try

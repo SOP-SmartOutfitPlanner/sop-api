@@ -240,6 +240,29 @@ namespace SOPServer.Service.Constants
         public const string NEWSFEED_EMPTY = "No posts available in your feed";
         public const string NEWSFEED_REFRESH_SUCCESS = "Newsfeed refreshed successfully";
 
+        // Notification related messages
+        public const string NOTIFICATION_NOT_EXIST = "Notification does not exist";
+        public const string GET_NOTIFICATION_SUCCESS = "Get notification successfully";
+        public const string PUSH_NOTIFICATION_USER_SUCCESS = "Push notification to user successfully";
+        public const string USER_DEVICE_NOT_FOUND = "User device not found";
+        public const string GET_LIST_NOTIFICATION_SUCCESS = "Get list notifications successfully";
+        public const string ENUM_NOTIFICATION_NOT_VALID = "Notification type is not valid";
+        public const string COUNT_UNREAD_NOTIFICATION_SUCCESS = "Get unread notification count successfully";
+        public const string USER_NOTIFICATION_NOT_EXIST = "User notification does not exist";
+        public const string MARK_NOTIFICATION_AS_READ_SUCCESS = "Notification marked as read successfully";
+        public const string NO_NOTIFICATION_MARK_AS_READ = "No unread notifications to mark as read";
+        public const string MARK_ALL_NOTIFICATION_AS_READ_SUCCESS = "All notifications marked as read successfully";
+        public const string PUSH_NOTIFICATION_SUCCESS = "Push notification successfully";
+        public const string NOTIFICATION_CREATE_SUCCESS = "Notification created successfully";
+        public const string GET_ALL_NOTIFICATIONS_SUCCESS = "Get all notifications successfully";
+
+        // UserDevice related messages
+        public const string DEVICE_TOKEN_EXIST = "Device token already exists";
+        public const string DEVICE_TOKEN_NOT_EXIST = "Device token does not exist";
+        public const string DEVICE_TOKEN_ADD_SUCCESS = "Device token added successfully";
+        public const string DEVICE_TOKEN_UPDATED_SUCCESS = "Device token updated successfully";
+        public const string DEVICE_TOKEN_DELETE_SUCCESS = "Device token deleted successfully";
+
         // OutfitCalendar related messages
         public const string OUTFIT_CALENDAR_NOT_FOUND = "Outfit calendar entry not found";
         public const string OUTFIT_CALENDAR_GET_SUCCESS = "Outfit calendar entry retrieved successfully";

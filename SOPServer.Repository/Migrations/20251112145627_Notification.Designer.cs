@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SOPServer.Repository.DBContext;
 
@@ -11,9 +12,11 @@ using SOPServer.Repository.DBContext;
 namespace SOPServer.Repository.Migrations
 {
     [DbContext(typeof(SOPServerContext))]
-    partial class SOPServerContextModelSnapshot : ModelSnapshot
+    [Migration("20251112145627_Notification")]
+    partial class Notification
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1203,37 +1206,6 @@ namespace SOPServer.Repository.Migrations
                     b.ToTable("User", (string)null);
                 });
 
-            modelBuilder.Entity("SOPServer.Repository.Entities.UserDevice", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeviceToken")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("UserDevice");
-                });
-
             modelBuilder.Entity("SOPServer.Repository.Entities.UserNotification", b =>
                 {
                     b.Property<long>("Id")
@@ -1834,17 +1806,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("Job");
                 });
 
-            modelBuilder.Entity("SOPServer.Repository.Entities.UserDevice", b =>
-                {
-                    b.HasOne("SOPServer.Repository.Entities.User", "User")
-                        .WithMany("UserDevices")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("SOPServer.Repository.Entities.UserNotification", b =>
                 {
                     b.HasOne("SOPServer.Repository.Entities.Notification", "Notification")
@@ -2059,8 +2020,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("ReportCommunities");
 
                     b.Navigation("SaveCollections");
-
-                    b.Navigation("UserDevices");
 
                     b.Navigation("UserNotifications");
 

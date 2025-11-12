@@ -108,6 +108,14 @@ namespace SOPServer.API
             services.AddScoped<IFollowerRepository, FollowerRepository>();
             services.AddScoped<IFollowerService, FollowerService>();
 
+            // ========== NOTIFICATION MANAGEMENT ==========
+            services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<IUserNotificationRepository, UserNotificationRepository>();
+            services.AddScoped<INotificationService, NotificationService>();
+
+            services.AddScoped<IUserDeviceRepository, UserDeviceRepository>();
+            services.AddScoped<IUserDeviceService, UserDeviceService>();
+
             // ========== AI SETTINGS ==========
             services.AddScoped<IAISettingRepository, AISettingRepository>();
             services.AddScoped<IAISettingService, AISettingService>();

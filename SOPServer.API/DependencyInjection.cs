@@ -65,7 +65,12 @@ namespace SOPServer.API
             // ========== COLLECTION MANAGEMENT ==========
             services.AddScoped<ICollectionRepository, CollectionRepository>();
             services.AddScoped<ICollectionService, CollectionService>();
+            services.AddScoped<ICollectionOutfitRepository, CollectionOutfitRepository>();
 
+            // ========== STYLIST DASHBOARD ==========
+            services.AddScoped<IStylistDashboardService, StylistDashboardService>();
+
+            // ========== LIKE & SAVE COLLECTION ==========
             services.AddScoped<ILikeCollectionRepository, LikeCollectionRepository>();
             services.AddScoped<ILikeCollectionService, LikeCollectionService>();
             services.AddScoped<ICommentCollectionRepository, CommentCollectionRepository>();
@@ -73,8 +78,6 @@ namespace SOPServer.API
             services.AddScoped<ISaveCollectionRepository, SaveCollectionRepository>();
             services.AddScoped<ISaveCollectionService, SaveCollectionService>();
 
-
-            services.AddScoped<ICollectionOutfitRepository, CollectionOutfitRepository>();
 
             // Register comment collection dependencies
             services.AddScoped<ICommentCollectionRepository, CommentCollectionRepository>();

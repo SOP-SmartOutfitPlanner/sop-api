@@ -36,6 +36,8 @@ namespace SOPServer.Service.Constants
         public const string USER_DELETE_SUCCESS = "User deleted successfully";
         public const string USER_ALREADY_DELETED = "User has already been deleted";
         public const string USER_ADDRESS_UPDATE_SUCCESS = "User address updated successfully";
+        public const string USER_PROFILE_UPDATE_SUCCESS = "User profile updated successfully";
+        public const string USER_AVATAR_UPDATE_SUCCESS = "User avatar updated successfully";
         public const string USER_MUST_LOGIN_WITH_GOOGLE = "User must login with google";
         public const string EMAIL_OR_PASSWORD_INCORRECT = "Email or password incorrect";
         public const string USER_FORBIDDEN = "User forbidden access to the system";

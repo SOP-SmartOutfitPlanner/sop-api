@@ -297,6 +297,12 @@ namespace SOPServer.Service.Constants
         public const string COLLECTION_PUBLISH_SUCCESS = "Collection published successfully";
         public const string COLLECTION_UNPUBLISH_SUCCESS = "Collection unpublished successfully";
 
+        // Dashboard related messages
+        public const string GET_STYLIST_DASHBOARD_STATISTICS_SUCCESS = "Stylist dashboard statistics retrieved successfully";
+        public const string GET_COLLECTION_STATISTICS_SUCCESS = "Collection statistics retrieved successfully";
+        public const string DASHBOARD_INVALID_MONTH = "Month must be between 1 and 12";
+        public const string DASHBOARD_INVALID_TOP_COUNT = "Top collections count must be at least 1";
+
         // ReportCommunity related messages
         public const string REPORT_COMMUNITY_CREATE_SUCCESS = "Report submitted successfully";
         public const string REPORT_POST_ID_REQUIRED = "PostId is required when reporting a post";

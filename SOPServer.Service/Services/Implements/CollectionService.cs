@@ -5,6 +5,7 @@ using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.CollectionModels;
+using SOPServer.Service.BusinessModels.FirebaseModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
@@ -16,11 +17,13 @@ namespace SOPServer.Service.Services.Implements
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IMinioService _minioService;
 
-        public CollectionService(IUnitOfWork unitOfWork, IMapper mapper)
+        public CollectionService(IUnitOfWork unitOfWork, IMapper mapper, IMinioService minioService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _minioService = minioService;
         }
 
         public async Task<BaseResponseModel> GetAllCollectionsPaginationAsync(PaginationParameter paginationParameter, long? callerUserId)
@@ -267,11 +270,19 @@ namespace SOPServer.Service.Services.Implements
                 }
             }
 
+            var thumbnail = await _minioService.UploadImageAsync(model.ThumbnailImg);
+
+            if (thumbnail?.Data is not ImageUploadResult uploadData || string.IsNullOrEmpty(uploadData.DownloadUrl))
+            {
+                throw new BadRequestException(MessageConstants.FILE_NOT_FOUND);
+            }
+
             var collection = new Collection
             {
                 UserId = userId,
                 Title = model.Title,
-                ShortDescription = model.ShortDescription
+                ShortDescription = model.ShortDescription,
+                ThumbnailURL = uploadData.DownloadUrl,
             };
 
             await _unitOfWork.CollectionRepository.AddAsync(collection);
@@ -325,6 +336,16 @@ namespace SOPServer.Service.Services.Implements
 
             collection.Title = model.Title;
             collection.ShortDescription = model.ShortDescription;
+
+            var newThumbnail = await _minioService.UploadImageAsync(model.ThumbnailImg);
+            if (newThumbnail?.Data is not ImageUploadResult uploadData || string.IsNullOrEmpty(uploadData.DownloadUrl))
+            {
+                throw new BadRequestException(MessageConstants.FILE_NOT_FOUND);
+            }
+
+            await _minioService.DeleteImageByURLAsync(collection.ThumbnailURL);
+
+            collection.ThumbnailURL = uploadData.DownloadUrl;
 
             _unitOfWork.CollectionRepository.UpdateAsync(collection);
             await _unitOfWork.SaveAsync();

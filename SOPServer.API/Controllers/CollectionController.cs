@@ -58,7 +58,7 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpPost]
-        public Task<IActionResult> CreateCollection([FromBody] CollectionCreateModel model)
+        public Task<IActionResult> CreateCollection([FromForm] CollectionCreateModel model)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;
             long.TryParse(userIdClaim, out long userId);
@@ -66,7 +66,7 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpPut("{id}")]
-        public Task<IActionResult> UpdateCollection(long id, [FromBody] CollectionUpdateModel model)
+        public Task<IActionResult> UpdateCollection(long id, [FromForm] CollectionUpdateModel model)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;
             long.TryParse(userIdClaim, out long userId);
@@ -81,7 +81,7 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _collectionService.DeleteCollectionAsync(id, userId));
         }
 
-        [HttpPatch("{id}/toggle-publish")]
+        [HttpPut("{id}/toggle-publish")]
         public Task<IActionResult> TogglePublishCollection(long id)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;

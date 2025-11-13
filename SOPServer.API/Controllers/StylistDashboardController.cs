@@ -19,62 +19,29 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
-        /// Get collection statistics for stylist dashboard
+        /// Get collection statistics for authenticated stylist
         /// </summary>
-        /// <param name="userId">User ID</param>
-        /// <param name="filter">Dashboard filter parameters</param>
-        /// <returns>Collection statistics including total counts, monthly breakdown, and top collections</returns>
+        /// <param name="filter">Dashboard filter parameters (year, month, topCollectionsCount)</param>
+        /// <returns>Collection statistics with total counts, monthly breakdown, and top performing collections</returns>
         /// <remarks>
-        /// **Auth Required** - Users can only access their own dashboard
-        ///
-        /// Returns comprehensive collection statistics for stylists:
-        /// - **Overall Metrics**: Total collections, published/unpublished counts, total engagement
-        /// - **Monthly Breakdown**: Collections created and engagement received per month
-        /// - **Top Collections**: Ranked by total engagement (likes + comments + saves)
-        ///
+        /// Returns collection statistics for the authenticated user including:
+        /// - Total collections (published/unpublished)
+        /// - Total engagement (likes, comments, saves)
+        /// - Monthly breakdown of collections and engagement
+        /// - Top performing collections by engagement
+        /// 
         /// **Query Parameters:**
-        /// - `year`: Filter by specific year (default: current year, range: 2020-2100)
-        /// - `month`: Filter by specific month (1-12, optional - if not provided, returns all 12 months)
-        /// - `topCollectionsCount`: Number of top collections to return (default: 5, range: 1-50)
-        ///
-        /// **Usage Examples:**
-        /// ```
-        /// // Get full year stats for 2024
-        /// GET /api/v1/stylist/dashboard/collections/123?year=2024
-        ///
-        /// // Get specific month (December 2024)
-        /// GET /api/v1/stylist/dashboard/collections/123?year=2024&amp;month=12
-        ///
-        /// // Get top 10 collections
-        /// GET /api/v1/stylist/dashboard/collections/123?topCollectionsCount=10
-        ///
-        /// // Current year with default settings
-        /// GET /api/v1/stylist/dashboard/collections/123
-        /// ```
-        ///
-        /// **Response Structure:**
-        /// ```json
-        /// {
-        ///   "statusCode": 200,
-        ///   "message": "Collection statistics retrieved successfully",
-        ///   "data": {
-        ///     "totalCollections": 15,
-        ///     "publishedCollections": 12,
-        ///     "unpublishedCollections": 3,
-        ///     "totalLikes": 284,
-        ///     "totalComments": 156,
-        ///     "totalSaves": 98,
-        ///     "monthlyStats": [...],
-        ///     "topCollections": [...]
-        ///   }
-        /// }
-        /// ```
+        /// - `year` (optional): Target year, default is current year
+        /// - `month` (optional): Target month (1-12), omit for all 12 months
+        /// - `topCollectionsCount` (optional): Number of top collections, default is 5
         /// </remarks>
         /// <response code="200">Statistics retrieved successfully</response>
         /// <response code="400">Invalid filter parameters</response>
-        /// <response code="403">User not authorized to access this dashboard</response>
-        /// <response code="404">User not found</response>
+        /// <response code="401">Not authenticated</response>
         [HttpGet("collections")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
         public Task<IActionResult> GetCollectionStatistics([FromQuery] DashboardFilterModel filter)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;

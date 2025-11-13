@@ -98,14 +98,14 @@ namespace SOPServer.API.Controllers
 
         // ========== MARK AS READ ==========
 
-        [HttpPatch("{notificationId}/read")]
+        [HttpPut("{notificationId}/read")]
         [Authorize]
         public Task<IActionResult> MarkNotificationAsRead(long notificationId)
         {
             return ValidateAndExecute(async () => await _notificationService.MarkNotificationAsRead(notificationId));
         }
 
-        [HttpPatch("user/{userId}/read-all")]
+        [HttpPut("user/{userId}/read-all")]
         [Authorize]
         public Task<IActionResult> MarkAllNotificationsAsRead(long userId)
         {

@@ -5,6 +5,7 @@ using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.CollectionModels;
+using SOPServer.Service.BusinessModels.FirebaseModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
@@ -16,14 +17,16 @@ namespace SOPServer.Service.Services.Implements
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IMinioService _minioService;
 
-        public CollectionService(IUnitOfWork unitOfWork, IMapper mapper)
+        public CollectionService(IUnitOfWork unitOfWork, IMapper mapper, IMinioService minioService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _minioService = minioService;
         }
 
-        public async Task<BaseResponseModel> GetAllCollectionsPaginationAsync(PaginationParameter paginationParameter)
+        public async Task<BaseResponseModel> GetAllCollectionsPaginationAsync(PaginationParameter paginationParameter, long? callerUserId)
         {
             var collections = await _unitOfWork.CollectionRepository.ToPaginationIncludeAsync(
                 paginationParameter,
@@ -33,14 +36,52 @@ namespace SOPServer.Service.Services.Implements
                         .ThenInclude(co => co.Outfit)
                         .ThenInclude(o => o.OutfitItems)
                         .ThenInclude(oi => oi.Item)
-                        .ThenInclude(i => i.Category),
-                filter: string.IsNullOrWhiteSpace(paginationParameter.Search)
-                    ? null
-                    : c => (c.Title != null && c.Title.Contains(paginationParameter.Search)) ||
-                           (c.ShortDescription != null && c.ShortDescription.Contains(paginationParameter.Search)),
+                        .ThenInclude(i => i.Category)
+                    .Include(x => x.CommentCollections)
+                    .Include(x => x.LikeCollections)
+                    .Include(x => x.SaveCollections),
+                filter: c => c.IsPublished && // Only show published collections
+                           (string.IsNullOrWhiteSpace(paginationParameter.Search) ||
+                            (c.Title != null && c.Title.Contains(paginationParameter.Search)) ||
+                            (c.ShortDescription != null && c.ShortDescription.Contains(paginationParameter.Search))),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
             var collectionModels = _mapper.Map<Pagination<CollectionDetailedModel>>(collections);
+
+            // Check following, saved, and liked status if caller user ID is provided
+            if (callerUserId.HasValue)
+            {
+                foreach (var collectionModel in collectionModels)
+                {
+                    // Check if caller follows the collection author
+                    if (collectionModel.UserId.HasValue && collectionModel.UserId.Value != callerUserId.Value)
+                    {
+                        var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(callerUserId.Value, collectionModel.UserId.Value);
+                        collectionModel.IsFollowing = isFollowing;
+                    }
+                    else
+                    {
+                        collectionModel.IsFollowing = false;
+                    }
+
+                    // Check if caller saved the collection
+                    var savedCollection = await _unitOfWork.SaveCollectionRepository.GetByUserAndCollection(callerUserId.Value, collectionModel.Id);
+                    collectionModel.IsSaved = savedCollection != null && !savedCollection.IsDeleted;
+
+                    // Check if caller liked the collection
+                    var likedCollection = await _unitOfWork.LikeCollectionRepository.GetByUserAndCollection(callerUserId.Value, collectionModel.Id);
+                    collectionModel.IsLiked = likedCollection != null && !likedCollection.IsDeleted;
+                }
+            }
+            else
+            {
+                foreach (var collectionModel in collectionModels)
+                {
+                    collectionModel.IsFollowing = false;
+                    collectionModel.IsSaved = false;
+                    collectionModel.IsLiked = false;
+                }
+            }
 
             return new BaseResponseModel
             {
@@ -62,7 +103,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetCollectionsByUserPaginationAsync(PaginationParameter paginationParameter, long userId)
+        public async Task<BaseResponseModel> GetCollectionsByUserPaginationAsync(PaginationParameter paginationParameter, long userId, long? callerUserId)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
             if (user == null)
@@ -70,19 +111,61 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
+            // Check if caller is viewing their own collections or someone else's
+            bool isOwner = callerUserId.HasValue && callerUserId.Value == userId;
+
             var collections = await _unitOfWork.CollectionRepository.ToPaginationIncludeAsync(
                 paginationParameter,
                 include: query => query
                     .Include(c => c.User)
                     .Include(c => c.CollectionOutfits.Where(co => !co.IsDeleted))
-                        .ThenInclude(co => co.Outfit),
+                        .ThenInclude(co => co.Outfit)
+                    .Include(c => c.LikeCollections)
+                    .Include(c => c.SaveCollections),
                 filter: c => c.UserId == userId &&
+                           // If owner, show all collections; if not owner, only show published
+                           (isOwner || c.IsPublished) &&
                            (string.IsNullOrWhiteSpace(paginationParameter.Search) ||
                             (c.Title != null && c.Title.Contains(paginationParameter.Search)) ||
                             (c.ShortDescription != null && c.ShortDescription.Contains(paginationParameter.Search))),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
             var collectionModels = _mapper.Map<Pagination<CollectionModel>>(collections);
+
+            // Check following, saved, and liked status if caller user ID is provided
+            if (callerUserId.HasValue)
+            {
+                foreach (var collectionModel in collectionModels)
+                {
+                    // Check if caller follows the collection author
+                    if (collectionModel.UserId.HasValue && collectionModel.UserId.Value != callerUserId.Value)
+                    {
+                        var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(callerUserId.Value, collectionModel.UserId.Value);
+                        collectionModel.IsFollowing = isFollowing;
+                    }
+                    else
+                    {
+                        collectionModel.IsFollowing = false;
+                    }
+
+                    // Check if caller saved the collection
+                    var savedCollection = await _unitOfWork.SaveCollectionRepository.GetByUserAndCollection(callerUserId.Value, collectionModel.Id);
+                    collectionModel.IsSaved = savedCollection != null && !savedCollection.IsDeleted;
+
+                    // Check if caller liked the collection
+                    var likedCollection = await _unitOfWork.LikeCollectionRepository.GetByUserAndCollection(callerUserId.Value, collectionModel.Id);
+                    collectionModel.IsLiked = likedCollection != null && !likedCollection.IsDeleted;
+                }
+            }
+            else
+            {
+                foreach (var collectionModel in collectionModels)
+                {
+                    collectionModel.IsFollowing = false;
+                    collectionModel.IsSaved = false;
+                    collectionModel.IsLiked = false;
+                }
+            }
 
             return new BaseResponseModel
             {
@@ -104,7 +187,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetCollectionByIdAsync(long id)
+        public async Task<BaseResponseModel> GetCollectionByIdAsync(long id, long? callerUserId)
         {
             var collection = await _unitOfWork.CollectionRepository.GetByIdIncludeAsync(
                 id,
@@ -114,18 +197,51 @@ namespace SOPServer.Service.Services.Implements
                         .ThenInclude(co => co.Outfit)
                             .ThenInclude(o => o.OutfitItems.Where(oi => !oi.IsDeleted))
                                 .ThenInclude(oi => oi.Item)
-                                    .ThenInclude(i => i.Category));
+                                    .ThenInclude(i => i.Category)
+                    .Include(c => c.LikeCollections)
+                    .Include(c => c.SaveCollections));
 
             if (collection == null)
             {
                 throw new NotFoundException(MessageConstants.COLLECTION_NOT_FOUND);
             }
 
+            var collectionModel = _mapper.Map<CollectionDetailedModel>(collection);
+
+            // Check following, saved, and liked status if caller user ID is provided
+            if (callerUserId.HasValue)
+            {
+                // Check if caller follows the collection author
+                if (collectionModel.UserId.HasValue && collectionModel.UserId.Value != callerUserId.Value)
+                {
+                    var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(callerUserId.Value, collectionModel.UserId.Value);
+                    collectionModel.IsFollowing = isFollowing;
+                }
+                else
+                {
+                    collectionModel.IsFollowing = false;
+                }
+
+                // Check if caller saved the collection
+                var savedCollection = await _unitOfWork.SaveCollectionRepository.GetByUserAndCollection(callerUserId.Value, collectionModel.Id);
+                collectionModel.IsSaved = savedCollection != null && !savedCollection.IsDeleted;
+
+                // Check if caller liked the collection
+                var likedCollection = await _unitOfWork.LikeCollectionRepository.GetByUserAndCollection(callerUserId.Value, collectionModel.Id);
+                collectionModel.IsLiked = likedCollection != null && !likedCollection.IsDeleted;
+            }
+            else
+            {
+                collectionModel.IsFollowing = false;
+                collectionModel.IsSaved = false;
+                collectionModel.IsLiked = false;
+            }
+
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.COLLECTION_GET_SUCCESS,
-                Data = _mapper.Map<CollectionDetailedModel>(collection)
+                Data = collectionModel
             };
         }
 
@@ -154,11 +270,19 @@ namespace SOPServer.Service.Services.Implements
                 }
             }
 
+            var thumbnail = await _minioService.UploadImageAsync(model.ThumbnailImg);
+
+            if (thumbnail?.Data is not ImageUploadResult uploadData || string.IsNullOrEmpty(uploadData.DownloadUrl))
+            {
+                throw new BadRequestException(MessageConstants.FILE_NOT_FOUND);
+            }
+
             var collection = new Collection
             {
                 UserId = userId,
                 Title = model.Title,
-                ShortDescription = model.ShortDescription
+                ShortDescription = model.ShortDescription,
+                ThumbnailURL = uploadData.DownloadUrl,
             };
 
             await _unitOfWork.CollectionRepository.AddAsync(collection);
@@ -212,6 +336,16 @@ namespace SOPServer.Service.Services.Implements
 
             collection.Title = model.Title;
             collection.ShortDescription = model.ShortDescription;
+
+            var newThumbnail = await _minioService.UploadImageAsync(model.ThumbnailImg);
+            if (newThumbnail?.Data is not ImageUploadResult uploadData || string.IsNullOrEmpty(uploadData.DownloadUrl))
+            {
+                throw new BadRequestException(MessageConstants.FILE_NOT_FOUND);
+            }
+
+            await _minioService.DeleteImageByURLAsync(collection.ThumbnailURL);
+
+            collection.ThumbnailURL = uploadData.DownloadUrl;
 
             _unitOfWork.CollectionRepository.UpdateAsync(collection);
             await _unitOfWork.SaveAsync();
@@ -295,6 +429,46 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.COLLECTION_DELETE_SUCCESS
+            };
+        }
+
+        public async Task<BaseResponseModel> TogglePublishCollectionAsync(long id, long userId)
+        {
+            var collection = await _unitOfWork.CollectionRepository.GetByIdAsync(id);
+            if (collection == null)
+            {
+                throw new NotFoundException(MessageConstants.COLLECTION_NOT_FOUND);
+            }
+
+            if (collection.UserId.HasValue && collection.UserId.Value != userId)
+            {
+                throw new ForbiddenException(MessageConstants.COLLECTION_ACCESS_DENIED);
+            }
+
+            // Toggle the publish status
+            collection.IsPublished = !collection.IsPublished;
+            _unitOfWork.CollectionRepository.UpdateAsync(collection);
+            await _unitOfWork.SaveAsync();
+
+            var updatedCollection = await _unitOfWork.CollectionRepository.GetByIdIncludeAsync(
+                id,
+                include: query => query
+                    .Include(c => c.User)
+                    .Include(c => c.CollectionOutfits.Where(co => !co.IsDeleted))
+                        .ThenInclude(co => co.Outfit)
+                            .ThenInclude(o => o.OutfitItems.Where(oi => !oi.IsDeleted))
+                                .ThenInclude(oi => oi.Item)
+                                    .ThenInclude(i => i.Category));
+
+            var message = collection.IsPublished 
+                ? MessageConstants.COLLECTION_PUBLISH_SUCCESS 
+                : MessageConstants.COLLECTION_UNPUBLISH_SUCCESS;
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = message,
+                Data = _mapper.Map<CollectionDetailedModel>(updatedCollection)
             };
         }
     }

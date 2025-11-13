@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SOPServer.Repository.Commons;
+using SOPServer.Repository.Entities;
 using SOPServer.Service.BusinessModels.OutfitCalendarModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.Services.Interfaces;
@@ -14,7 +15,7 @@ namespace SOPServer.API.Controllers
     /// </summary>
     [Route("api/v1/outfits")]
     [ApiController]
-    [Authorize(Roles = "USER,STYLIST,ADMIN")]
+    //[Authorize(Roles = "USER,STYLIST,ADMIN")]
     public class OutfitController : BaseController
     {
         private readonly IOutfitService _outfitService;
@@ -296,10 +297,10 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _outfitService.DeleteOutfitCalendarAsync(id, userId));
         }
 
-        [HttpPost("suggestion")]
-        public Task<IActionResult> OutfitSuggestion()
+        [HttpGet("suggestion")]
+        public Task<IActionResult> OutfitSuggestion(long userId, long? occasionId)
         {
-            throw new NotImplementedException();
+            return ValidateAndExecute(async () => await _outfitService.OutfitSuggestion(userId, occasionId));
         }
     }
 }

@@ -3,6 +3,7 @@ using SOPServer.Service.BusinessModels.AuthenModels;
 using SOPServer.Service.BusinessModels.OnboardingModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.UserModels;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +20,8 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> LoginWithGoogleOAuth(string credential);
         Task<BaseResponseModel> RefreshToken(string jwtToken);
         Task<BaseResponseModel> UpdateUser(UpdateUserModel user);
+        Task<BaseResponseModel> UpdateProfile(long userId, UpdateProfileModel model);
+        Task<BaseResponseModel> UpdateAvatar(long userId, IFormFile file);
         Task<BaseResponseModel> GetUsers(PaginationParameter paginationParameter);
         Task<BaseResponseModel> SoftDeleteUserAsync(long userId);
         Task<BaseResponseModel> UpdateUserAddress(UpdateUserAddressModel userAddress);

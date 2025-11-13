@@ -252,6 +252,35 @@ namespace SOPServer.Service.Services.Implements
                 throw new BadRequestException("Filter is required");
             }
 
+            // Get child category IDs if filtering by a root/parent category
+            List<long>? categoryIdsToFilter = null;
+            if (filter.CategoryId.HasValue)
+            {
+                var category = await _unitOfWork.CategoryRepository.GetByIdIncludeAsync(
+                    filter.CategoryId.Value,
+                    include: query => query.Include(c => c.InverseParent)
+                );
+
+                if (category == null)
+                {
+                    throw new NotFoundException(MessageConstants.CATEGORY_NOT_EXIST);
+                }
+
+                // If it's a root/parent category (ParentId is null), get all child category IDs
+                if (category.ParentId == null)
+                {
+                    categoryIdsToFilter = category.InverseParent
+                        .Where(c => !c.IsDeleted)
+                        .Select(c => c.Id)
+                        .ToList();
+                }
+                else
+                {
+                    // If it's a child category, only filter by this specific category
+                    categoryIdsToFilter = new List<long> { filter.CategoryId.Value };
+                }
+            }
+
             var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter,
                                     include: query => query
           .Include(x => x.Category)
@@ -261,7 +290,7 @@ namespace SOPServer.Service.Services.Implements
         .Include(x => x.ItemStyles).ThenInclude(x => x.Style),
             filter: x => x.UserId == userid
                && (!filter.IsAnalyzed.HasValue || x.IsAnalyzed == filter.IsAnalyzed.Value)
-    && (!filter.CategoryId.HasValue || x.CategoryId == filter.CategoryId.Value)
+    && (categoryIdsToFilter == null || (x.CategoryId.HasValue && categoryIdsToFilter.Contains(x.CategoryId.Value)))
    && (!filter.StyleId.HasValue || x.ItemStyles.Any(isr => !isr.IsDeleted && isr.StyleId == filter.StyleId.Value))
                  && (!filter.SeasonId.HasValue || x.ItemSeasons.Any(ss => !ss.IsDeleted && ss.SeasonId == filter.SeasonId.Value))
      && (!filter.OccasionId.HasValue || x.ItemOccasions.Any(ss => !ss.IsDeleted && ss.OccasionId == filter.OccasionId.Value))
@@ -723,7 +752,8 @@ namespace SOPServer.Service.Services.Implements
                         UserId = bulkUploadModel.UserId,
                         ImgUrl = imageUrl,
                         IsAnalyzed = false,
-                        AIAnalyzeJson = JsonSerializer.Serialize(categoryAnalysis, serializerOptions)
+                        AIAnalyzeJson = JsonSerializer.Serialize(categoryAnalysis, serializerOptions),
+                        ItemType = user.Role == Role.ADMIN ? ItemType.SYSTEM : ItemType.USER
                     };
 
                     return (imageUrl, newItem);
@@ -828,7 +858,8 @@ namespace SOPServer.Service.Services.Implements
                         CategoryId = itemUpload.CategoryId,
                         UserId = bulkUploadModel.UserId,
                         ImgUrl = itemUpload.ImageURLs,
-                        IsAnalyzed = false
+                        IsAnalyzed = false,
+                        ItemType = user.Role == Role.ADMIN ? ItemType.SYSTEM : ItemType.USER
                     };
                     validItems.Add(newItem);
                     await _unitOfWork.ItemRepository.AddAsync(newItem);

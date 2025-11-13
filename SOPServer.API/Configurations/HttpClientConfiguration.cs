@@ -29,7 +29,7 @@ namespace SOPServer.API.Configurations
             {
                 client.BaseAddress = new Uri("https://split-item.wizlab.io.vn/");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
-                client.Timeout = TimeSpan.FromSeconds(30);
+                client.Timeout = TimeSpan.FromSeconds(60);
             });
 
             return services;

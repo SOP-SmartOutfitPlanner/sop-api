@@ -9,8 +9,10 @@ namespace SOPServer.Repository.Entities
     public partial class Collection : BaseEntity
     {
         public long? UserId { get; set; }
+        public string ThumbnailURL { get; set; }
         public string Title { get; set; }
         public string ShortDescription { get; set; }
+        public bool IsPublished { get; set; } = false;
 
         // Navigation properties
         virtual public User User { get; set; }

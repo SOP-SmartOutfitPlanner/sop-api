@@ -36,6 +36,8 @@ namespace SOPServer.Service.Constants
         public const string USER_DELETE_SUCCESS = "User deleted successfully";
         public const string USER_ALREADY_DELETED = "User has already been deleted";
         public const string USER_ADDRESS_UPDATE_SUCCESS = "User address updated successfully";
+        public const string USER_PROFILE_UPDATE_SUCCESS = "User profile updated successfully";
+        public const string USER_AVATAR_UPDATE_SUCCESS = "User avatar updated successfully";
         public const string USER_MUST_LOGIN_WITH_GOOGLE = "User must login with google";
         public const string EMAIL_OR_PASSWORD_INCORRECT = "Email or password incorrect";
         public const string USER_FORBIDDEN = "User forbidden access to the system";
@@ -92,6 +94,8 @@ namespace SOPServer.Service.Constants
         public const string GET_TOP_CONTRIBUTORS_SUCCESS = "Get top contributors successfully";
         public const string GET_LIST_POST_SUCCESS = "Get post successfully";
         public const string GET_POST_LIKERS_SUCCESS = "Get list of post likers successfully";
+        public const string GET_LIST_POST_BY_HASHTAG_SUCCESS = "Get list posts by hashtag successfully";
+        public const string HASHTAG_NOT_FOUND = "Hashtag not found";
 
         public const string OTP_SENT_SUCCESS = "OTP sent successfully to your gmail";
         public const string OTP_VERIFY_SUCCESS = "Verify OTP successfully";
@@ -192,6 +196,16 @@ namespace SOPServer.Service.Constants
         public const string ALREADY_LIKE_POST = "You have already liked this post";
         public const string LIKE_POST_NOT_FOUND = "Like not found";
 
+        // LikeCollection related messages
+        public const string LIKE_COLLECTION_SUCCESS = "Like collection successfully";
+        public const string UNLIKE_COLLECTION_SUCCESS = "Unlike collection successfully";
+
+        // SaveCollection related messages
+        public const string SAVE_COLLECTION_SUCCESS = "Save collection successfully";
+        public const string UNSAVE_COLLECTION_SUCCESS = "Unsave collection successfully";
+        public const string GET_SAVED_COLLECTIONS_SUCCESS = "Get saved collections successfully";
+        public const string CHECK_SAVED_COLLECTION_SUCCESS = "Check saved collection status successfully";
+
         // CommentPost related messages
         public const string COMMENT_CREATE_SUCCESS = "Comment created successfully";
         public const string COMMENT_UPDATE_SUCCESS = "Comment updated successfully";
@@ -228,6 +242,29 @@ namespace SOPServer.Service.Constants
         public const string NEWSFEED_EMPTY = "No posts available in your feed";
         public const string NEWSFEED_REFRESH_SUCCESS = "Newsfeed refreshed successfully";
 
+        // Notification related messages
+        public const string NOTIFICATION_NOT_EXIST = "Notification does not exist";
+        public const string GET_NOTIFICATION_SUCCESS = "Get notification successfully";
+        public const string PUSH_NOTIFICATION_USER_SUCCESS = "Push notification to user successfully";
+        public const string USER_DEVICE_NOT_FOUND = "User device not found";
+        public const string GET_LIST_NOTIFICATION_SUCCESS = "Get list notifications successfully";
+        public const string ENUM_NOTIFICATION_NOT_VALID = "Notification type is not valid";
+        public const string COUNT_UNREAD_NOTIFICATION_SUCCESS = "Get unread notification count successfully";
+        public const string USER_NOTIFICATION_NOT_EXIST = "User notification does not exist";
+        public const string MARK_NOTIFICATION_AS_READ_SUCCESS = "Notification marked as read successfully";
+        public const string NO_NOTIFICATION_MARK_AS_READ = "No unread notifications to mark as read";
+        public const string MARK_ALL_NOTIFICATION_AS_READ_SUCCESS = "All notifications marked as read successfully";
+        public const string PUSH_NOTIFICATION_SUCCESS = "Push notification successfully";
+        public const string NOTIFICATION_CREATE_SUCCESS = "Notification created successfully";
+        public const string GET_ALL_NOTIFICATIONS_SUCCESS = "Get all notifications successfully";
+
+        // UserDevice related messages
+        public const string DEVICE_TOKEN_EXIST = "Device token already exists";
+        public const string DEVICE_TOKEN_NOT_EXIST = "Device token does not exist";
+        public const string DEVICE_TOKEN_ADD_SUCCESS = "Device token added successfully";
+        public const string DEVICE_TOKEN_UPDATED_SUCCESS = "Device token updated successfully";
+        public const string DEVICE_TOKEN_DELETE_SUCCESS = "Device token deleted successfully";
+
         // OutfitCalendar related messages
         public const string OUTFIT_CALENDAR_NOT_FOUND = "Outfit calendar entry not found";
         public const string OUTFIT_CALENDAR_GET_SUCCESS = "Outfit calendar entry retrieved successfully";
@@ -237,6 +274,11 @@ namespace SOPServer.Service.Constants
         public const string GET_LIST_OUTFIT_CALENDAR_SUCCESS = "Get list outfit calendar successfully";
         public const string OUTFIT_CALENDAR_ACCESS_DENIED = "You don't have permission to access this outfit calendar entry";
         public const string OUTFIT_CALENDAR_ALREADY_EXISTS = "An outfit is already scheduled for this date";
+
+        // Outfit Suggestion related messages
+        public const string OUTFIT_SUGGESTION_SUCCESS = "Outfit suggestion generated successfully";
+        public const string OUTFIT_SUGGESTION_FAILED = "Failed to generate outfit suggestion";
+        public const string NO_MATCHING_ITEMS_FOUND = "No matching items found in your wardrobe for the suggested outfit";
 
         public static string GET_USER_STATS_SUCCESS = "Get user stats successfully";
 
@@ -252,11 +294,16 @@ namespace SOPServer.Service.Constants
         public const string COLLECTION_OUTFIT_NOT_FOUND = "This outfit is not in the collection";
         public const string ADD_OUTFIT_TO_COLLECTION_SUCCESS = "Outfit added to collection successfully";
         public const string REMOVE_OUTFIT_FROM_COLLECTION_SUCCESS = "Outfit removed from collection successfully";
+        public const string COLLECTION_PUBLISH_SUCCESS = "Collection published successfully";
+        public const string COLLECTION_UNPUBLISH_SUCCESS = "Collection unpublished successfully";
 
         // ReportCommunity related messages
         public const string REPORT_COMMUNITY_CREATE_SUCCESS = "Report submitted successfully";
         public const string REPORT_POST_ID_REQUIRED = "PostId is required when reporting a post";
         public const string REPORT_COMMENT_ID_REQUIRED = "CommentId is required when reporting a comment";
         public const string REPORT_ALREADY_EXISTS = "You have already reported this content";
+
+        // Subscription related messages
+        public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "Plan: ";
     }
 }

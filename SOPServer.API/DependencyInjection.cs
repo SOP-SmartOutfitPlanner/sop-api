@@ -66,7 +66,23 @@ namespace SOPServer.API
             services.AddScoped<ICollectionRepository, CollectionRepository>();
             services.AddScoped<ICollectionService, CollectionService>();
 
+            services.AddScoped<ILikeCollectionRepository, LikeCollectionRepository>();
+            services.AddScoped<ILikeCollectionService, LikeCollectionService>();
+            services.AddScoped<ICommentCollectionRepository, CommentCollectionRepository>();
+            services.AddScoped<ICommentCollectionService, CommentCollectionService>();
+            services.AddScoped<ISaveCollectionRepository, SaveCollectionRepository>();
+            services.AddScoped<ISaveCollectionService, SaveCollectionService>();
+
+
             services.AddScoped<ICollectionOutfitRepository, CollectionOutfitRepository>();
+
+            // Register comment collection dependencies
+            services.AddScoped<ICommentCollectionRepository, CommentCollectionRepository>();
+            services.AddScoped<ICommentCollectionService, CommentCollectionService>();
+
+            // Register like collection dependencies
+            services.AddScoped<ILikeCollectionRepository, LikeCollectionRepository>();
+            services.AddScoped<ILikeCollectionService, LikeCollectionService>();
 
             // ========== POST MANAGEMENT ==========
             services.AddScoped<IPostRepository, PostRepository>();
@@ -92,6 +108,14 @@ namespace SOPServer.API
             services.AddScoped<IFollowerRepository, FollowerRepository>();
             services.AddScoped<IFollowerService, FollowerService>();
 
+            // ========== NOTIFICATION MANAGEMENT ==========
+            services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<IUserNotificationRepository, UserNotificationRepository>();
+            services.AddScoped<INotificationService, NotificationService>();
+
+            services.AddScoped<IUserDeviceRepository, UserDeviceRepository>();
+            services.AddScoped<IUserDeviceService, UserDeviceService>();
+
             // ========== AI SETTINGS ==========
             services.AddScoped<IAISettingRepository, AISettingRepository>();
             services.AddScoped<IAISettingService, AISettingService>();
@@ -101,6 +125,7 @@ namespace SOPServer.API
             services.AddScoped<IRedisService, RedisService>();
             services.AddScoped<IMinioService, MinioService>();
             services.AddScoped<IQdrantService, QDrantService>();
+            services.AddScoped<IPayOSService, PayOSService>();
 
             // ========== EMAIL SERVICES ==========
             services.AddScoped<IMailService, MailService>();

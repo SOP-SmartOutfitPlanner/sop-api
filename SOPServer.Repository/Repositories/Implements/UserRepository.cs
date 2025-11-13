@@ -34,7 +34,7 @@ namespace SOPServer.Repository.Repositories.Implements
         {
             return await _context.Users
                 .Include(u => u.Job)
-                .Include(u => u.UserStyles)
+                .Include(u => u.UserStyles.Where(us => !us.IsDeleted))
                     .ThenInclude(us => us.Style)
                 .Where(x => x.Id == userId && !x.IsDeleted)
                 .FirstOrDefaultAsync();

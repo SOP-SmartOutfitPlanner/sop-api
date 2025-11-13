@@ -5,7 +5,7 @@ namespace SOPServer.Repository.Entities
 {
     public partial class UserSubscriptionTransaction : BaseEntity
     {
-        public long SubscriptionId { get; set; }
+        public long UserSubscriptionId { get; set; }
         public string TransactionCode { get; set; }
 
         public decimal Price { get; set; }

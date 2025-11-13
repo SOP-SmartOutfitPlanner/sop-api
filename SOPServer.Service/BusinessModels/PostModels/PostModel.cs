@@ -22,6 +22,7 @@ namespace SOPServer.Service.BusinessModels.PostModels
         public int LikeCount { get; set; }
         public int CommentCount { get; set; }
         public bool IsLiked { get; set; }
+        public bool IsFollowing { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
     }

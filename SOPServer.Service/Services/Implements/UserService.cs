@@ -13,6 +13,7 @@ using SOPServer.Service.BusinessModels.EmailModels;
 using SOPServer.Service.BusinessModels.OnboardingModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.UserModels;
+using SOPServer.Service.BusinessModels.FirebaseModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
@@ -32,6 +33,7 @@ namespace SOPServer.Service.Services.Implements
         private readonly IOtpService _otpService;
         private readonly IRedisService _redisService;
         private readonly IEmailTemplateService _emailTemplateService;
+        private readonly IMinioService _minioService;
 
         public UserService(
             IUnitOfWork unitOfWork,
@@ -40,7 +42,8 @@ namespace SOPServer.Service.Services.Implements
             IMailService mailService,
             IOtpService otpService,
             IRedisService redisService,
-            IEmailTemplateService emailTemplateService)
+            IEmailTemplateService emailTemplateService,
+            IMinioService minioService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -49,6 +52,7 @@ namespace SOPServer.Service.Services.Implements
             _otpService = otpService;
             _redisService = redisService;
             _emailTemplateService = emailTemplateService;
+            _minioService = minioService;
         }
 
         public async Task<BaseResponseModel> LoginWithGoogleOAuth(string credential)
@@ -229,7 +233,7 @@ namespace SOPServer.Service.Services.Implements
                 filter: x => !x.IsDeleted && x.Role != Role.ADMIN,
                 include: query => query
                     .Include(u => u.Job)
-                    .Include(u => u.UserStyles)
+                    .Include(u => u.UserStyles.Where(us => !us.IsDeleted))
                         .ThenInclude(us => us.Style),
                 orderBy: query => query.OrderByDescending(x => x.CreatedDate)
             );
@@ -782,7 +786,11 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<UserCharacteristicModel> GetUserCharacteristic(long userId)
         {
-            var user = await _unitOfWork.UserRepository.GetByIdIncludeAsync(userId, include: x => x.Include(x => x.UserStyles).ThenInclude(y => y.Style));
+            var user = await _unitOfWork.UserRepository.GetByIdIncludeAsync(
+                userId, 
+                include: x => x.Include(u => u.UserStyles.Where(us => !us.IsDeleted))
+                    .ThenInclude(y => y.Style)
+            );
 
             if (user == null)
             {
@@ -790,6 +798,158 @@ namespace SOPServer.Service.Services.Implements
             }
 
             return _mapper.Map<UserCharacteristicModel>(user);
+        }
+
+        public async Task<BaseResponseModel> UpdateProfile(long userId, UpdateProfileModel model)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdIncludeAsync(
+                userId,
+                include: query => query
+                    .Include(u => u.Job)
+                    .Include(u => u.UserStyles.Where(us => !us.IsDeleted))
+                        .ThenInclude(us => us.Style)
+            );
+
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Update basic fields
+            if (!string.IsNullOrWhiteSpace(model.DisplayName))
+            {
+                user.DisplayName = model.DisplayName;
+            }
+
+            if (model.Dob.HasValue)
+            {
+                user.Dob = model.Dob.Value;
+            }
+
+            if (model.Gender.HasValue)
+            {
+                user.Gender = model.Gender.Value;
+            }
+
+            if (model.PreferedColor != null)
+            {
+                user.PreferedColor = model.PreferedColor;
+            }
+
+            if (model.AvoidedColor != null)
+            {
+                user.AvoidedColor = model.AvoidedColor;
+            }
+
+            if (model.Location != null)
+            {
+                user.Location = model.Location;
+            }
+
+            if (model.Bio != null)
+            {
+                user.Bio = model.Bio;
+            }
+
+            if (model.JobId.HasValue)
+            {
+                var job = await _unitOfWork.JobRepository.GetByIdAsync(model.JobId.Value);
+                if (job == null)
+                {
+                    throw new NotFoundException(MessageConstants.JOB_NOT_EXIST);
+                }
+                user.JobId = model.JobId.Value;
+            }
+
+            // Update styles if provided
+            if (model.StyleIds != null)
+            {
+                // Soft delete existing active styles
+                var existingUserStyles = user.UserStyles.Where(us => !us.IsDeleted).ToList();
+                foreach (var userStyle in existingUserStyles)
+                {
+                    userStyle.IsDeleted = true;
+                }
+
+                // Add new styles
+                foreach (var styleId in model.StyleIds)
+                {
+                    var style = await _unitOfWork.StyleRepository.GetByIdAsync(styleId);
+                    if (style == null)
+                    {
+                        throw new NotFoundException($"{MessageConstants.STYLE_NOT_EXIST}: {styleId}");
+                    }
+
+                    user.UserStyles.Add(new UserStyle
+                    {
+                        UserId = userId,
+                        StyleId = styleId
+                    });
+                }
+            }
+
+            _unitOfWork.UserRepository.UpdateAsync(user);
+            await _unitOfWork.SaveAsync();
+
+            // Reload user with updated data
+            var updatedUser = await _unitOfWork.UserRepository.GetUserProfileByIdAsync(userId);
+            var userProfile = _mapper.Map<UserProfileModel>(updatedUser);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.USER_PROFILE_UPDATE_SUCCESS,
+                Data = userProfile
+            };
+        }
+
+        public async Task<BaseResponseModel> UpdateAvatar(long userId, IFormFile file)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Delete old avatar if exists
+            if (!string.IsNullOrWhiteSpace(user.AvtUrl))
+            {
+                try
+                {
+                    await _minioService.DeleteImageByURLAsync(user.AvtUrl);
+                }
+                catch
+                {
+                    // Continue even if old avatar deletion fails
+                }
+            }
+
+            // Upload new avatar to MinIO
+            var uploadResult = await _minioService.UploadImageAsync(file);
+
+            if (uploadResult?.Data is ImageUploadResult imageResult)
+            {
+                user.AvtUrl = imageResult.DownloadUrl;
+            }
+            else
+            {
+                throw new BadRequestException("Failed to upload avatar");
+            }
+
+            _unitOfWork.UserRepository.UpdateAsync(user);
+            await _unitOfWork.SaveAsync();
+
+            // Return updated profile
+            var updatedUser = await _unitOfWork.UserRepository.GetUserProfileByIdAsync(userId);
+            var userProfile = _mapper.Map<UserProfileModel>(updatedUser);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.USER_AVATAR_UPDATE_SUCCESS,
+                Data = userProfile
+            };
         }
     }
 }

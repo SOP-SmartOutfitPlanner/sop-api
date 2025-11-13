@@ -153,11 +153,20 @@ namespace SOPServer.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("bit");
+
                     b.Property<string>("ShortDescription")
                         .IsRequired()
                         .HasMaxLength(500)
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ThumbnailURL")
+                        .IsRequired()
+                        .HasMaxLength(2147483647)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -426,6 +435,9 @@ namespace SOPServer.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("ItemType")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("LastWornAt")
                         .HasColumnType("datetime2");
 
@@ -662,6 +674,51 @@ namespace SOPServer.Repository.Migrations
                         .HasDatabaseName("IX_LikePost_PostId_UserId");
 
                     b.ToTable("LikePost", (string)null);
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.Notification", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long?>("ActorUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Data")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Href")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.ToTable("Notification");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Occasion", b =>
@@ -1158,6 +1215,81 @@ namespace SOPServer.Repository.Migrations
                     b.ToTable("User", (string)null);
                 });
 
+            modelBuilder.Entity("SOPServer.Repository.Entities.UserDevice", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeviceToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserDevice");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.UserNotification", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int?>("AggregationCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GroupKey")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("NotificationId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NotificationId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserNotification");
+                });
+
             modelBuilder.Entity("SOPServer.Repository.Entities.UserOccasion", b =>
                 {
                     b.Property<long>("Id")
@@ -1308,9 +1440,6 @@ namespace SOPServer.Repository.Migrations
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
-
-                    b.Property<long>("SubscriptionId")
-                        .HasColumnType("bigint");
 
                     b.Property<string>("TransactionCode")
                         .IsRequired()
@@ -1569,6 +1698,15 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SOPServer.Repository.Entities.Notification", b =>
+                {
+                    b.HasOne("SOPServer.Repository.Entities.User", "ActorUser")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId");
+
+                    b.Navigation("ActorUser");
+                });
+
             modelBuilder.Entity("SOPServer.Repository.Entities.OutfitItem", b =>
                 {
                     b.HasOne("SOPServer.Repository.Entities.Item", "Item")
@@ -1708,6 +1846,36 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("Job");
                 });
 
+            modelBuilder.Entity("SOPServer.Repository.Entities.UserDevice", b =>
+                {
+                    b.HasOne("SOPServer.Repository.Entities.User", "User")
+                        .WithMany("UserDevices")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.UserNotification", b =>
+                {
+                    b.HasOne("SOPServer.Repository.Entities.Notification", "Notification")
+                        .WithMany("UserNotifications")
+                        .HasForeignKey("NotificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SOPServer.Repository.Entities.User", "User")
+                        .WithMany("UserNotifications")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Notification");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SOPServer.Repository.Entities.UserOccasion", b =>
                 {
                     b.HasOne("SOPServer.Repository.Entities.Occasion", "Occasion")
@@ -1771,7 +1939,7 @@ namespace SOPServer.Repository.Migrations
                         .HasForeignKey("UserId");
 
                     b.HasOne("SOPServer.Repository.Entities.UserSubscription", "UserSubscription")
-                        .WithMany()
+                        .WithMany("UserSubscriptionTransactions")
                         .HasForeignKey("UserSubscriptionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1832,6 +2000,11 @@ namespace SOPServer.Repository.Migrations
             modelBuilder.Entity("SOPServer.Repository.Entities.Job", b =>
                 {
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.Notification", b =>
+                {
+                    b.Navigation("UserNotifications");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Occasion", b =>
@@ -1899,6 +2072,10 @@ namespace SOPServer.Repository.Migrations
 
                     b.Navigation("SaveCollections");
 
+                    b.Navigation("UserDevices");
+
+                    b.Navigation("UserNotifications");
+
                     b.Navigation("UserOccasions");
 
                     b.Navigation("UserStyles");
@@ -1911,6 +2088,11 @@ namespace SOPServer.Repository.Migrations
             modelBuilder.Entity("SOPServer.Repository.Entities.UserOccasion", b =>
                 {
                     b.Navigation("OutfitUsageHistories");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.UserSubscription", b =>
+                {
+                    b.Navigation("UserSubscriptionTransactions");
                 });
 #pragma warning restore 612, 618
         }

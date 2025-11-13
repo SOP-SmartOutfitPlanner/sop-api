@@ -39,7 +39,16 @@ namespace SOPServer.Repository.UnitOfWork
         private IOutfitUsageHistoryRepository _outfitUsageHistoryRepository;
         private ICollectionRepository _collectionRepository;
         private ICollectionOutfitRepository _collectionOutfitRepository;
+        private ICommentCollectionRepository _commentCollectionRepository;
+        private ILikeCollectionRepository _likeCollectionRepository;
+        private ISaveCollectionRepository _saveCollectionRepository;
         private IReportCommunityRepository _reportCommunityRepository;
+        private IUserSubscriptionRepository _userSubscriptionRepository;
+        private ISubscriptionPlanRepository _subscriptionPlanRepository;
+        private IUserSubscriptionTransactionRepository _subscriptionTransactionRepository;
+        private INotificationRepository _notificationRepository;
+        private IUserNotificationRepository _userNotificationRepository;
+        private IUserDeviceRepository _userDeviceRepository;
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -238,11 +247,84 @@ namespace SOPServer.Repository.UnitOfWork
             }
         }
 
+        public ICommentCollectionRepository CommentCollectionRepository
+        {
+            get
+            {
+                return _commentCollectionRepository ??= new CommentCollectionRepository(_context);
+            }
+        }
+
+        public ILikeCollectionRepository LikeCollectionRepository
+        {
+            get
+            {
+                return _likeCollectionRepository ??= new LikeCollectionRepository(_context);
+            }
+        }
+
+        public ISaveCollectionRepository SaveCollectionRepository
+        {
+            get
+            {
+                return _saveCollectionRepository ??= new SaveCollectionRepository(_context);
+            }
+        }
+
         public IReportCommunityRepository ReportCommunityRepository
         {
             get
             {
                 return _reportCommunityRepository ??= new ReportCommunityRepository(_context);
+            }
+        }
+
+        public IUserSubscriptionRepository UserSubscriptionRepository
+        {
+            get
+            {
+                return _userSubscriptionRepository ??= new UserSubscriptionRepository(_context);
+            }
+        }
+
+        public ISubscriptionPlanRepository SubscriptionPlanRepository
+        {
+            get
+            {
+                return _subscriptionPlanRepository ??= new SubscriptionPlanRepository(_context);
+            }
+
+        }
+
+        public IUserSubscriptionTransactionRepository UserSubscriptionTransactionRepository
+        {
+            get
+            {
+                return _subscriptionTransactionRepository ??= new UserSubscriptionTransactionRepository(_context);
+            }
+        }
+
+        public INotificationRepository NotificationRepository
+        {
+            get
+            {
+                return _notificationRepository ??= new NotificationRepository(_context);
+            }
+        }
+
+        public IUserNotificationRepository UserNotificationRepository
+        {
+            get
+            {
+                return _userNotificationRepository ??= new UserNotificationRepository(_context);
+            }
+        }
+
+        public IUserDeviceRepository UserDeviceRepository
+        {
+            get
+            {
+                return _userDeviceRepository ??= new UserDeviceRepository(_context);
             }
         }
 

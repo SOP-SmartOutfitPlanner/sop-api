@@ -33,8 +33,16 @@ namespace SOPServer.Repository.UnitOfWork
         IUserOccasionRepository UserOccasionRepository { get; }
         ICollectionRepository CollectionRepository { get; }
         ICollectionOutfitRepository CollectionOutfitRepository { get; }
+        ICommentCollectionRepository CommentCollectionRepository { get; }
+        ILikeCollectionRepository LikeCollectionRepository { get; }
+        ISaveCollectionRepository SaveCollectionRepository { get; }
         IReportCommunityRepository ReportCommunityRepository { get; }
-
+        IUserSubscriptionRepository UserSubscriptionRepository { get; }
+        IUserSubscriptionTransactionRepository UserSubscriptionTransactionRepository { get; }
+        ISubscriptionPlanRepository SubscriptionPlanRepository { get; }
+        INotificationRepository NotificationRepository { get; }
+        IUserNotificationRepository UserNotificationRepository { get; }
+        IUserDeviceRepository UserDeviceRepository { get; }
         int Save();
         void Commit();
         void Rollback();

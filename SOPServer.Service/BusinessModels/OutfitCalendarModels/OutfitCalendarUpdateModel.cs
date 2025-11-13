@@ -18,9 +18,21 @@ namespace SOPServer.Service.BusinessModels.OutfitCalendarModels
         public long? UserOccasionId { get; set; }
 
         /// <summary>
-        /// Date when the outfit will be used
+        /// Indicates if this is a daily outfit (no specific occasion)
         /// </summary>
-        /// <example>2025-12-15T14:00:00</example>
-        public DateTime? DateUsed { get; set; }
+        /// <example>true</example>
+        public bool? IsDaily { get; set; }
+
+        /// <summary>
+        /// Time when the outfit will be worn (used when IsDaily is true)
+        /// </summary>
+        /// <example>08:00:00</example>
+        public TimeSpan? Time { get; set; }
+
+        /// <summary>
+        /// End time for the outfit (optional, used when IsDaily is true)
+        /// </summary>
+        /// <example>17:00:00</example>
+        public TimeSpan? EndTime { get; set; }
     }
 }

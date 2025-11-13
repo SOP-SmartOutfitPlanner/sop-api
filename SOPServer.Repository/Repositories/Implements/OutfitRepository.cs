@@ -76,7 +76,7 @@ namespace SOPServer.Repository.Repositories.Implements
                             .ThenInclude(i => i.Category)
                 .Include(x => x.UserOccasion)
                 .Where(x => x.UserOccassionId == userOccasionId && x.UserId == userId && !x.IsDeleted)
-                .OrderBy(x => x.DateUsed)
+                .OrderBy(x => x.CreatedDate)
                 .ToListAsync();
         }
 

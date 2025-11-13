@@ -486,9 +486,10 @@ namespace SOPServer.Service.Services.Implements
             var outfitCalendars = await _unitOfWork.OutfitRepository.GetOutfitCalendarPaginationAsync(
                 paginationParameter,
                 filter: x => x.UserId == userId &&
-                           (!filterStartDate.HasValue || x.DateUsed >= filterStartDate.Value) &&
-                           (!filterEndDate.HasValue || x.DateUsed <= filterEndDate.Value),
-                orderBy: q => q.OrderBy(x => x.DateUsed));
+                           x.UserOccasion != null &&
+                           (!filterStartDate.HasValue || x.UserOccasion.DateOccasion >= filterStartDate.Value) &&
+                           (!filterEndDate.HasValue || x.UserOccasion.DateOccasion <= filterEndDate.Value),
+                orderBy: q => q.OrderBy(x => x.UserOccasion != null ? x.UserOccasion.DateOccasion : DateTime.MaxValue));
 
             var models = _mapper.Map<Pagination<OutfitCalendarModel>>(outfitCalendars);
 
@@ -569,21 +570,76 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
-            // Verify outfit exists and belongs to user
-            var outfit = await _unitOfWork.OutfitRepository.GetByIdAsync(model.OutfitId);
-            if (outfit == null)
+            // Validate all outfits exist and belong to user
+            var outfits = new List<Outfit>();
+            foreach (var outfitId in model.OutfitIds)
             {
-                throw new NotFoundException(MessageConstants.OUTFIT_NOT_FOUND);
+                var outfit = await _unitOfWork.OutfitRepository.GetByIdAsync(outfitId);
+                if (outfit == null)
+                {
+                    throw new NotFoundException($"Outfit with ID {outfitId} not found");
+                }
+
+                if (outfit.UserId != userId)
+                {
+                    throw new ForbiddenException($"Access denied to outfit {outfitId}");
+                }
+
+                outfits.Add(outfit);
             }
 
-            if (outfit.UserId != userId)
-            {
-                throw new ForbiddenException(MessageConstants.OUTFIT_ACCESS_DENIED);
-            }
+            // Handle Daily outfit logic
+            long? userOccasionId = model.UserOccasionId;
 
-            // Verify user occasion if provided
-            if (model.UserOccasionId.HasValue)
+            if (model.IsDaily)
             {
+                // Validate that Time is provided for daily outfits
+                if (!model.Time.HasValue)
+                {
+                    throw new BadRequestException("Time is required when IsDaily is true");
+                }
+
+                // Look for existing "Daily" UserOccasion for this user
+                var dailyOccasion = _unitOfWork.UserOccasionRepository.GetQueryable()
+                    .FirstOrDefault(uo => uo.UserId == userId && uo.Name == "Daily");
+
+                if (dailyOccasion == null)
+                {
+                    // Create a new "Daily" UserOccasion
+                    dailyOccasion = new UserOccasion
+                    {
+                        UserId = userId,
+                        Name = "Daily",
+                        Description = "Daily outfit schedule",
+                        DateOccasion = DateTime.Today,
+                        StartTime = DateTime.Today.Add(model.Time.Value),
+                        EndTime = model.EndTime.HasValue ? DateTime.Today.Add(model.EndTime.Value) : null,
+                        OccasionId = null
+                    };
+                    await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
+                    await _unitOfWork.SaveAsync();
+                }
+                else
+                {
+                    // Update the StartTime and EndTime if different
+                    var newStartTime = DateTime.Today.Add(model.Time.Value);
+                    var newEndTime = model.EndTime.HasValue ? DateTime.Today.Add(model.EndTime.Value) : (DateTime?)null;
+
+                    if (dailyOccasion.StartTime != newStartTime || dailyOccasion.EndTime != newEndTime)
+                    {
+                        dailyOccasion.StartTime = newStartTime;
+                        dailyOccasion.EndTime = newEndTime;
+                        dailyOccasion.DateOccasion = DateTime.Today;
+                        _unitOfWork.UserOccasionRepository.UpdateAsync(dailyOccasion);
+                        await _unitOfWork.SaveAsync();
+                    }
+                }
+
+                userOccasionId = dailyOccasion.Id;
+            }
+            else if (model.UserOccasionId.HasValue)
+            {
+                // Verify user occasion if provided
                 var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdAsync(model.UserOccasionId.Value);
                 if (userOccasion == null)
                 {
@@ -596,20 +652,31 @@ namespace SOPServer.Service.Services.Implements
                 }
             }
 
-            var outfitCalendar = _mapper.Map<OutfitUsageHistory>(model);
-            outfitCalendar.UserId = userId;
-            outfitCalendar.CreatedBy = OutfitCreatedBy.USER;
+            // Create calendar entries for all outfits
+            var createdCalendars = new List<OutfitCalendarModel>();
 
-            await _unitOfWork.OutfitRepository.AddOutfitCalendarAsync(outfitCalendar);
-            await _unitOfWork.SaveAsync();
+            foreach (var outfitId in model.OutfitIds)
+            {
+                var outfitCalendar = new OutfitUsageHistory
+                {
+                    UserId = userId,
+                    OutfitId = outfitId,
+                    UserOccassionId = userOccasionId,
+                    CreatedBy = OutfitCreatedBy.USER
+                };
 
-            var created = await _unitOfWork.OutfitRepository.GetOutfitCalendarByIdAsync(outfitCalendar.Id);
+                await _unitOfWork.OutfitRepository.AddOutfitCalendarAsync(outfitCalendar);
+                await _unitOfWork.SaveAsync();
+
+                var created = await _unitOfWork.OutfitRepository.GetOutfitCalendarByIdAsync(outfitCalendar.Id);
+                createdCalendars.Add(_mapper.Map<OutfitCalendarModel>(created));
+            }
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status201Created,
                 Message = MessageConstants.OUTFIT_CALENDAR_CREATE_SUCCESS,
-                Data = _mapper.Map<OutfitCalendarModel>(created)
+                Data = createdCalendars
             };
         }
 
@@ -643,9 +710,57 @@ namespace SOPServer.Service.Services.Implements
                 outfitCalendar.OutfitId = model.OutfitId.Value;
             }
 
-            // Verify user occasion if provided
-            if (model.UserOccasionId.HasValue)
+            // Handle Daily outfit logic
+            if (model.IsDaily.HasValue && model.IsDaily.Value)
             {
+                // Validate that Time is provided for daily outfits
+                if (!model.Time.HasValue)
+                {
+                    throw new BadRequestException("Time is required when IsDaily is true");
+                }
+
+                // Look for existing "Daily" UserOccasion for this user
+                var dailyOccasion = _unitOfWork.UserOccasionRepository.GetQueryable()
+                    .FirstOrDefault(uo => uo.UserId == userId && uo.Name == "Daily");
+
+                if (dailyOccasion == null)
+                {
+                    // Create a new "Daily" UserOccasion
+                    dailyOccasion = new UserOccasion
+                    {
+                        UserId = userId,
+                        Name = "Daily",
+                        Description = "Daily outfit schedule",
+                        DateOccasion = DateTime.Today,
+                        StartTime = DateTime.Today.Add(model.Time.Value),
+                        EndTime = model.EndTime.HasValue ? DateTime.Today.Add(model.EndTime.Value) : null,
+                        OccasionId = null
+                    };
+                    await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
+                    await _unitOfWork.SaveAsync();
+                }
+                else
+                {
+                    // Update the StartTime and EndTime if different
+                    var newStartTime = DateTime.Today.Add(model.Time.Value);
+                    var newEndTime = model.EndTime.HasValue ? DateTime.Today.Add(model.EndTime.Value) : (DateTime?)null;
+
+                    if (dailyOccasion.StartTime != newStartTime || dailyOccasion.EndTime != newEndTime)
+                    {
+                        dailyOccasion.StartTime = newStartTime;
+                        dailyOccasion.EndTime = newEndTime;
+                        dailyOccasion.DateOccasion = DateTime.Today;
+                        _unitOfWork.UserOccasionRepository.UpdateAsync(dailyOccasion);
+                        await _unitOfWork.SaveAsync();
+                    }
+                }
+
+                // Set the UserOccasionId to the Daily occasion
+                outfitCalendar.UserOccassionId = dailyOccasion.Id;
+            }
+            else if (model.UserOccasionId.HasValue)
+            {
+                // Verify user occasion if provided
                 var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdAsync(model.UserOccasionId.Value);
                 if (userOccasion == null)
                 {
@@ -658,11 +773,6 @@ namespace SOPServer.Service.Services.Implements
                 }
 
                 outfitCalendar.UserOccassionId = model.UserOccasionId.Value;
-            }
-
-            if (model.DateUsed.HasValue)
-            {
-                outfitCalendar.DateUsed = model.DateUsed.Value;
             }
 
             _unitOfWork.OutfitRepository.UpdateOutfitCalendar(outfitCalendar);

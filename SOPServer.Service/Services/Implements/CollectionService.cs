@@ -337,6 +337,16 @@ namespace SOPServer.Service.Services.Implements
             collection.Title = model.Title;
             collection.ShortDescription = model.ShortDescription;
 
+            var newThumbnail = await _minioService.UploadImageAsync(model.ThumbnailImg);
+            if (newThumbnail?.Data is not ImageUploadResult uploadData || string.IsNullOrEmpty(uploadData.DownloadUrl))
+            {
+                throw new BadRequestException(MessageConstants.FILE_NOT_FOUND);
+            }
+
+            await _minioService.DeleteImageByURLAsync(collection.ThumbnailURL);
+
+            collection.ThumbnailURL = uploadData.DownloadUrl;
+
             _unitOfWork.CollectionRepository.UpdateAsync(collection);
             await _unitOfWork.SaveAsync();
 

@@ -508,6 +508,10 @@ public partial class SOPServerContext : DbContext
                 .HasMaxLength(500)
                 .IsUnicode(true);
 
+            entity.Property(e => e.ThumbnailURL)
+                .HasMaxLength(int.MaxValue)
+                .IsUnicode(true);
+
             entity.HasOne(d => d.User)
                 .WithMany(p => p.Collections)
                 .HasForeignKey(d => d.UserId)

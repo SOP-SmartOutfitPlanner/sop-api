@@ -115,5 +115,47 @@ namespace SOPServer.Service.Services.Implements
 
             return result;
         }
+
+        public async Task<List<QDrantSearchModels>> SearchSimilarityItemSystem(List<float> embedding)
+        {
+            List<QDrantSearchModels> result = new List<QDrantSearchModels>();
+            var searchResult = await _client.SearchAsync(
+                collectionName: _qdrantSettings.Collection,
+                vector: embedding.ToArray(),
+                filter: new Filter
+                {
+                    Must =
+                    {
+                        new Condition
+                        {
+                            Field = new FieldCondition
+                            {
+                                Key = "ItemType",
+                                Match = new Match
+                                {
+                                   Integer = 1
+                                }
+                            }
+                        }
+                    }
+                },
+                limit: 5
+            );
+
+            foreach (var item in searchResult)
+            {
+                if (item.Score > 0.6)
+                {
+                    result.Add(new QDrantSearchModels
+                    {
+                        id = int.Parse(item.Id.Num.ToString()),
+                        score = item.Score
+                    });
+                }
+
+            }
+
+            return result;
+        }
     }
 }

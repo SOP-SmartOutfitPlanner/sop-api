@@ -434,9 +434,6 @@ public partial class SOPServerContext : DbContext
 
             entity.ToTable("OutfitUsageHistory");
 
-            entity.Property(e => e.DateUsed)
-                .HasColumnType("datetime2");
-
             entity.Property(e => e.CreatedBy)
                 .HasConversion<int>();
 

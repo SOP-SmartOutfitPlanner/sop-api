@@ -15,7 +15,7 @@ namespace SOPServer.Repository.Repositories.Implements
     public class UserNotificationRepository : GenericRepository<UserNotification>, IUserNotificationRepository
     {
         private readonly SOPServerContext _context;
-        
+
         public UserNotificationRepository(SOPServerContext context) : base(context)
         {
             _context = context;
@@ -32,6 +32,15 @@ namespace SOPServer.Repository.Repositories.Implements
         {
             return await _context.Set<UserNotification>()
                 .Where(un => un.UserId == userId && !un.IsRead && !un.IsDeleted)
+                .ToListAsync();
+        }
+
+        public async Task<List<UserNotification>> GetUserNotificationsByIdsAsync(List<long> notificationIds, long userId)
+        {
+            return await _context.Set<UserNotification>()
+                .Where(un => notificationIds.Contains(un.NotificationId)
+                    && un.UserId == userId
+                    && !un.IsDeleted)
                 .ToListAsync();
         }
     }

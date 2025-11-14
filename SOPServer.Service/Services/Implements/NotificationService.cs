@@ -229,6 +229,57 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<BaseResponseModel> DeleteNotificationsByIdsAsync(long userId, DeleteNotificationsModel model)
+        {
+            // Validate user exists
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Get UserNotification records for the specified notification IDs belonging to this user
+            // This removes the relationship between the user and the notifications
+            var userNotificationsToDelete = await _unitOfWork.UserNotificationRepository
+                .GetUserNotificationsByIdsAsync(model.NotificationIds, userId);
+
+            if (!userNotificationsToDelete.Any())
+            {
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status404NotFound,
+                    Message = MessageConstants.NO_NOTIFICATIONS_TO_DELETE
+                };
+            }
+
+            // Soft delete the UserNotification records (removes user's relationship with these notifications)
+            foreach (var userNotification in userNotificationsToDelete)
+            {
+                _unitOfWork.UserNotificationRepository.SoftDeleteAsync(userNotification);
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            // Check if some notifications were not found
+            var deletedCount = userNotificationsToDelete.Count;
+            var requestedCount = model.NotificationIds.Count;
+
+            var message = deletedCount == requestedCount
+                ? MessageConstants.DELETE_NOTIFICATIONS_SUCCESS
+                : MessageConstants.SOME_NOTIFICATIONS_NOT_FOUND;
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = message,
+                Data = new
+                {
+                    DeletedCount = deletedCount,
+                    RequestedCount = requestedCount
+                }
+            };
+        }
+
         public async Task<BaseResponseModel> GetSystemNotifications(PaginationParameter paginationParameter, bool newestFirst, string? searchTerm)
         {
             var notifications = await _unitOfWork.NotificationRepository.ToPaginationIncludeAsync(
@@ -399,7 +450,7 @@ namespace SOPServer.Service.Services.Implements
             }
             catch (Exception)
             {
-                
+
             }
         }
     }

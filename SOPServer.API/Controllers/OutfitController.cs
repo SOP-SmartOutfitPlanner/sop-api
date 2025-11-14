@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
+using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.OutfitCalendarModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.Services.Interfaces;
@@ -186,13 +187,16 @@ namespace SOPServer.API.Controllers
         /// **Note:** Users can only see their own outfit calendar entries
         ///
         /// **Examples:**
-        /// - Get entries for December 2025: ?year=2025&amp;month=12
-        /// - Get entries in date range: ?start-date=2025-12-01&amp;end-date=2025-12-31
-        /// - Get entries for specific occasion: ?user-occasion-id=5
+        /// - Get current week: ?filter-type=0
+        /// - Get current month: ?filter-type=1
+        /// - Get specific month: ?filter-type=2&amp;year=2025&amp;month=12
+        /// - Get date range: ?filter-type=3&amp;start-date=2025-12-01&amp;end-date=2025-12-31
+        /// - Legacy: ?year=2025&amp;month=12 (backward compatible)
         /// </remarks>
         [HttpGet("calendar")]
         public Task<IActionResult> GetOutfitCalendar(
             [FromQuery] PaginationParameter paginationParameter,
+            [FromQuery(Name = "filter-type")] CalendarFilterType? filterType,
             [FromQuery(Name = "start-date")] DateTime? startDate,
             [FromQuery(Name = "end-date")] DateTime? endDate,
             [FromQuery] int? year,
@@ -201,7 +205,7 @@ namespace SOPServer.API.Controllers
             var userIdClaim = User.FindFirst("UserId")?.Value;
             long.TryParse(userIdClaim, out long userId);
             return ValidateAndExecute(async () => await _outfitService.GetOutfitCalendarPaginationAsync(
-                paginationParameter, userId, startDate, endDate, year, month));
+                paginationParameter, userId, filterType, startDate, endDate, year, month));
         }
 
         /// <summary>

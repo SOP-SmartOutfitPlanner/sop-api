@@ -1,4 +1,5 @@
 using SOPServer.Repository.Commons;
+using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.OutfitCalendarModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.ResultModels;
@@ -22,6 +23,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> GetOutfitCalendarPaginationAsync(
             PaginationParameter paginationParameter,
             long userId,
+            CalendarFilterType? filterType = null,
             DateTime? startDate = null,
             DateTime? endDate = null,
             int? year = null,

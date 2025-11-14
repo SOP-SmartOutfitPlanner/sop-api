@@ -339,22 +339,6 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> CreateNotification(NotificationRequestModel model)
-        {
-            var notification = _mapper.Map<Notification>(model);
-            notification.Type = NotificationType.SYSTEM;
-
-            await _unitOfWork.NotificationRepository.AddAsync(notification);
-            await _unitOfWork.SaveAsync();
-
-            return new BaseResponseModel
-            {
-                StatusCode = StatusCodes.Status201Created,
-                Message = MessageConstants.NOTIFICATION_CREATE_SUCCESS,
-                Data = _mapper.Map<SystemNotificationModel>(notification)
-            };
-        }
-
         public async Task<BaseResponseModel> GetAllNotifications(PaginationParameter paginationParameter)
         {
             var notifications = await _unitOfWork.NotificationRepository.ToPaginationIncludeAsync(

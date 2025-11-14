@@ -9,6 +9,7 @@ using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
+using SOPServer.Service.Utils;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -16,11 +17,13 @@ namespace SOPServer.Service.Services.Implements
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ContentVisibilityHelper _visibilityHelper;
 
-        public CommentPostService(IUnitOfWork unitOfWork, IMapper mapper)
+        public CommentPostService(IUnitOfWork unitOfWork, IMapper mapper, ContentVisibilityHelper visibilityHelper)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _visibilityHelper = visibilityHelper;
         }
 
         public async Task<BaseResponseModel> CreateNewComment(CreateCommentPostModel model)
@@ -37,6 +40,15 @@ namespace SOPServer.Service.Services.Implements
                 {
                     throw new BadRequestException(MessageConstants.COMMENT_CANNOT_REPLY_MORE_THAN_ONE_LEVEL);
                 }
+            }
+
+            // Check if user is suspended
+            var suspension = await _unitOfWork.UserSuspensionRepository.GetActiveSuspensionAsync(model.UserId);
+            if (suspension != null && suspension.EndAt > DateTime.UtcNow)
+            {
+                throw new ForbiddenException(
+                    $"Your account is suspended until {suspension.EndAt:yyyy-MM-dd HH:mm} UTC. " +
+                    $"Reason: {suspension.Reason}. You cannot create comments during this period.");
             }
 
             var commentPost = _mapper.Map<CommentPost>(model);
@@ -101,15 +113,52 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetCommentByParentId(PaginationParameter paginationParameter, long id)
+        public async Task<BaseResponseModel> GetCommentByParentId(PaginationParameter paginationParameter, long id, long? requesterId = null)
         {
+            // Validate parent comment exists and check if it's hidden
+            var parentComment = await _unitOfWork.CommentPostRepository.GetByIdIncludeAsync(
+                id,
+                include: query => query.Include(c => c.Post));
+
+            if (parentComment == null)
+            {
+                throw new NotFoundException(MessageConstants.COMMENT_NOT_FOUND);
+            }
+
+            // Check if parent comment is hidden
+            if (parentComment.IsHidden)
+            {
+                bool isAdmin = requesterId.HasValue && await _visibilityHelper.IsUserAdminAsync(requesterId.Value);
+                bool canView = ContentVisibilityHelper.CanViewHiddenContent(parentComment.UserId, requesterId, isAdmin);
+
+                if (!canView)
+                {
+                    throw new NotFoundException(MessageConstants.COMMENTS_NOT_FOUND_POST_HIDDEN);
+                }
+            }
+
+            // If parent comment belongs to a post, check post visibility
+            if (parentComment.Post != null && parentComment.Post.IsHidden)
+            {
+                bool isAdmin = requesterId.HasValue && await _visibilityHelper.IsUserAdminAsync(requesterId.Value);
+                bool canView = ContentVisibilityHelper.CanViewHiddenContent(parentComment.Post.UserId ?? 0, requesterId, isAdmin);
+
+                if (!canView)
+                {
+                    throw new NotFoundException(MessageConstants.COMMENTS_NOT_FOUND_POST_HIDDEN);
+                }
+            }
+
+            // Determine if requester can see hidden comments
+            bool isRequesterAdmin = requesterId.HasValue && await _visibilityHelper.IsUserAdminAsync(requesterId.Value);
+
             // Get comments with the specified parent ID, including user and parent comment information
             var comments = await _unitOfWork.CommentPostRepository.ToPaginationIncludeAsync(
                 paginationParameter,
                 include: query => query
                     .Include(c => c.User)
                     .Include(c => c.ParentComment),
-                filter: c => c.ParentCommentId == id,
+                filter: c => c.ParentCommentId == id && (!c.IsHidden || c.UserId == requesterId || isRequesterAdmin),
                 orderBy: q => q.OrderByDescending(c => c.CreatedDate));
 
             var commentModels = _mapper.Map<Pagination<CommentPostModel>>(comments);
@@ -134,7 +183,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetCommentParentByPostId(PaginationParameter paginationParameter, long postId)
+        public async Task<BaseResponseModel> GetCommentParentByPostId(PaginationParameter paginationParameter, long postId, long? requesterId = null)
         {
             var postExisted = await _unitOfWork.PostRepository.GetByIdAsync(postId);
 
@@ -143,11 +192,26 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.POST_NOT_FOUND);
             }
 
+            // Check if post is hidden and user is authorized to view comments
+            if (postExisted.IsHidden)
+            {
+                bool isAdmin = requesterId.HasValue && await _visibilityHelper.IsUserAdminAsync(requesterId.Value);
+                bool canView = ContentVisibilityHelper.CanViewHiddenContent(postExisted.UserId ?? 0, requesterId, isAdmin);
+
+                if (!canView)
+                {
+                    throw new NotFoundException(MessageConstants.COMMENTS_NOT_FOUND_POST_HIDDEN);
+                }
+            }
+
+            // Determine if requester can see hidden comments
+            bool isRequesterAdmin = requesterId.HasValue && await _visibilityHelper.IsUserAdminAsync(requesterId.Value);
+
             var comments = await _unitOfWork.CommentPostRepository.ToPaginationIncludeAsync(
                 paginationParameter,
                 include: query => query
                     .Include(c => c.User),
-                filter: c => c.PostId == postId && c.ParentCommentId == null,
+                filter: c => c.PostId == postId && c.ParentCommentId == null && (!c.IsHidden || c.UserId == requesterId || isRequesterAdmin),
                 orderBy: q => q.OrderByDescending(c => c.CreatedDate));
 
             var commentModels = _mapper.Map<Pagination<CommentPostModel>>(comments);

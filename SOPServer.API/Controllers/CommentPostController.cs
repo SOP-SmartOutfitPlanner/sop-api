@@ -11,7 +11,7 @@ namespace SOPServer.API.Controllers
     public class CommentPostController : BaseController
     {
         private readonly ICommentPostService _commentPostService;
-        
+
         public CommentPostController(ICommentPostService commentPostService)
         {
             _commentPostService = commentPostService;
@@ -26,7 +26,14 @@ namespace SOPServer.API.Controllers
         [HttpGet("parent/{id}")]
         public Task<IActionResult> GetCommentsByParentId([FromQuery] PaginationParameter paginationParameter, long id)
         {
-            return ValidateAndExecute(async () => await _commentPostService.GetCommentByParentId(paginationParameter, id));
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? requesterId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                requesterId = parsedUserId;
+            }
+
+            return ValidateAndExecute(async () => await _commentPostService.GetCommentByParentId(paginationParameter, id, requesterId));
         }
 
         /// <summary>
@@ -66,7 +73,14 @@ namespace SOPServer.API.Controllers
         [HttpGet("post/{id}")]
         public Task<IActionResult> GetCommentsParentByPostId([FromQuery] PaginationParameter paginationParameter, long id)
         {
-            return ValidateAndExecute(async () => await _commentPostService.GetCommentParentByPostId(paginationParameter, id));
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? requesterId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                requesterId = parsedUserId;
+            }
+
+            return ValidateAndExecute(async () => await _commentPostService.GetCommentParentByPostId(paginationParameter, id, requesterId));
         }
     }
 }

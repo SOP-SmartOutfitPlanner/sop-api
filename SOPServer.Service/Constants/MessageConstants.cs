@@ -308,11 +308,22 @@ namespace SOPServer.Service.Constants
         public const string REPORT_POST_ID_REQUIRED = "PostId is required when reporting a post";
         public const string REPORT_COMMENT_ID_REQUIRED = "CommentId is required when reporting a comment";
         public const string REPORT_ALREADY_EXISTS = "You have already reported this content";
+        public const string REPORT_NOT_FOUND = "Report not found";
+        public const string GET_REPORT_DETAILS_SUCCESS = "Get report details successfully";
+        public const string GET_PENDING_REPORTS_SUCCESS = "Get pending reports successfully";
+        public const string RESOLVE_REPORT_NO_VIOLATION_SUCCESS = "Report resolved: No violation found";
+        public const string RESOLVE_REPORT_WITH_ACTION_SUCCESS = "Report resolved and action applied successfully";
+        public const string REPORT_ALREADY_RESOLVED = "Report has already been resolved";
+        public const string INVALID_REPORT_ACTION = "Invalid report action. Only HIDE, DELETE, WARN, and SUSPEND are allowed for resolution";
+        public const string CONTENT_NOT_FOUND_FOR_ACTION = "The reported content no longer exists";
+
+        public const string NOTIFICATION_PROCESS_IN_BACKGROUND = "Notifications are being processed in the background";
+        public const string DELETE_NOTIFICATIONS_SUCCESS = "Notifications deleted successfully";
+        public const string SOME_NOTIFICATIONS_NOT_FOUND = "Some notifications were not found or already deleted";
+        public const string NO_NOTIFICATIONS_TO_DELETE = "No valid notifications found to delete";
 
         // Subscription related messages
         public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "Plan: ";
-
-        public const string NOTIFICATION_PROCESS_IN_BACKGROUND = "Notification is being processed in background";
 
         public const string GET_WEATHER_INFO_SUCCESS = "Get weather info success";
     }

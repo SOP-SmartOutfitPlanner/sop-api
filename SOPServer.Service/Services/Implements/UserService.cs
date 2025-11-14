@@ -470,9 +470,10 @@ namespace SOPServer.Service.Services.Implements
             var refreshKey = RedisKeyConstants.GetRefreshTokenKey(user.Id, tokenId);
 
             var tokenValidityInMinutes = long.Parse(_configuration["JWT:TokenValidityInMinutes"]);
+            var refreshTokenValidityInDays = long.Parse(_configuration["JWT:RefreshTokenValidityInDays"]);
 
             await _redisService.SetAsync(accessKey, accessToken, TimeSpan.FromMinutes(tokenValidityInMinutes));
-            await _redisService.SetAsync(refreshKey, refreshToken, TimeSpan.FromDays(7));
+            await _redisService.SetAsync(refreshKey, refreshToken, TimeSpan.FromDays(refreshTokenValidityInDays));
 
             return new AuthenResultModel
             {

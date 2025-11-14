@@ -23,5 +23,6 @@ namespace SOPServer.Service.Services.Interfaces
         
         // Delete
         Task<BaseResponseModel> DeleteNotificationsByIdsAsync(long userId, DeleteNotificationsModel model);
+        Task<BaseResponseModel> GetNotificationByUserNotificationId(long notiId);
     }
 }

@@ -41,6 +41,13 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _notificationService.GetNotificationById(id));
         }
 
+        [HttpGet("user-notification/{notiId}")]
+        //[Authorize]
+        public Task<IActionResult> GetNotiByUserNotificationId(long notiId)
+        {
+            return ValidateAndExecute(async () => await _notificationService.GetNotificationByUserNotificationId(notiId));
+        }
+
         [HttpGet]
         //[Authorize(Roles = "ADMIN")]
         public Task<IActionResult> GetAllNotifications([FromQuery] PaginationParameter paginationParameter)

@@ -253,6 +253,15 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
+            // Check if user is suspended
+            var suspension = await _unitOfWork.UserSuspensionRepository.GetActiveSuspensionAsync(userId);
+            if (suspension != null && suspension.EndAt > DateTime.UtcNow)
+            {
+                throw new ForbiddenException(
+                    $"Your account is suspended until {suspension.EndAt:yyyy-MM-dd HH:mm} UTC. " +
+                    $"Reason: {suspension.Reason}. You cannot create collections during this period.");
+            }
+
             if (model.Outfits != null && model.Outfits.Any())
             {
                 foreach (var outfitInput in model.Outfits)
@@ -460,8 +469,8 @@ namespace SOPServer.Service.Services.Implements
                                 .ThenInclude(oi => oi.Item)
                                     .ThenInclude(i => i.Category));
 
-            var message = collection.IsPublished 
-                ? MessageConstants.COLLECTION_PUBLISH_SUCCESS 
+            var message = collection.IsPublished
+                ? MessageConstants.COLLECTION_PUBLISH_SUCCESS
                 : MessageConstants.COLLECTION_UNPUBLISH_SUCCESS;
 
             return new BaseResponseModel

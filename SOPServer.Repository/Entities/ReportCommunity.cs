@@ -13,9 +13,13 @@ namespace SOPServer.Repository.Entities
         public ReportAction Action { get; set; } = ReportAction.NONE;
         public ReportStatus Status { get; set; } = ReportStatus.PENDING;
         public string Description { get; set; }
+        public long? ResolvedByAdminId { get; set; }
+        public DateTime? ResolvedAt { get; set; }
+        public string ResolutionNotes { get; set; }
 
         public virtual User User { get; set; }
         public virtual Post Post { get; set; }
         public virtual CommentPost CommentPost { get; set; }
+        public virtual User ResolvedByAdmin { get; set; }
     }
 }

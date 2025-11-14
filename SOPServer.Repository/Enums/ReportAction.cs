@@ -8,6 +8,7 @@ namespace SOPServer.Repository.Enums
         NONE = 0,
         HIDE = 1,
         DELETE = 2,
-        WARN = 3
+        WARN = 3,
+        SUSPEND = 4
     }
 }

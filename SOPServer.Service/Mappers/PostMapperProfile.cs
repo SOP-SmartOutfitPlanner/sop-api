@@ -21,16 +21,17 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.UserDisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : "Unknown"))
                 .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.User.AvtUrl != null ? src.User.AvtUrl : null))
                 .ForMember(dest => dest.Role, opt => opt.MapFrom(src => src.User.Role.ToString()))
-                .ForMember(dest => dest.Hashtags, opt => opt.MapFrom(src => 
-                    src.PostHashtags != null 
+                .ForMember(dest => dest.IsHidden, opt => opt.MapFrom(src => src.IsHidden))
+                .ForMember(dest => dest.Hashtags, opt => opt.MapFrom(src =>
+                    src.PostHashtags != null
                     ? src.PostHashtags
                         .Where(ph => !ph.IsDeleted && ph.Hashtag != null)
-                        .Select(ph => new HashtagModel 
-                        { 
-                            Id = ph.Hashtag.Id, 
-                            Name = ph.Hashtag.Name 
+                        .Select(ph => new HashtagModel
+                        {
+                            Id = ph.Hashtag.Id,
+                            Name = ph.Hashtag.Name
                         })
-                        .ToList() 
+                        .ToList()
                     : new List<HashtagModel>()))
                 .ForMember(dest => dest.Images, opt => opt.MapFrom(src => src.PostImages != null ? src.PostImages.Where(pi => !pi.IsDeleted).Select(pi => pi.ImgUrl).Where(url => !string.IsNullOrEmpty(url)).ToList() : new List<string>()))
                 .ForMember(dest => dest.LikeCount, opt => opt.MapFrom(src => src.LikePosts != null ? src.LikePosts.Count(lp => !lp.IsDeleted) : 0))

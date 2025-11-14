@@ -107,6 +107,9 @@ namespace SOPServer.API
             services.AddScoped<IReportCommunityRepository, ReportCommunityRepository>();
             services.AddScoped<IReportCommunityService, ReportCommunityService>();
 
+            services.AddScoped<IUserSuspensionRepository, UserSuspensionRepository>();
+            services.AddScoped<IUserViolationRepository, UserViolationRepository>();
+
             // ========== FOLLOWER MANAGEMENT ==========
             services.AddScoped<IFollowerRepository, FollowerRepository>();
             services.AddScoped<IFollowerService, FollowerService>();
@@ -137,6 +140,9 @@ namespace SOPServer.API
 
             // ========== WEATHER SERVICES ==========
             services.AddScoped<IWeatherService, WeatherService>();
+
+            // ========== UTILITY SERVICES ==========
+            services.AddScoped<SOPServer.Service.Utils.ContentVisibilityHelper>();
 
             return services;
         }

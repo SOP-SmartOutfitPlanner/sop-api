@@ -620,7 +620,49 @@ public partial class SOPServerContext : DbContext
                 .HasDatabaseName("IX_Follower_FollowerId_FollowingId");
         });
 
-   
+        modelBuilder.Entity<SubscriptionPlan>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__SubscriptionPlan__3214EC07");
+
+            entity.ToTable("SubscriptionPlan");
+
+            entity.Property(e => e.Name)
+                .HasMaxLength(255)
+                .IsUnicode(true)
+                .IsRequired();
+
+            entity.Property(e => e.Description)
+                .HasMaxLength(500)
+                .IsUnicode(true)
+                .IsRequired(false);
+
+            entity.Property(e => e.BenefitLimit)
+                .HasColumnType("nvarchar(max)")
+                .IsUnicode(true)
+                .IsRequired(false);
+        });
+
+        modelBuilder.Entity<UserSubscription>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__UserSubscription__3214EC07");
+
+            entity.ToTable("UserSubscription");
+
+            entity.Property(e => e.BenefitUsed)
+                .HasColumnType("nvarchar(max)")
+                .IsUnicode(true)
+                .IsRequired(false);
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserSubscriptions)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_UserSubscription_User");
+
+            entity.HasOne(d => d.SubscriptionPlan).WithMany(p => p.UserSubscriptions)
+                .HasForeignKey(d => d.SubscriptionPlanId)
+                .HasConstraintName("FK_UserSubscription_SubscriptionPlan");
+        });
+
+
         OnModelCreatingPartial(modelBuilder);
     }
 

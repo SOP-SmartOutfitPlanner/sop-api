@@ -12,6 +12,8 @@ namespace SOPServer.Repository.Entities
 
         public bool IsActive { get; set; }
 
+        public string? BenefitUsed { get; set; }
+
         public virtual User User { get; set; }
 
         public virtual SubscriptionPlan SubscriptionPlan { get; set; }

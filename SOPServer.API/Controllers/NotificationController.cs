@@ -18,7 +18,6 @@ namespace SOPServer.API.Controllers
             _notificationService = notificationService;
         }
 
-        // ========== CREATE ==========
         
         [HttpPost]
         [Authorize(Roles = "ADMIN")]

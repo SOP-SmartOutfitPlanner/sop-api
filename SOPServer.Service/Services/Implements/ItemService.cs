@@ -115,24 +115,27 @@ namespace SOPServer.Service.Services.Implements
       .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
           .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
 
-            var stringItem = ConvertItemToEmbeddingString(updatedItem);
-
-            var embeddingText = await _geminiService.EmbeddingText(stringItem);
-
-            if (embeddingText != null && embeddingText.Any())
+            if (updatedItem.IsAnalyzed == true)
             {
-                // Prepare payload for Qdrant
-                var payload = new Dictionary<string, object>
+                var stringItem = ConvertItemToEmbeddingString(updatedItem);
+
+                var embeddingText = await _geminiService.EmbeddingText(stringItem);
+
+                if (embeddingText != null && embeddingText.Any())
+                {
+                    // Prepare payload for Qdrant
+                    var payload = new Dictionary<string, object>
                 {
                     { "UserId", updatedItem.UserId ?? 0 },
                     { "Name", updatedItem.Name ?? "" },
                     { "Category", updatedItem.Category?.Parent.Name ?? "" },
                     { "Color", updatedItem.Color ?? "" },
-                    { "Brand", updatedItem.Brand ?? "" }
+                    { "Brand", updatedItem.Brand ?? "" },
+                    { "ItemType", (int)(updatedItem.ItemType ?? ItemType.USER) }
                 };
-
-                // Upload to Qdrant
-                await _qdrantService.UpSertItem(embeddingText, payload, updatedItem.Id);
+                    // Upload to Qdrant
+                    await _qdrantService.UpSertItem(embeddingText, payload, updatedItem.Id);
+                }
             }
 
             var data = _mapper.Map<ItemModel>(updatedItem);
@@ -1060,7 +1063,8 @@ namespace SOPServer.Service.Services.Implements
                         { "Name", newItemInclude.Name ?? "" },
                         { "Category", newItemInclude.Category?.Parent.Name ?? "" },
                         { "Color", newItemInclude.Color ?? "" },
-                        { "Brand", newItemInclude.Brand ?? "" }
+                        { "Brand", newItemInclude.Brand ?? "" },
+                        { "ItemType", (int)(newItemInclude.ItemType ?? ItemType.USER) }
                     };
 
                     // Upload to Qdrant

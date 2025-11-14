@@ -135,6 +135,9 @@ namespace SOPServer.API
             services.AddScoped<IEmailTemplateService, EmailTemplateService>();
             services.AddScoped<IOtpService, OtpService>();
 
+            // ========== WEATHER SERVICES ==========
+            services.AddScoped<IWeatherService, WeatherService>();
+
             return services;
         }
     }

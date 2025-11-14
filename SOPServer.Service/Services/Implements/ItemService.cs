@@ -115,24 +115,27 @@ namespace SOPServer.Service.Services.Implements
       .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
           .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
 
-            var stringItem = ConvertItemToEmbeddingString(updatedItem);
-
-            var embeddingText = await _geminiService.EmbeddingText(stringItem);
-
-            if (embeddingText != null && embeddingText.Any())
+            if (updatedItem.IsAnalyzed == true)
             {
-                // Prepare payload for Qdrant
-                var payload = new Dictionary<string, object>
+                var stringItem = ConvertItemToEmbeddingString(updatedItem);
+
+                var embeddingText = await _geminiService.EmbeddingText(stringItem);
+
+                if (embeddingText != null && embeddingText.Any())
+                {
+                    // Prepare payload for Qdrant
+                    var payload = new Dictionary<string, object>
                 {
                     { "UserId", updatedItem.UserId ?? 0 },
                     { "Name", updatedItem.Name ?? "" },
                     { "Category", updatedItem.Category?.Parent.Name ?? "" },
                     { "Color", updatedItem.Color ?? "" },
-                    { "Brand", updatedItem.Brand ?? "" }
+                    { "Brand", updatedItem.Brand ?? "" },
+                    { "ItemType", (int)(updatedItem.ItemType ?? ItemType.USER) }
                 };
-
-                // Upload to Qdrant
-                await _qdrantService.UpSertItem(embeddingText, payload, updatedItem.Id);
+                    // Upload to Qdrant
+                    await _qdrantService.UpSertItem(embeddingText, payload, updatedItem.Id);
+                }
             }
 
             var data = _mapper.Map<ItemModel>(updatedItem);
@@ -227,11 +230,11 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> GetItemById(long id)
         {
             var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(id,
- include: query => query.Include(x => x.Category)
-    .Include(x => x.User)
-       .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
- .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-        .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
+                        include: query => query.Include(x => x.Category)
+                                                .Include(x => x.User)
+                                                .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+                                                .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+                                                .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
             if (item == null)
             {
                 throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
@@ -1060,7 +1063,8 @@ namespace SOPServer.Service.Services.Implements
                         { "Name", newItemInclude.Name ?? "" },
                         { "Category", newItemInclude.Category?.Parent.Name ?? "" },
                         { "Color", newItemInclude.Color ?? "" },
-                        { "Brand", newItemInclude.Brand ?? "" }
+                        { "Brand", newItemInclude.Brand ?? "" },
+                        { "ItemType", (int)(newItemInclude.ItemType ?? ItemType.USER) }
                     };
 
                     // Upload to Qdrant
@@ -1125,14 +1129,13 @@ namespace SOPServer.Service.Services.Implements
             var scopedUnitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
             var scopedMinioService = scope.ServiceProvider.GetRequiredService<IMinioService>();
             var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
-
+            var client = httpClientFactory.CreateClient("RembgClient");
             foreach (var itemId in itemIds)
             {
                 var item = await scopedUnitOfWork.ItemRepository.GetByIdAsync(itemId);
                 if (item == null || string.IsNullOrEmpty(item.ImgUrl))
                     continue;
-
-                var client = httpClientFactory.CreateClient("RembgClient");
+                
                 var requestBody = new RembgRequest
                 {
                     Input = new RembgInput { Image = item.ImgUrl }
@@ -1178,8 +1181,8 @@ namespace SOPServer.Service.Services.Implements
                 await scopedMinioService.DeleteImageByURLAsync(item.ImgUrl);
                 item.ImgUrl = uploadData.DownloadUrl;
                 scopedUnitOfWork.ItemRepository.UpdateAsync(item);
-                await scopedUnitOfWork.SaveAsync();
             }
+            await scopedUnitOfWork.SaveAsync();
         }
 
         public async Task<BaseResponseModel> SplitItem(IFormFile file)

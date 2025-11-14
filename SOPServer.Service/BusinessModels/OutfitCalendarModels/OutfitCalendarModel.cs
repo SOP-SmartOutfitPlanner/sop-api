@@ -14,7 +14,7 @@ namespace SOPServer.Service.BusinessModels.OutfitCalendarModels
         public string OutfitName { get; set; }
         public long? UserOccasionId { get; set; }
         public string? UserOccasionName { get; set; }
-        public DateTime DateUsed { get; set; }
+        public bool IsDaily { get; set; }
         public OutfitCreatedBy CreatedBy { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
@@ -29,7 +29,7 @@ namespace SOPServer.Service.BusinessModels.OutfitCalendarModels
         public OutfitModel Outfit { get; set; }
         public long? UserOccasionId { get; set; }
         public UserOccasionModel? UserOccasion { get; set; }
-        public DateTime DateUsed { get; set; }
+        public bool IsDaily { get; set; }
         public OutfitCreatedBy CreatedBy { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }

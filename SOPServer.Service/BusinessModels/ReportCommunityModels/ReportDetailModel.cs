@@ -19,6 +19,7 @@ namespace SOPServer.Service.BusinessModels.ReportCommunityModels
         public long? ResolvedByAdminId { get; set; }
         public DateTime? ResolvedAt { get; set; }
         public string? ResolutionNotes { get; set; }
+        public string? HiddenStatus { get; set; }
 
         public int AuthorWarningCount { get; set; }
         public int AuthorSuspensionCount { get; set; }

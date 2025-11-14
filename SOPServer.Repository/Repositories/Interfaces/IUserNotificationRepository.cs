@@ -9,5 +9,6 @@ namespace SOPServer.Repository.Repositories.Interfaces
     {
         Task<int> GetUnreadNotificationCount(long userId);
         Task<List<UserNotification>> GetUnreadNotificationByUserId(long userId);
+        Task<List<UserNotification>> GetUserNotificationsByIdsAsync(List<long> notificationIds, long userId);
     }
 }

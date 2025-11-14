@@ -10,6 +10,7 @@ using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,11 +23,13 @@ namespace SOPServer.Service.Services.Implements
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper)
+        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IServiceScopeFactory scopeFactory)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _scopeFactory = scopeFactory;
         }
 
         public async Task<BaseResponseModel> GetNotificationById(long id)
@@ -57,6 +60,13 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
+            var actor = await _unitOfWork.UserRepository.GetByIdAsync((long)model.ActorUserId);
+
+            if (actor == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
             var notification = _mapper.Map<Notification>(model);
             notification.Type = NotificationType.USER;
 
@@ -69,13 +79,13 @@ namespace SOPServer.Service.Services.Implements
                 UserId = userId,
                 IsRead = false
             };
-            
+
             await _unitOfWork.UserNotificationRepository.AddAsync(userNotification);
             await _unitOfWork.SaveAsync();
 
             // Send push notification to user devices
             var userDevices = await _unitOfWork.UserDeviceRepository.GetUserDeviceByUserId(userId);
-            
+
             if (!userDevices.Any())
             {
                 return new BaseResponseModel
@@ -172,7 +182,7 @@ namespace SOPServer.Service.Services.Implements
 
             userNotification.IsRead = true;
             userNotification.ReadAt = DateTime.UtcNow;
-            
+
             _unitOfWork.UserNotificationRepository.UpdateAsync(userNotification);
             await _unitOfWork.SaveAsync();
 
@@ -263,35 +273,8 @@ namespace SOPServer.Service.Services.Implements
             await _unitOfWork.NotificationRepository.AddAsync(notification);
             await _unitOfWork.SaveAsync();
 
-            // Get all users to create user notifications
-            var allUsers = await _unitOfWork.UserRepository.GetQueryable()
-                .Where(u => !u.IsDeleted)
-                .Select(u => u.Id)
-                .ToListAsync();
-
-            var userNotifications = allUsers.Select(userId => new UserNotification
-            {
-                NotificationId = notification.Id,
-                UserId = userId,
-                IsRead = false
-            }).ToList();
-
-            await _unitOfWork.UserNotificationRepository.AddRangeAsync(userNotifications);
-            await _unitOfWork.SaveAsync();
-
-            // Get all user devices for push notifications
-            var userDevices = await _unitOfWork.UserDeviceRepository.GetAllWithUser();
-            
-            if (userDevices.Any())
-            {
-                var tokens = userDevices.Select(x => x.DeviceToken).Distinct().ToList();
-
-                var tokensNotValid = await FirebaseLibrary.SendRangeMessageFireBase(model.Title, model.Message, tokens);
-                if (tokensNotValid.Any())
-                {
-                    await RemoveTokenNotValid(tokensNotValid);
-                }
-            }
+            // Fire-and-forget background task to create user notifications and send Firebase
+            _ = ProcessNotificationInBackground(notification.Id, model.Title, model.Message);
 
             return new BaseResponseModel
             {
@@ -299,8 +282,8 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.PUSH_NOTIFICATION_SUCCESS,
                 Data = new
                 {
-                    NotificationsSent = allUsers.Count,
-                    DevicesNotified = userDevices.Count
+                    NotificationId = notification.Id,
+                    Message = MessageConstants.NOTIFICATION_PROCESS_IN_BACKGROUND
                 }
             };
         }
@@ -363,6 +346,61 @@ namespace SOPServer.Service.Services.Implements
                 }
             }
             await _unitOfWork.SaveAsync();
+        }
+
+        private async Task ProcessNotificationInBackground(long notificationId, string title, string message)
+        {
+            // Create a new scope so we use scoped services safely in a background task
+            using var scope = _scopeFactory.CreateScope();
+            var scopedUnitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+            try
+            {
+                // Get all users to create user notifications (in background, không block API response)
+                var allUsers = await scopedUnitOfWork.UserRepository.GetQueryable()
+                        .Where(u => !u.IsDeleted)
+                        .Select(u => u.Id)
+                        .ToListAsync();
+
+                // Batch create user notifications
+                var userNotifications = allUsers.Select(userId => new UserNotification
+                {
+                    NotificationId = notificationId,
+                    UserId = userId,
+                    IsRead = false
+                }).ToList();
+
+                await scopedUnitOfWork.UserNotificationRepository.AddRangeAsync(userNotifications);
+                await scopedUnitOfWork.SaveAsync();
+
+                // Get all user devices for push notifications
+                var userDevices = await scopedUnitOfWork.UserDeviceRepository.GetAllWithUser();
+
+                if (userDevices.Any())
+                {
+                    var tokens = userDevices.Select(x => x.DeviceToken).Distinct().ToList();
+
+                    var tokensNotValid = await FirebaseLibrary.SendRangeMessageFireBase(title, message, tokens);
+
+                    if (tokensNotValid.Any())
+                    {
+                        // Remove invalid tokens
+                        foreach (var token in tokensNotValid)
+                        {
+                            var userDevice = await scopedUnitOfWork.UserDeviceRepository.GetByTokenDevice(token);
+                            if (userDevice != null)
+                            {
+                                scopedUnitOfWork.UserDeviceRepository.SoftDeleteAsync(userDevice);
+                            }
+                        }
+                        await scopedUnitOfWork.SaveAsync();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                
+            }
         }
     }
 }

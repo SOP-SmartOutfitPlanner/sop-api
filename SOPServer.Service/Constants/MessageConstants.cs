@@ -311,5 +311,7 @@ namespace SOPServer.Service.Constants
 
         // Subscription related messages
         public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "Plan: ";
+
+        public const string NOTIFICATION_PROCESS_IN_BACKGROUND = "Notification is being processed in background";
     }
 }

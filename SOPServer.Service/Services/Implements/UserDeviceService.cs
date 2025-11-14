@@ -5,6 +5,7 @@ using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.UserDeviceModels;
 using SOPServer.Service.Constants;
+using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using System.Threading.Tasks;
 
@@ -26,11 +27,7 @@ namespace SOPServer.Service.Services.Implements
             var user = await _unitOfWork.UserRepository.GetByIdAsync(model.UserId);
             if (user == null)
             {
-                return new BaseResponseModel
-                {
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = MessageConstants.USER_NOT_EXIST,
-                };
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
             var existingDevice = await _unitOfWork.UserDeviceRepository.GetByTokenDevice(model.DeviceToken);

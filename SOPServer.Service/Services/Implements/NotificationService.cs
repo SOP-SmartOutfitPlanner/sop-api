@@ -152,7 +152,6 @@ namespace SOPServer.Service.Services.Implements
                 }
             };
         }
-
         public async Task<BaseResponseModel> GetUnreadNotificationCount(long userId)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
@@ -436,6 +435,31 @@ namespace SOPServer.Service.Services.Implements
             {
 
             }
+        }
+
+        public async Task<BaseResponseModel> GetNotificationByUserNotificationId(long notiId)
+        {
+            var userNotification = await _unitOfWork.UserNotificationRepository.GetByIdIncludeAsync(
+                notiId,
+                include: query => query
+                    .Include(un => un.Notification)
+                        .ThenInclude(n => n.ActorUser)
+                    .Include(un => un.User)
+            );
+
+            if (userNotification == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOTIFICATION_NOT_EXIST);
+            }
+
+            var notification = _mapper.Map<NotificationModel>(userNotification.Notification);
+            notification.Id = userNotification.Id;
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Data = notification,
+                Message = MessageConstants.GET_NOTIFICATION_SUCCESS
+            };
         }
     }
 }

@@ -141,6 +141,9 @@ namespace SOPServer.API
             // ========== WEATHER SERVICES ==========
             services.AddScoped<IWeatherService, WeatherService>();
 
+            // ========== UTILITY SERVICES ==========
+            services.AddScoped<SOPServer.Service.Utils.ContentVisibilityHelper>();
+
             return services;
         }
     }

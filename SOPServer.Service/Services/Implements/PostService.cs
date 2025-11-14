@@ -12,6 +12,7 @@ using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
+using SOPServer.Service.Utils;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -22,19 +23,22 @@ namespace SOPServer.Service.Services.Implements
         private readonly NewsfeedSettings _newsfeedSettings;
         private readonly IRedisService _redisService;
         private readonly IMinioService _minioService;
+        private readonly ContentVisibilityHelper _visibilityHelper;
 
         public PostService(
             IUnitOfWork unitOfWork,
             IMapper mapper,
             IOptions<NewsfeedSettings> newsfeedSettings,
             IRedisService redisService,
-            IMinioService minioService)
+            IMinioService minioService,
+            ContentVisibilityHelper visibilityHelper)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _newsfeedSettings = newsfeedSettings.Value;
             _redisService = redisService;
             _minioService = minioService;
+            _visibilityHelper = visibilityHelper;
         }
 
         public async Task<BaseResponseModel> CreatePostAsync(PostCreateModel model)
@@ -127,7 +131,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetPostByIdAsync(long id)
+        public async Task<BaseResponseModel> GetPostByIdAsync(long id, long? requesterId = null)
         {
             var post = await _unitOfWork.PostRepository.GetByIdIncludeAsync(
                 id,
@@ -145,6 +149,18 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.POST_NOT_FOUND);
             }
 
+            // Check if post is hidden and user is authorized to view it
+            if (post.IsHidden)
+            {
+                bool isAdmin = requesterId.HasValue && await _visibilityHelper.IsUserAdminAsync(requesterId.Value);
+                bool canView = ContentVisibilityHelper.CanViewHiddenContent(post.UserId ?? 0, requesterId, isAdmin);
+
+                if (!canView)
+                {
+                    throw new NotFoundException(MessageConstants.CONTENT_HIDDEN_NOT_FOUND);
+                }
+            }
+
             var postModel = _mapper.Map<PostModel>(post);
 
             return new BaseResponseModel
@@ -159,6 +175,10 @@ namespace SOPServer.Service.Services.Implements
         {
             await ValidateUserExistsAsync(userId);
 
+            // Determine if caller can see hidden posts
+            bool isAdmin = callerUserId.HasValue && await _visibilityHelper.IsUserAdminAsync(callerUserId.Value);
+            bool isOwner = callerUserId.HasValue && callerUserId.Value == userId;
+
             var posts = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
                 paginationParameter,
                 include: query => query
@@ -169,8 +189,8 @@ namespace SOPServer.Service.Services.Implements
                     .Include(p => p.LikePosts)
                     .Include(p => p.CommentPosts),
                 filter: string.IsNullOrWhiteSpace(paginationParameter.Search)
-                    ? p => p.UserId == userId
-                    : p => p.UserId == userId && p.Body != null && EF.Functions.Collate(p.Body, "Latin1_General_CI_AI").Contains(EF.Functions.Collate(paginationParameter.Search, "Latin1_General_CI_AI")),
+                    ? p => p.UserId == userId && (!p.IsHidden || isOwner || isAdmin)
+                    : p => p.UserId == userId && (!p.IsHidden || isOwner || isAdmin) && p.Body != null && EF.Functions.Collate(p.Body, "Latin1_General_CI_AI").Contains(EF.Functions.Collate(paginationParameter.Search, "Latin1_General_CI_AI")),
                 orderBy: q => q.OrderByDescending(p => p.CreatedDate)
             );
 
@@ -207,6 +227,7 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> GetAllPostsAsync(PaginationParameter paginationParameter, long? callerUserId)
         {
             // Validate user if provided
+            bool isAdmin = false;
             if (callerUserId.HasValue)
             {
                 var user = await _unitOfWork.UserRepository.GetByIdAsync(callerUserId.Value);
@@ -214,6 +235,7 @@ namespace SOPServer.Service.Services.Implements
                 {
                     throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
                 }
+                isAdmin = await _visibilityHelper.IsUserAdminAsync(callerUserId.Value);
             }
 
             var post = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
@@ -226,8 +248,8 @@ namespace SOPServer.Service.Services.Implements
                     .Include(p => p.LikePosts)
                     .Include(p => p.CommentPosts),
                 filter: string.IsNullOrWhiteSpace(paginationParameter.Search)
-                    ? null
-                    : p => p.Body != null && EF.Functions.Collate(p.Body, "Latin1_General_CI_AI").Contains(EF.Functions.Collate(paginationParameter.Search, "Latin1_General_CI_AI")),
+                    ? p => !p.IsHidden || p.UserId == callerUserId || isAdmin
+                    : p => (!p.IsHidden || p.UserId == callerUserId || isAdmin) && p.Body != null && EF.Functions.Collate(p.Body, "Latin1_General_CI_AI").Contains(EF.Functions.Collate(paginationParameter.Search, "Latin1_General_CI_AI")),
                 orderBy: q => q.OrderByDescending(p => p.CreatedDate)
             );
 
@@ -282,7 +304,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetPostsByHashtagIdAsync(PaginationParameter paginationParameter, long hashtagId)
+        public async Task<BaseResponseModel> GetPostsByHashtagIdAsync(PaginationParameter paginationParameter, long hashtagId, long? requesterId = null)
         {
             // Validate hashtag exists
             var hashtag = await _unitOfWork.HashtagRepository.GetByIdAsync(hashtagId);
@@ -291,7 +313,10 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException($"Hashtag with ID {hashtagId} not found");
             }
 
-            // Get posts that contain the specified hashtag
+            // Determine if requester can see hidden posts
+            bool isAdmin = requesterId.HasValue && await _visibilityHelper.IsUserAdminAsync(requesterId.Value);
+
+            // Get posts that contain the specified hashtag, excluding hidden posts for normal users
             var posts = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
                 paginationParameter,
                 include: query => query
@@ -301,7 +326,7 @@ namespace SOPServer.Service.Services.Implements
                         .ThenInclude(ph => ph.Hashtag)
                     .Include(p => p.LikePosts)
                     .Include(p => p.CommentPosts),
-                filter: p => p.PostHashtags.Any(ph => ph.HashtagId == hashtagId && !ph.IsDeleted),
+                filter: p => p.PostHashtags.Any(ph => ph.HashtagId == hashtagId && !ph.IsDeleted) && (!p.IsHidden || p.UserId == requesterId || isAdmin),
                 orderBy: q => q.OrderByDescending(p => p.CreatedDate)
             );
 
@@ -336,10 +361,12 @@ namespace SOPServer.Service.Services.Implements
                 throw new BadRequestException("Hashtag name cannot be empty");
             }
 
-            // Validate user if provided
+            // Validate user if provided and determine admin status
+            bool isAdmin = false;
             if (callerUserId.HasValue)
             {
                 await ValidateUserExistsAsync(callerUserId.Value);
+                isAdmin = await _visibilityHelper.IsUserAdminAsync(callerUserId.Value);
             }
 
             // Get hashtag by name (case-insensitive)
@@ -349,7 +376,7 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.HASHTAG_NOT_FOUND);
             }
 
-            // Get posts that contain the specified hashtag
+            // Get posts that contain the specified hashtag, excluding hidden posts for normal users
             var posts = await _unitOfWork.PostRepository.ToPaginationIncludeAsync(
                 paginationParameter,
                 include: query => query
@@ -359,7 +386,7 @@ namespace SOPServer.Service.Services.Implements
                         .ThenInclude(ph => ph.Hashtag)
                     .Include(p => p.LikePosts)
                     .Include(p => p.CommentPosts),
-                filter: p => p.PostHashtags.Any(ph => ph.HashtagId == hashtag.Id && !ph.IsDeleted),
+                filter: p => p.PostHashtags.Any(ph => ph.HashtagId == hashtag.Id && !ph.IsDeleted) && (!p.IsHidden || p.UserId == callerUserId || isAdmin),
                 orderBy: q => q.OrderByDescending(p => p.CreatedDate)
             );
 
@@ -424,8 +451,9 @@ namespace SOPServer.Service.Services.Implements
 
             int numberOfDays = 30;//config o cho nay
 
+            // Exclude hidden posts from statistics
             var topContributorsQuery = _unitOfWork.PostRepository.GetQueryable()
-                .Where(p => p.CreatedDate >= DateTime.UtcNow.AddDays(-numberOfDays) && p.UserId.HasValue)
+                .Where(p => p.CreatedDate >= DateTime.UtcNow.AddDays(-numberOfDays) && p.UserId.HasValue && !p.IsHidden)
                 .GroupBy(p => new { p.UserId, p.User.DisplayName, p.User.AvtUrl })
                 .Select(g => new TopContributorModel
                 {
@@ -495,6 +523,18 @@ namespace SOPServer.Service.Services.Implements
             if (post == null)
             {
                 throw new NotFoundException(MessageConstants.POST_NOT_FOUND);
+            }
+
+            // Check if post is hidden and user is authorized to view it
+            if (post.IsHidden)
+            {
+                bool isAdmin = userId.HasValue && await _visibilityHelper.IsUserAdminAsync(userId.Value);
+                bool canView = ContentVisibilityHelper.CanViewHiddenContent(post.UserId ?? 0, userId, isAdmin);
+
+                if (!canView)
+                {
+                    throw new NotFoundException(MessageConstants.CONTENT_HIDDEN_NOT_FOUND);
+                }
             }
 
             // Validate user if provided

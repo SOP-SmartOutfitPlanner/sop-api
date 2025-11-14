@@ -156,6 +156,17 @@ namespace SOPServer.Service.Services.Implements
                 suspensionCount = violations.Count(v => v.ViolationType == "SUSPEND");
             }
 
+            // Determine hidden status for admin visibility
+            string? hiddenStatus = null;
+            if (report.Type == ReportType.POST && report.Post != null && report.Post.IsHidden)
+            {
+                hiddenStatus = $"Hidden by moderation on {report.Post.UpdatedDate?.ToString("yyyy-MM-dd") ?? report.ResolvedAt?.ToString("yyyy-MM-dd") ?? "N/A"}";
+            }
+            else if (report.Type == ReportType.COMMENT && report.CommentPost != null && report.CommentPost.IsHidden)
+            {
+                hiddenStatus = $"Hidden by moderation on {report.CommentPost.UpdatedDate?.ToString("yyyy-MM-dd") ?? report.ResolvedAt?.ToString("yyyy-MM-dd") ?? "N/A"}";
+            }
+
             var detailModel = new ReportDetailModel
             {
                 Id = report.Id,
@@ -174,6 +185,7 @@ namespace SOPServer.Service.Services.Implements
                 ResolvedByAdminId = report.ResolvedByAdminId,
                 ResolvedAt = report.ResolvedAt,
                 ResolutionNotes = report.ResolutionNotes,
+                HiddenStatus = hiddenStatus,
                 AuthorWarningCount = warningCount,
                 AuthorSuspensionCount = suspensionCount
             };

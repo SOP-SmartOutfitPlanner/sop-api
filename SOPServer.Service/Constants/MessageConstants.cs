@@ -318,6 +318,8 @@ namespace SOPServer.Service.Constants
         public const string CONTENT_NOT_FOUND_FOR_ACTION = "The reported content no longer exists";
         public const string USER_SUSPENDED_CANNOT_CREATE_CONTENT = "Your account is suspended. You cannot create posts, collections, or comments during this period";
         public const string SUSPENSION_DAYS_REQUIRED = "Suspension days are required when applying SUSPEND action";
+        public const string CONTENT_HIDDEN_NOT_FOUND = "The requested content is not available";
+        public const string COMMENTS_NOT_FOUND_POST_HIDDEN = "Cannot retrieve comments: parent post is hidden";
 
         public const string NOTIFICATION_PROCESS_IN_BACKGROUND = "Notifications are being processed in the background";
         public const string DELETE_NOTIFICATIONS_SUCCESS = "Notifications deleted successfully";

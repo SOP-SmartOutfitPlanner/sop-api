@@ -53,7 +53,7 @@ jobs:
       - name: Deploy to VPS
         run: |
           docker pull lion3993vn/sop-server:latest
-          docker run -d --name sop-server --restart=unless-stopped -p 8386:8386 -e PATH_SOP="${{ secrets.PATH_SOP }}" -v ${{ secrets.PATH_SOP_COPY }} lion3993vn/sop-server:latest
+          docker run -d --name sop-server --restart=unless-stopped -p 8386:8386 -e PATH_SOP="${{ secrets.PATH_SOP }}" -e PATH_FIREBASE_ADMIN="${{ secrets.PATH_FIREBASE_ADMIN }}" -v ${{ secrets.PATH_SOP_COPY }} -v ${{ secrets.PATH_FIREBASE_COPY }} lion3993vn/sop-server:latest
 
       - name: Verify running containers
         run: docker ps -a

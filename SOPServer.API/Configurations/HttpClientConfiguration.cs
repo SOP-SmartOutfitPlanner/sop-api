@@ -32,6 +32,13 @@ namespace SOPServer.API.Configurations
                 client.Timeout = TimeSpan.FromSeconds(60);
             });
 
+            services.AddHttpClient("OpenWeatherMap", client =>
+            {
+                client.BaseAddress = new Uri("https://api.openweathermap.org/");
+                client.DefaultRequestHeaders.Add("Accept", "application/json");
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+
             return services;
         }
     }

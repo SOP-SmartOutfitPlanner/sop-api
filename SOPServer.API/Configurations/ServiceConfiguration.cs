@@ -31,6 +31,9 @@ namespace SOPServer.API.Configurations
 
             services.Configure<PayOSSettings>(
                 configuration.GetSection("PayOSSettings"));
+
+            services.Configure<OpenWeatherMapSettings>(
+                configuration.GetSection("OpenWeatherMapSettings"));
             // Add Infrastructure Services
             services.AddInfractstructure(configuration);
 

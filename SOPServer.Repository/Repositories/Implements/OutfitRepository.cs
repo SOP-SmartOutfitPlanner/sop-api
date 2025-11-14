@@ -82,6 +82,7 @@ namespace SOPServer.Repository.Repositories.Implements
 
         public async Task<OutfitUsageHistory> AddOutfitCalendarAsync(OutfitUsageHistory outfitCalendar)
         {
+            outfitCalendar.CreatedDate = DateTime.UtcNow;
             await _context.OutfitUsageHistories.AddAsync(outfitCalendar);
             return outfitCalendar;
         }

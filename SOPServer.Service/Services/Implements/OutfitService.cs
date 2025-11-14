@@ -11,6 +11,7 @@ using SOPServer.Service.BusinessModels.OutfitCalendarModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.UserModels;
+using SOPServer.Service.BusinessModels.UserOccasionModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
@@ -446,6 +447,7 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> GetOutfitCalendarPaginationAsync(
             PaginationParameter paginationParameter,
             long userId,
+            CalendarFilterType? filterType = null,
             DateTime? startDate = null,
             DateTime? endDate = null,
             int? year = null,
@@ -459,39 +461,124 @@ namespace SOPServer.Service.Services.Implements
 
             DateTime? filterStartDate = null;
             DateTime? filterEndDate = null;
+            var today = DateTime.Today;
 
-            if (year.HasValue && month.HasValue)
+            // Handle filter by CalendarFilterType enum
+            if (filterType.HasValue)
             {
-                // Get entries for specific month and year
-                if (month.Value < 1 || month.Value > 12)
+                switch (filterType.Value)
                 {
-                    throw new BadRequestException("Month must be between 1 and 12");
+                    case CalendarFilterType.THIS_WEEK:
+                        // Get current week (Monday to Sunday)
+                        var dayOfWeek = (int)today.DayOfWeek;
+                        // If Sunday (0), treat as 7 for calculation
+                        var daysFromMonday = dayOfWeek == 0 ? 6 : dayOfWeek - 1;
+                        filterStartDate = today.AddDays(-daysFromMonday);
+                        filterEndDate = filterStartDate.Value.AddDays(6).AddHours(23).AddMinutes(59).AddSeconds(59);
+                        break;
+
+                    case CalendarFilterType.THIS_MONTH:
+                        // Get current month
+                        filterStartDate = new DateTime(today.Year, today.Month, 1);
+                        filterEndDate = filterStartDate.Value.AddMonths(1).AddTicks(-1);
+                        break;
+
+                    case CalendarFilterType.SPECIFIC_MONTH:
+                        // Requires year and month parameters
+                        if (!year.HasValue || !month.HasValue)
+                        {
+                            throw new BadRequestException("Year and Month are required when using SPECIFIC_MONTH filter");
+                        }
+                        if (month.Value < 1 || month.Value > 12)
+                        {
+                            throw new BadRequestException("Month must be between 1 and 12");
+                        }
+                        filterStartDate = new DateTime(year.Value, month.Value, 1);
+                        filterEndDate = filterStartDate.Value.AddMonths(1).AddTicks(-1);
+                        break;
+
+                    case CalendarFilterType.DATE_RANGE:
+                        // Requires startDate and endDate parameters
+                        if (!startDate.HasValue || !endDate.HasValue)
+                        {
+                            throw new BadRequestException("StartDate and EndDate are required when using DATE_RANGE filter");
+                        }
+                        filterStartDate = startDate.Value.Date;
+                        filterEndDate = endDate.Value.Date.AddHours(23).AddMinutes(59).AddSeconds(59);
+                        break;
                 }
-                filterStartDate = new DateTime(year.Value, month.Value, 1);
-                filterEndDate = filterStartDate.Value.AddMonths(1).AddTicks(-1);
             }
-            else if (year.HasValue)
+            else
             {
-                // Get entries for entire year
-                filterStartDate = new DateTime(year.Value, 1, 1);
-                filterEndDate = new DateTime(year.Value, 12, 31, 23, 59, 59);
-            }
-            else if (startDate.HasValue || endDate.HasValue)
-            {
-                // Use provided date range
-                filterStartDate = startDate;
-                filterEndDate = endDate;
+                // Legacy support: fallback to old parameter-based filtering
+                if (year.HasValue && month.HasValue)
+                {
+                    // Get entries for specific month and year
+                    if (month.Value < 1 || month.Value > 12)
+                    {
+                        throw new BadRequestException("Month must be between 1 and 12");
+                    }
+                    filterStartDate = new DateTime(year.Value, month.Value, 1);
+                    filterEndDate = filterStartDate.Value.AddMonths(1).AddTicks(-1);
+                }
+                else if (year.HasValue)
+                {
+                    // Get entries for entire year
+                    filterStartDate = new DateTime(year.Value, 1, 1);
+                    filterEndDate = new DateTime(year.Value, 12, 31, 23, 59, 59);
+                }
+                else if (startDate.HasValue || endDate.HasValue)
+                {
+                    // Use provided date range
+                    filterStartDate = startDate;
+                    filterEndDate = endDate;
+                }
             }
 
-            var outfitCalendars = await _unitOfWork.OutfitRepository.GetOutfitCalendarPaginationAsync(
-                paginationParameter,
-                filter: x => x.UserId == userId &&
+            // Get all calendar entries (without pagination first to group them)
+            var allCalendars = _unitOfWork.OutfitUsageHistoryRepository.GetQueryable()
+                .Include(x => x.UserOccasion)
+                .Include(x => x.Outfit)
+                    .ThenInclude(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                .Where(x => x.UserId == userId &&
                            x.UserOccasion != null &&
                            (!filterStartDate.HasValue || x.UserOccasion.DateOccasion >= filterStartDate.Value) &&
-                           (!filterEndDate.HasValue || x.UserOccasion.DateOccasion <= filterEndDate.Value),
-                orderBy: q => q.OrderBy(x => x.UserOccasion != null ? x.UserOccasion.DateOccasion : DateTime.MaxValue));
+                           (!filterEndDate.HasValue || x.UserOccasion.DateOccasion <= filterEndDate.Value))
+                .OrderBy(x => x.UserOccasion.DateOccasion)
+                .ThenBy(x => x.UserOccasion.StartTime)
+                .ToList();
 
-            var models = _mapper.Map<Pagination<OutfitCalendarModel>>(outfitCalendars);
+            // Group by UserOccasion
+            var grouped = allCalendars
+                .GroupBy(x => x.UserOccassionId)
+                .Select(g =>
+                {
+                    var first = g.First();
+                    return new OutfitCalendarGroupedModel
+                    {
+                        UserOccasion = _mapper.Map<UserOccasionModel>(first.UserOccasion),
+                        IsDaily = first.UserOccasion?.Name == "Daily",
+                        Outfits = g.Select(c => new OutfitCalendarItemModel
+                        {
+                            CalendarId = c.Id,
+                            OutfitId = c.OutfitId,
+                            OutfitName = c.Outfit?.Name ?? "Unnamed Outfit",
+                            OutfitDetails = _mapper.Map<OutfitModel>(c.Outfit),
+                            CreatedDate = c.CreatedDate
+                        }).ToList()
+                    };
+                })
+                .ToList();
+
+            // Apply pagination to grouped results
+            var totalCount = grouped.Count;
+            var pagedGroups = grouped
+                .Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
+                .Take(paginationParameter.PageSize)
+                .ToList();
+
+            var totalPages = (int)Math.Ceiling(totalCount / (double)paginationParameter.PageSize);
 
             return new BaseResponseModel
             {
@@ -499,15 +586,15 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.GET_LIST_OUTFIT_CALENDAR_SUCCESS,
                 Data = new ModelPaging
                 {
-                    Data = models,
+                    Data = pagedGroups,
                     MetaData = new
                     {
-                        models.TotalCount,
-                        models.PageSize,
-                        models.CurrentPage,
-                        models.TotalPages,
-                        models.HasNext,
-                        models.HasPrevious
+                        TotalCount = totalCount,
+                        PageSize = paginationParameter.PageSize,
+                        CurrentPage = paginationParameter.PageIndex,
+                        TotalPages = totalPages,
+                        HasNext = paginationParameter.PageIndex < totalPages,
+                        HasPrevious = paginationParameter.PageIndex > 1
                     }
                 }
             };
@@ -570,6 +657,34 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
+            // Validate IsDaily logic
+            if (model.IsDaily)
+            {
+                // IsDaily = true: Time is required, UserOccasionId should NOT be provided
+                if (!model.Time.HasValue)
+                {
+                    throw new BadRequestException("Time is required when IsDaily is true");
+                }
+
+                if (model.UserOccasionId.HasValue)
+                {
+                    throw new BadRequestException("UserOccasionId should not be provided when IsDaily is true. The Daily occasion will be auto-created.");
+                }
+            }
+            else
+            {
+                // IsDaily = false: UserOccasionId is required, Time should NOT be provided
+                if (!model.UserOccasionId.HasValue)
+                {
+                    throw new BadRequestException("UserOccasionId is required when IsDaily is false");
+                }
+
+                if (model.Time.HasValue)
+                {
+                    throw new BadRequestException("Time should not be provided when IsDaily is false. Use the UserOccasion's time instead.");
+                }
+            }
+
             // Validate all outfits exist and belong to user
             var outfits = new List<Outfit>();
             foreach (var outfitId in model.OutfitIds)
@@ -589,16 +704,10 @@ namespace SOPServer.Service.Services.Implements
             }
 
             // Handle Daily outfit logic
-            long? userOccasionId = model.UserOccasionId;
+            long? userOccasionId = null;
 
             if (model.IsDaily)
             {
-                // Validate that Time is provided for daily outfits
-                if (!model.Time.HasValue)
-                {
-                    throw new BadRequestException("Time is required when IsDaily is true");
-                }
-
                 // Look for existing "Daily" UserOccasion for this user
                 var dailyOccasion = _unitOfWork.UserOccasionRepository.GetQueryable()
                     .FirstOrDefault(uo => uo.UserId == userId && uo.Name == "Daily");
@@ -611,9 +720,9 @@ namespace SOPServer.Service.Services.Implements
                         UserId = userId,
                         Name = "Daily",
                         Description = "Daily outfit schedule",
-                        DateOccasion = DateTime.Today,
-                        StartTime = DateTime.Today.Add(model.Time.Value),
-                        EndTime = model.EndTime.HasValue ? DateTime.Today.Add(model.EndTime.Value) : null,
+                        DateOccasion = model.Time.Value.Date,
+                        StartTime = model.Time.Value,
+                        EndTime = model.EndTime,
                         OccasionId = null
                     };
                     await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
@@ -622,14 +731,11 @@ namespace SOPServer.Service.Services.Implements
                 else
                 {
                     // Update the StartTime and EndTime if different
-                    var newStartTime = DateTime.Today.Add(model.Time.Value);
-                    var newEndTime = model.EndTime.HasValue ? DateTime.Today.Add(model.EndTime.Value) : (DateTime?)null;
-
-                    if (dailyOccasion.StartTime != newStartTime || dailyOccasion.EndTime != newEndTime)
+                    if (dailyOccasion.StartTime != model.Time.Value || dailyOccasion.EndTime != model.EndTime)
                     {
-                        dailyOccasion.StartTime = newStartTime;
-                        dailyOccasion.EndTime = newEndTime;
-                        dailyOccasion.DateOccasion = DateTime.Today;
+                        dailyOccasion.StartTime = model.Time.Value;
+                        dailyOccasion.EndTime = model.EndTime;
+                        dailyOccasion.DateOccasion = model.Time.Value.Date;
                         _unitOfWork.UserOccasionRepository.UpdateAsync(dailyOccasion);
                         await _unitOfWork.SaveAsync();
                     }
@@ -637,9 +743,9 @@ namespace SOPServer.Service.Services.Implements
 
                 userOccasionId = dailyOccasion.Id;
             }
-            else if (model.UserOccasionId.HasValue)
+            else
             {
-                // Verify user occasion if provided
+                // Verify user occasion exists and belongs to user
                 var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdAsync(model.UserOccasionId.Value);
                 if (userOccasion == null)
                 {
@@ -650,6 +756,8 @@ namespace SOPServer.Service.Services.Implements
                 {
                     throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
                 }
+
+                userOccasionId = model.UserOccasionId.Value;
             }
 
             // Create calendar entries for all outfits
@@ -693,6 +801,37 @@ namespace SOPServer.Service.Services.Implements
                 throw new ForbiddenException(MessageConstants.OUTFIT_CALENDAR_ACCESS_DENIED);
             }
 
+            // Validate IsDaily logic if provided
+            if (model.IsDaily.HasValue)
+            {
+                if (model.IsDaily.Value)
+                {
+                    // IsDaily = true: Time is required, UserOccasionId should NOT be provided
+                    if (!model.Time.HasValue)
+                    {
+                        throw new BadRequestException("Time is required when IsDaily is true");
+                    }
+
+                    if (model.UserOccasionId.HasValue)
+                    {
+                        throw new BadRequestException("UserOccasionId should not be provided when IsDaily is true. The Daily occasion will be auto-created.");
+                    }
+                }
+                else
+                {
+                    // IsDaily = false: UserOccasionId is required, Time should NOT be provided
+                    if (!model.UserOccasionId.HasValue)
+                    {
+                        throw new BadRequestException("UserOccasionId is required when IsDaily is false");
+                    }
+
+                    if (model.Time.HasValue)
+                    {
+                        throw new BadRequestException("Time should not be provided when IsDaily is false. Use the UserOccasion's time instead.");
+                    }
+                }
+            }
+
             // Verify outfit if provided
             if (model.OutfitId.HasValue)
             {
@@ -713,12 +852,6 @@ namespace SOPServer.Service.Services.Implements
             // Handle Daily outfit logic
             if (model.IsDaily.HasValue && model.IsDaily.Value)
             {
-                // Validate that Time is provided for daily outfits
-                if (!model.Time.HasValue)
-                {
-                    throw new BadRequestException("Time is required when IsDaily is true");
-                }
-
                 // Look for existing "Daily" UserOccasion for this user
                 var dailyOccasion = _unitOfWork.UserOccasionRepository.GetQueryable()
                     .FirstOrDefault(uo => uo.UserId == userId && uo.Name == "Daily");
@@ -731,9 +864,9 @@ namespace SOPServer.Service.Services.Implements
                         UserId = userId,
                         Name = "Daily",
                         Description = "Daily outfit schedule",
-                        DateOccasion = DateTime.Today,
-                        StartTime = DateTime.Today.Add(model.Time.Value),
-                        EndTime = model.EndTime.HasValue ? DateTime.Today.Add(model.EndTime.Value) : null,
+                        DateOccasion = model.Time.Value.Date,
+                        StartTime = model.Time.Value,
+                        EndTime = model.EndTime,
                         OccasionId = null
                     };
                     await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
@@ -742,14 +875,11 @@ namespace SOPServer.Service.Services.Implements
                 else
                 {
                     // Update the StartTime and EndTime if different
-                    var newStartTime = DateTime.Today.Add(model.Time.Value);
-                    var newEndTime = model.EndTime.HasValue ? DateTime.Today.Add(model.EndTime.Value) : (DateTime?)null;
-
-                    if (dailyOccasion.StartTime != newStartTime || dailyOccasion.EndTime != newEndTime)
+                    if (dailyOccasion.StartTime != model.Time.Value || dailyOccasion.EndTime != model.EndTime)
                     {
-                        dailyOccasion.StartTime = newStartTime;
-                        dailyOccasion.EndTime = newEndTime;
-                        dailyOccasion.DateOccasion = DateTime.Today;
+                        dailyOccasion.StartTime = model.Time.Value;
+                        dailyOccasion.EndTime = model.EndTime;
+                        dailyOccasion.DateOccasion = model.Time.Value.Date;
                         _unitOfWork.UserOccasionRepository.UpdateAsync(dailyOccasion);
                         await _unitOfWork.SaveAsync();
                     }
@@ -760,7 +890,7 @@ namespace SOPServer.Service.Services.Implements
             }
             else if (model.UserOccasionId.HasValue)
             {
-                // Verify user occasion if provided
+                // Verify user occasion exists and belongs to user
                 var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdAsync(model.UserOccasionId.Value);
                 if (userOccasion == null)
                 {

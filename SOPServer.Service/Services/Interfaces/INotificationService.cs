@@ -22,5 +22,8 @@ namespace SOPServer.Service.Services.Interfaces
         // Mark as Read (kept for UX purposes)
         Task<BaseResponseModel> MarkNotificationAsRead(long notificationId);
         Task<BaseResponseModel> MarkAllNotificationsAsRead(long userId);
+        
+        // Delete
+        Task<BaseResponseModel> DeleteNotificationsByIdsAsync(long userId, DeleteNotificationsModel model);
     }
 }

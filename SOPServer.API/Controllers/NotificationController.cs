@@ -18,23 +18,15 @@ namespace SOPServer.API.Controllers
             _notificationService = notificationService;
         }
 
-        
-        [HttpPost]
-        [Authorize(Roles = "ADMIN")]
-        public Task<IActionResult> CreateNotification([FromBody] NotificationRequestModel model)
-        {
-            return ValidateAndExecute(async () => await _notificationService.CreateNotification(model));
-        }
-
         [HttpPost("push")]
-        [Authorize(Roles = "ADMIN")]
+        //[Authorize(Roles = "ADMIN")]
         public Task<IActionResult> PushNotification([FromBody] NotificationRequestModel model)
         {
             return ValidateAndExecute(async () => await _notificationService.PushNotification(model));
         }
 
         [HttpPost("user/{userId}")]
-        [Authorize(Roles = "ADMIN")]
+        //[Authorize(Roles = "ADMIN")]
         public Task<IActionResult> PushNotificationByUserId(long userId, [FromBody] NotificationRequestModel model)
         {
             return ValidateAndExecute(async () => await _notificationService.PushNotificationByUserId(userId, model));
@@ -43,21 +35,21 @@ namespace SOPServer.API.Controllers
         // ========== READ ==========
 
         [HttpGet("{id}")]
-        [Authorize]
+        //[Authorize]
         public Task<IActionResult> GetNotificationById(long id)
         {
             return ValidateAndExecute(async () => await _notificationService.GetNotificationById(id));
         }
 
         [HttpGet]
-        [Authorize(Roles = "ADMIN")]
+        //[Authorize(Roles = "ADMIN")]
         public Task<IActionResult> GetAllNotifications([FromQuery] PaginationParameter paginationParameter)
         {
             return ValidateAndExecute(async () => await _notificationService.GetAllNotifications(paginationParameter));
         }
 
         [HttpGet("system")]
-        [Authorize(Roles = "ADMIN")]
+        //[Authorize(Roles = "ADMIN")]
         public Task<IActionResult> GetSystemNotifications(
             [FromQuery] PaginationParameter paginationParameter,
             [FromQuery] bool newestFirst = true,
@@ -67,30 +59,30 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpGet("user/{userId}")]
-        [Authorize]
+        //[Authorize]
         public Task<IActionResult> GetNotificationsByUserId(
             [FromQuery] PaginationParameter paginationParameter,
             long userId,
             [FromQuery] int type = 0)
         {
-            var userIdClaim = User.FindFirst("UserId")?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || long.Parse(userIdClaim) != userId)
-            {
-                return Task.FromResult<IActionResult>(Forbid());
-            }
+            //var userIdClaim = User.FindFirst("UserId")?.Value;
+            //if (string.IsNullOrEmpty(userIdClaim) || long.Parse(userIdClaim) != userId)
+            //{
+            //    return Task.FromResult<IActionResult>(Forbid());
+            //}
 
             return ValidateAndExecute(async () => await _notificationService.GetNotificationsByUserId(paginationParameter, userId, type));
         }
 
         [HttpGet("user/{userId}/unread-count")]
-        [Authorize]
+        //[Authorize]
         public Task<IActionResult> GetUnreadNotificationCount(long userId)
         {
-            var userIdClaim = User.FindFirst("UserId")?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || long.Parse(userIdClaim) != userId)
-            {
-                return Task.FromResult<IActionResult>(Forbid());
-            }
+            //var userIdClaim = User.FindFirst("UserId")?.Value;
+            //if (string.IsNullOrEmpty(userIdClaim) || long.Parse(userIdClaim) != userId)
+            //{
+            //    return Task.FromResult<IActionResult>(Forbid());
+            //}
 
             return ValidateAndExecute(async () => await _notificationService.GetUnreadNotificationCount(userId));
         }
@@ -98,21 +90,21 @@ namespace SOPServer.API.Controllers
         // ========== MARK AS READ ==========
 
         [HttpPut("{notificationId}/read")]
-        [Authorize]
+        //[Authorize]
         public Task<IActionResult> MarkNotificationAsRead(long notificationId)
         {
             return ValidateAndExecute(async () => await _notificationService.MarkNotificationAsRead(notificationId));
         }
 
         [HttpPut("user/{userId}/read-all")]
-        [Authorize]
+        //[Authorize]
         public Task<IActionResult> MarkAllNotificationsAsRead(long userId)
         {
-            var userIdClaim = User.FindFirst("UserId")?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || long.Parse(userIdClaim) != userId)
-            {
-                return Task.FromResult<IActionResult>(Forbid());
-            }
+            //var userIdClaim = User.FindFirst("UserId")?.Value;
+            //if (string.IsNullOrEmpty(userIdClaim) || long.Parse(userIdClaim) != userId)
+            //{
+            //    return Task.FromResult<IActionResult>(Forbid());
+            //}
 
             return ValidateAndExecute(async () => await _notificationService.MarkAllNotificationsAsRead(userId));
         }

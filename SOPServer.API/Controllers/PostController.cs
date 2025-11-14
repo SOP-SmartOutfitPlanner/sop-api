@@ -20,7 +20,14 @@ namespace SOPServer.API.Controllers
         [HttpGet("{id}")]
         public Task<IActionResult> GetPostById(long id)
         {
-            return ValidateAndExecute(async () => await _postService.GetPostByIdAsync(id));
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? requesterId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                requesterId = parsedUserId;
+            }
+
+            return ValidateAndExecute(async () => await _postService.GetPostByIdAsync(id, requesterId));
         }
 
         [HttpPost]
@@ -61,7 +68,14 @@ namespace SOPServer.API.Controllers
             [FromQuery] PaginationParameter paginationParameter,
             long hashtagId)
         {
-            return ValidateAndExecute(async () => await _postService.GetPostsByHashtagIdAsync(paginationParameter, hashtagId));
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long? requesterId = null;
+            if (long.TryParse(userIdClaim, out long parsedUserId))
+            {
+                requesterId = parsedUserId;
+            }
+
+            return ValidateAndExecute(async () => await _postService.GetPostsByHashtagIdAsync(paginationParameter, hashtagId, requesterId));
         }
 
         [HttpGet("hashtag/name/{hashtagName}")]
@@ -109,7 +123,7 @@ namespace SOPServer.API.Controllers
             {
                 callerUserId = parsedUserId;
             }
-            
+
             return ValidateAndExecute(async () => await _postService.GetPostLikersAsync(paginationParameter, postId, callerUserId));
         }
     }

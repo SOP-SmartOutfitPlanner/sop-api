@@ -14,5 +14,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<bool> UpSertItem(List<float> embedding, Dictionary<string, object> payload, long id);
         Task<bool> DeleteItem(long id);
         Task<List<QDrantSearchModels>> SearchSimilarityByUserId(List<float> embedding, long userId);
+        Task<List<QDrantSearchModels>> SearchSimilarityItemSystem(List<float> embedding);
     }
 }

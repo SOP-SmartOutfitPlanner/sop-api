@@ -41,6 +41,15 @@ namespace SOPServer.Service.Services.Implements
         {
             await ValidateUserExistsAsync(model.UserId);
 
+            // Check if user is suspended
+            var suspension = await _unitOfWork.UserSuspensionRepository.GetActiveSuspensionAsync(model.UserId);
+            if (suspension != null && suspension.EndAt > DateTime.UtcNow)
+            {
+                throw new ForbiddenException(
+                    $"Your account is suspended until {suspension.EndAt:yyyy-MM-dd HH:mm} UTC. " +
+                    $"Reason: {suspension.Reason}. You cannot create posts during this period.");
+            }
+
             var newPost = await CreatePostEntityAsync(model);
 
             // Upload images to MinIO and get URLs

@@ -313,5 +313,7 @@ namespace SOPServer.Service.Constants
         public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "Plan: ";
 
         public const string NOTIFICATION_PROCESS_IN_BACKGROUND = "Notification is being processed in background";
+
+        public const string GET_WEATHER_INFO_SUCCESS = "Get weather info success";
     }
 }

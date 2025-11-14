@@ -230,11 +230,11 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> GetItemById(long id)
         {
             var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(id,
- include: query => query.Include(x => x.Category)
-    .Include(x => x.User)
-       .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
- .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-        .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
+                        include: query => query.Include(x => x.Category)
+                                                .Include(x => x.User)
+                                                .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+                                                .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+                                                .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
             if (item == null)
             {
                 throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);

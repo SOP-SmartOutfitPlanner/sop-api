@@ -1129,14 +1129,13 @@ namespace SOPServer.Service.Services.Implements
             var scopedUnitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
             var scopedMinioService = scope.ServiceProvider.GetRequiredService<IMinioService>();
             var httpClientFactory = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>();
-
+            var client = httpClientFactory.CreateClient("RembgClient");
             foreach (var itemId in itemIds)
             {
                 var item = await scopedUnitOfWork.ItemRepository.GetByIdAsync(itemId);
                 if (item == null || string.IsNullOrEmpty(item.ImgUrl))
                     continue;
-
-                var client = httpClientFactory.CreateClient("RembgClient");
+                
                 var requestBody = new RembgRequest
                 {
                     Input = new RembgInput { Image = item.ImgUrl }
@@ -1182,8 +1181,8 @@ namespace SOPServer.Service.Services.Implements
                 await scopedMinioService.DeleteImageByURLAsync(item.ImgUrl);
                 item.ImgUrl = uploadData.DownloadUrl;
                 scopedUnitOfWork.ItemRepository.UpdateAsync(item);
-                await scopedUnitOfWork.SaveAsync();
             }
+            await scopedUnitOfWork.SaveAsync();
         }
 
         public async Task<BaseResponseModel> SplitItem(IFormFile file)

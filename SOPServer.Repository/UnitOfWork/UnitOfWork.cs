@@ -43,6 +43,8 @@ namespace SOPServer.Repository.UnitOfWork
         private ILikeCollectionRepository _likeCollectionRepository;
         private ISaveCollectionRepository _saveCollectionRepository;
         private IReportCommunityRepository _reportCommunityRepository;
+        private IUserSuspensionRepository _userSuspensionRepository;
+        private IUserViolationRepository _userViolationRepository;
         private IUserSubscriptionRepository _userSubscriptionRepository;
         private ISubscriptionPlanRepository _subscriptionPlanRepository;
         private IUserSubscriptionTransactionRepository _subscriptionTransactionRepository;
@@ -276,6 +278,22 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _reportCommunityRepository ??= new ReportCommunityRepository(_context);
+            }
+        }
+
+        public IUserSuspensionRepository UserSuspensionRepository
+        {
+            get
+            {
+                return _userSuspensionRepository ??= new UserSuspensionRepository(_context);
+            }
+        }
+
+        public IUserViolationRepository UserViolationRepository
+        {
+            get
+            {
+                return _userViolationRepository ??= new UserViolationRepository(_context);
             }
         }
 

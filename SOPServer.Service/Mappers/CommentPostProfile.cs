@@ -17,7 +17,8 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.UserAvatarUrl, opt => opt.MapFrom(src =>
                     src.User != null ? src.User.AvtUrl : null))
                 .ForMember(dest => dest.UserRole, opt => opt.MapFrom(src =>
-                    src.User != null ? src.User.Role.ToString() : null));
+                    src.User != null ? src.User.Role.ToString() : null))
+                .ForMember(dest => dest.IsHidden, opt => opt.MapFrom(src => src.IsHidden));
 
             CreateMap<CreateCommentPostModel, CommentPost>();
             CreateMap<UpdateCommentPostModel, CommentPost>();

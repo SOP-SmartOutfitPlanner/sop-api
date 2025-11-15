@@ -40,6 +40,7 @@ namespace SOPServer.Service.BusinessModels.DashboardModels
     public class TopCollectionModel
     {
         public long Id { get; set; }
+        public string? ThumbnailURL { get; set; }
         public string Title { get; set; }
         public string ShortDescription { get; set; }
         public bool IsPublished { get; set; }

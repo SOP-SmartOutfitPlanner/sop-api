@@ -49,6 +49,8 @@ namespace SOPServer.Service.Constants
         public const string ONBOARDING_SUCCESS = "Onboarding data saved successfully";
         public const string INVALID_USER_TOKEN = "Invalid user token";
         public const string ONBOARDING_ALREADY_COMPLETED_MSG = "Onboarding has already been completed";
+        public const string STYLIST_PROFILE_NOT_FOUND = "Stylist profile not found or user is not a stylist";
+        public const string GET_STYLIST_PROFILE_SUCCESS = "Get stylist profile successfully";
 
         public const string TOKEN_NOT_VALID = "Token not valid";
         public const string LOGIN_SUCCESS_MESSAGE = "Login successfully";

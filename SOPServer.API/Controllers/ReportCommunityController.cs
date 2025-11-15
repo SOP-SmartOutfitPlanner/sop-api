@@ -86,6 +86,37 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
+        /// [ADMIN] Get paginated list of all reports with optional filters
+        /// </summary>
+        /// <param name="paginationParameter">Pagination parameters (PageIndex, PageSize)</param>
+        /// <param name="filter">Optional filters (Type, Status, FromDate, ToDate)</param>
+        /// <returns>Paginated list of all reports with reporter, content, and author details</returns>
+        /// <response code="200">Reports retrieved successfully</response>
+        /// <response code="401">Unauthorized - Admin role required</response>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET /api/v1/reports?PageIndex=1&amp;PageSize=20&amp;Type=POST&amp;Status=RESOLVED&amp;FromDate=2024-01-01&amp;ToDate=2024-12-31
+        ///     
+        /// Note: 
+        /// - Requires ADMIN role
+        /// - Returns all reports regardless of status
+        /// - Filter by Type (POST/COMMENT), Status (PENDING/RESOLVED/REJECTED), and date range
+        /// - All filters are optional
+        /// </remarks>
+        [HttpGet]
+        [Authorize(Roles = "ADMIN")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public Task<IActionResult> GetAllReports(
+            [FromQuery] PaginationParameter paginationParameter,
+            [FromQuery] ReportFilterModel filter)
+        {
+            return ValidateAndExecute(async () =>
+                await _reportCommunityService.GetAllReportsAsync(filter, paginationParameter));
+        }
+
+        /// <summary>
         /// [ADMIN] Get detailed information about a specific report
         /// </summary>
         /// <param name="id">Report ID</param>

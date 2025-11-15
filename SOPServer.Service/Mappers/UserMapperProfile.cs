@@ -48,6 +48,10 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.StyleId, opt => opt.MapFrom(src => src.StyleId ?? 0))
                 .ForMember(dest => dest.StyleName, opt => opt.MapFrom(src => src.Style != null ? src.Style.Name : string.Empty))
                 .ForMember(dest => dest.StyleDescription, opt => opt.MapFrom(src => src.Style != null ? src.Style.Description : string.Empty));
+
+            // Stylist Profile mapping
+            CreateMap<User, StylistProfileModel>()
+                .ForMember(dest => dest.JobName, opt => opt.MapFrom(src => src.Job != null ? src.Job.Name : null));
         }
     }
 }

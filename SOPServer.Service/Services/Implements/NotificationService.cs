@@ -108,7 +108,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetNotificationsByUserId(PaginationParameter paginationParameter, long userId, int type = 0)
+        public async Task<BaseResponseModel> GetNotificationsByUserId(PaginationParameter paginationParameter, long userId, int type, bool? isRead)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
             if (user == null)
@@ -123,7 +123,7 @@ namespace SOPServer.Service.Services.Implements
 
             var notifications = await _unitOfWork.UserNotificationRepository.ToPaginationIncludeAsync(
                 paginationParameter,
-                filter: x => x.UserId == userId && !x.IsDeleted && x.Notification.Type == notificationType,
+                filter: x => x.UserId == userId && !x.IsDeleted && x.Notification.Type == notificationType && (isRead == null || x.IsRead == isRead),
                 include: query => query
                     .Include(x => x.Notification)
                         .ThenInclude(n => n.ActorUser)

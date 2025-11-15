@@ -22,18 +22,18 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly GenerativeModel _generativeModel;
         private readonly EmbeddingModel _embeddingModel;
-        private readonly IMapper _mapper;
+        private readonly GenerativeModel _suggestionAiClient;
         private readonly QDrantClientSettings _qdrantClientSettings;
         private readonly ILogger<GeminiService> _logger;
         private readonly HashSet<string> _allowedMime = new(StringComparer.OrdinalIgnoreCase)
         {
             "image/jpeg", "image/png", "image/webp", "image/gif"
         };
+        
 
-        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IMapper mapper, IOptions<QDrantClientSettings> qdrantClientSettings, ILogger<GeminiService> logger)
+        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IOptions<QDrantClientSettings> qdrantClientSettings, ILogger<GeminiService> logger)
         {
             _unitOfWork = unitOfWork;
-            _mapper = mapper;
             _qdrantClientSettings = qdrantClientSettings.Value;
             _logger = logger;
 
@@ -48,6 +48,11 @@ namespace SOPServer.Service.Services.Implements
             var modelIdEmbedding = GetAiSettingValue(AISettingType.MODEL_EMBEDDING);
             var embeddingAiClient = new GoogleAi(apiKeyEmbedding);
             _embeddingModel = embeddingAiClient.CreateEmbeddingModel(modelIdEmbedding);
+
+            var apiKeySuggest = GetAiSettingValue(AISettingType.API_SUGGESTION);
+            var modelSuggestion = GetAiSettingValue(AISettingType.MODEL_SUGGESTION);
+            var suggestionAiClient = new GoogleAi(apiKeySuggest);
+            _suggestionAiClient = suggestionAiClient.CreateGenerativeModel(modelSuggestion);
         }
 
         private string GetAiSettingValue(AISettingType type)

@@ -112,12 +112,31 @@ namespace SOPServer.Service.Services.Implements
                     if (reverseGeoJson.Any())
                     {
                         var locationInfo = reverseGeoJson[0];
-                        string? cityNameEnglish = (string?)locationInfo["local_names"]?["en"];
-                        string? defaultName = (string?)locationInfo["name"];
 
-                        cityDisplayName = cityNameEnglish
-                                          ?? defaultName
-                                          ?? "Unknown Location";
+                        string? englishName = (string?)locationInfo["local_names"]?["en"];
+                        string? defaultName = (string?)locationInfo["name"];
+                        string? stateName = (string?)locationInfo["state"];
+                        string? countryCode = (string?)locationInfo["country"]; // <- quốc gia (VN, US...)
+
+                        // Ưu tiên city English → nếu không lấy name → nếu không có lấy state
+                        string city = englishName
+                                      ?? defaultName
+                                      ?? stateName
+                                      ?? "Unknown";
+
+                        // Build display name: City, State, Country
+                        var parts = new List<string>();
+
+                        if (!string.IsNullOrWhiteSpace(city))
+                            parts.Add(city);
+
+                        if (!string.IsNullOrWhiteSpace(stateName))
+                            parts.Add(stateName);
+
+                        if (!string.IsNullOrWhiteSpace(countryCode))
+                            parts.Add(countryCode);
+
+                        cityDisplayName = string.Join(", ", parts);
                     }
                 }
             }

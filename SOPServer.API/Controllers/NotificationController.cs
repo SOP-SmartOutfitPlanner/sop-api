@@ -70,7 +70,8 @@ namespace SOPServer.API.Controllers
         public Task<IActionResult> GetNotificationsByUserId(
             [FromQuery] PaginationParameter paginationParameter,
             long userId,
-            [FromQuery] int type = 0)
+            [FromQuery] int type = 0,
+            [FromQuery] bool? isRead = null)
         {
             //var userIdClaim = User.FindFirst("UserId")?.Value;
             //if (string.IsNullOrEmpty(userIdClaim) || long.Parse(userIdClaim) != userId)
@@ -78,7 +79,7 @@ namespace SOPServer.API.Controllers
             //    return Task.FromResult<IActionResult>(Forbid());
             //}
 
-            return ValidateAndExecute(async () => await _notificationService.GetNotificationsByUserId(paginationParameter, userId, type));
+            return ValidateAndExecute(async () => await _notificationService.GetNotificationsByUserId(paginationParameter, userId, type, isRead));
         }
 
         [HttpGet("user/{userId}/unread-count")]

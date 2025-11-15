@@ -708,38 +708,19 @@ namespace SOPServer.Service.Services.Implements
 
             if (model.IsDaily)
             {
-                // Look for existing "Daily" UserOccasion for this user
-                var dailyOccasion = _unitOfWork.UserOccasionRepository.GetQueryable()
-                    .FirstOrDefault(uo => uo.UserId == userId && uo.Name == "Daily");
-
-                if (dailyOccasion == null)
+                // Always create a new "Daily" UserOccasion with the provided time
+                var dailyOccasion = new UserOccasion
                 {
-                    // Create a new "Daily" UserOccasion
-                    dailyOccasion = new UserOccasion
-                    {
-                        UserId = userId,
-                        Name = "Daily",
-                        Description = "Daily outfit schedule",
-                        DateOccasion = model.Time.Value.Date,
-                        StartTime = model.Time.Value,
-                        EndTime = model.EndTime,
-                        OccasionId = null
-                    };
-                    await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
-                    await _unitOfWork.SaveAsync();
-                }
-                else
-                {
-                    // Update the StartTime and EndTime if different
-                    if (dailyOccasion.StartTime != model.Time.Value || dailyOccasion.EndTime != model.EndTime)
-                    {
-                        dailyOccasion.StartTime = model.Time.Value;
-                        dailyOccasion.EndTime = model.EndTime;
-                        dailyOccasion.DateOccasion = model.Time.Value.Date;
-                        _unitOfWork.UserOccasionRepository.UpdateAsync(dailyOccasion);
-                        await _unitOfWork.SaveAsync();
-                    }
-                }
+                    UserId = userId,
+                    Name = "Daily",
+                    Description = "Daily outfit schedule",
+                    DateOccasion = model.Time.Value.Date,
+                    StartTime = model.Time.Value,
+                    EndTime = model.EndTime,
+                    OccasionId = null
+                };
+                await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
+                await _unitOfWork.SaveAsync();
 
                 userOccasionId = dailyOccasion.Id;
             }
@@ -852,38 +833,19 @@ namespace SOPServer.Service.Services.Implements
             // Handle Daily outfit logic
             if (model.IsDaily.HasValue && model.IsDaily.Value)
             {
-                // Look for existing "Daily" UserOccasion for this user
-                var dailyOccasion = _unitOfWork.UserOccasionRepository.GetQueryable()
-                    .FirstOrDefault(uo => uo.UserId == userId && uo.Name == "Daily");
-
-                if (dailyOccasion == null)
+                // Always create a new "Daily" UserOccasion with the provided time
+                var dailyOccasion = new UserOccasion
                 {
-                    // Create a new "Daily" UserOccasion
-                    dailyOccasion = new UserOccasion
-                    {
-                        UserId = userId,
-                        Name = "Daily",
-                        Description = "Daily outfit schedule",
-                        DateOccasion = model.Time.Value.Date,
-                        StartTime = model.Time.Value,
-                        EndTime = model.EndTime,
-                        OccasionId = null
-                    };
-                    await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
-                    await _unitOfWork.SaveAsync();
-                }
-                else
-                {
-                    // Update the StartTime and EndTime if different
-                    if (dailyOccasion.StartTime != model.Time.Value || dailyOccasion.EndTime != model.EndTime)
-                    {
-                        dailyOccasion.StartTime = model.Time.Value;
-                        dailyOccasion.EndTime = model.EndTime;
-                        dailyOccasion.DateOccasion = model.Time.Value.Date;
-                        _unitOfWork.UserOccasionRepository.UpdateAsync(dailyOccasion);
-                        await _unitOfWork.SaveAsync();
-                    }
-                }
+                    UserId = userId,
+                    Name = "Daily",
+                    Description = "Daily outfit schedule",
+                    DateOccasion = model.Time.Value.Date,
+                    StartTime = model.Time.Value,
+                    EndTime = model.EndTime,
+                    OccasionId = null
+                };
+                await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
+                await _unitOfWork.SaveAsync();
 
                 // Set the UserOccasionId to the Daily occasion
                 outfitCalendar.UserOccassionId = dailyOccasion.Id;

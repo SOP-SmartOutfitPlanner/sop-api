@@ -34,12 +34,14 @@ namespace SOPServer.Service.Mappers
 
             CreateMap<Collection, CollectionDetailedModel>()
                 .ForMember(dest => dest.UserDisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : "Unknown"))
+                .ForMember(dest => dest.AvtUrl, opt => opt.MapFrom(src => src.User.AvtUrl != null ? src.User.AvtUrl : null))
                 .ForMember(dest => dest.Outfits, opt => opt.MapFrom(src => 
                     src.CollectionOutfits != null 
                         ? src.CollectionOutfits.Where(co => !co.IsDeleted && co.Outfit != null).ToList() 
                         : new List<CollectionOutfit>()))
                 .ForMember(dest => dest.LikeCount, opt => opt.MapFrom(src => src.LikeCollections != null ? src.LikeCollections.Count(lp => !lp.IsDeleted) : 0))
-                .ForMember(dest => dest.CommentCount, opt => opt.MapFrom(src => src.CommentCollections != null ? src.CommentCollections.Count(lp => !lp.IsDeleted) : 0));
+                .ForMember(dest => dest.CommentCount, opt => opt.MapFrom(src => src.CommentCollections != null ? src.CommentCollections.Count(lp => !lp.IsDeleted) : 0))
+                .ForMember(dest => dest.SavedCount, opt => opt.MapFrom(src => src.SaveCollections != null ? src.SaveCollections.Count(lp => !lp.IsDeleted) : 0));
 
             CreateMap<CollectionOutfit, CollectionOutfitModel>();
 

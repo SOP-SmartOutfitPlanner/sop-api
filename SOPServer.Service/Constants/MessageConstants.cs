@@ -311,6 +311,7 @@ namespace SOPServer.Service.Constants
         public const string REPORT_NOT_FOUND = "Report not found";
         public const string GET_REPORT_DETAILS_SUCCESS = "Get report details successfully";
         public const string GET_PENDING_REPORTS_SUCCESS = "Get pending reports successfully";
+        public const string GET_ALL_REPORTS_SUCCESS = "Get all reports successfully";
         public const string RESOLVE_REPORT_NO_VIOLATION_SUCCESS = "Report resolved: No violation found";
         public const string RESOLVE_REPORT_WITH_ACTION_SUCCESS = "Report resolved and action applied successfully";
         public const string REPORT_ALREADY_RESOLVED = "Report has already been resolved";

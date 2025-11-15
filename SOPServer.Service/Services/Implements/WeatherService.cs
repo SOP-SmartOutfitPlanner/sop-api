@@ -112,9 +112,12 @@ namespace SOPServer.Service.Services.Implements
                     if (reverseGeoJson.Any())
                     {
                         var locationInfo = reverseGeoJson[0];
-                        string cityNameEn = (string?)locationInfo["name"] ?? "Unknown";
-                        string? cityNameVi = (string?)locationInfo["local_names"]?["vi"];
-                        cityDisplayName = cityNameVi ?? cityNameEn;
+                        string? cityNameEnglish = (string?)locationInfo["local_names"]?["en"];
+                        string? defaultName = (string?)locationInfo["name"];
+
+                        cityDisplayName = cityNameEnglish
+                                          ?? defaultName
+                                          ?? "Unknown Location";
                     }
                 }
             }

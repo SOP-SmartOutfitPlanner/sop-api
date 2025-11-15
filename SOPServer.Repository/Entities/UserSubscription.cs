@@ -8,7 +8,7 @@ namespace SOPServer.Repository.Entities
 
         public long SubscriptionPlanId { get; set; }
 
-        public DateTime DateExp { get; set; }
+        public DateTime DateExp { get; set  ; }
 
         public bool IsActive { get; set; }
 

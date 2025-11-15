@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SOPServer.API.Attributes;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
@@ -96,8 +97,10 @@ namespace SOPServer.API.Controllers
         /// - `itemIds`: Array of item IDs (optional, prevents duplicates)
         ///
         /// **Note:** UserId is extracted from JWT token automatically
+        /// **Note:** Subject to subscription limits based on user's plan
         /// </remarks>
         [HttpPost]
+        [CheckSubscriptionLimit("outfitsCreated", "maxOutfits")]
         public Task<IActionResult> CreateOutfit([FromBody] OutfitCreateModel model)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;

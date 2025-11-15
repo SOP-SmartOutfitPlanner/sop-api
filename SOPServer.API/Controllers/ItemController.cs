@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using SOPServer.API.Attributes;
 using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.Services.Interfaces;
@@ -43,6 +44,7 @@ namespace SOPServer.API.Controllers
         //}
 
         [HttpPost]
+        [CheckSubscriptionLimit("wardrobeItems", "maxWardrobeItems")]
         public Task<IActionResult> CreateNewItem(ItemCreateModel model)
         {
             return ValidateAndExecute(async () => await _itemService.AddNewItem(model));

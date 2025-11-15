@@ -123,6 +123,16 @@ namespace SOPServer.API
             services.AddScoped<IAISettingRepository, AISettingRepository>();
             services.AddScoped<IAISettingService, AISettingService>();
 
+            // ========== SUBSCRIPTION PLAN MANAGEMENT ==========
+            services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
+            services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
+
+            services.AddScoped<IUserSubscriptionRepository, UserSubscriptionRepository>();
+            services.AddScoped<ISubscriptionLimitService, SubscriptionLimitService>();
+
+            // Register the action filter for subscription limit checking
+            services.AddScoped<SOPServer.API.Attributes.SubscriptionLimitActionFilter>();
+
             // ========== EXTERNAL SERVICES ==========
             services.AddScoped<IGeminiService, GeminiService>();
             services.AddScoped<IRedisService, RedisService>();

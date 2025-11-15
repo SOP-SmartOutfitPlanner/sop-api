@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SOPServer.API.Attributes;
 using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.CollectionModels;
 using SOPServer.Service.Services.Interfaces;
@@ -58,6 +59,7 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpPost]
+        [CheckSubscriptionLimit("collections", "maxCollections")]
         public Task<IActionResult> CreateCollection([FromForm] CollectionCreateModel model)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;

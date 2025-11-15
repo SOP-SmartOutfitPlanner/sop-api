@@ -315,5 +315,14 @@ namespace SOPServer.Service.Constants
         public const string NOTIFICATION_PROCESS_IN_BACKGROUND = "Notification is being processed in background";
 
         public const string GET_WEATHER_INFO_SUCCESS = "Get weather info success";
+
+        // SubscriptionPlan related messages
+        public const string SUBSCRIPTION_PLAN_NOT_FOUND = "Subscription plan not found";
+        public const string SUBSCRIPTION_PLAN_GET_SUCCESS = "Subscription plan retrieved successfully";
+        public const string SUBSCRIPTION_PLAN_CREATE_SUCCESS = "Subscription plan created successfully";
+        public const string SUBSCRIPTION_PLAN_UPDATE_SUCCESS = "Subscription plan updated successfully";
+        public const string SUBSCRIPTION_PLAN_DELETE_SUCCESS = "Subscription plan deleted successfully";
+        public const string GET_LIST_SUBSCRIPTION_PLAN_SUCCESS = "Get list subscription plans successfully";
+        public const string SUBSCRIPTION_PLAN_NAME_EXISTS = "A subscription plan with this name already exists";
     }
 }

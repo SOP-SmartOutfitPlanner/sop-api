@@ -1,11 +1,10 @@
-using System;
-
 namespace SOPServer.Service.BusinessModels.CollectionModels
 {
     public class CollectionModel
     {
         public long Id { get; set; }
         public long? UserId { get; set; }
+        public string? ThumbnailURL { get; set; }
         public string UserDisplayName { get; set; }
         public string Title { get; set; }
         public string ShortDescription { get; set; }

@@ -1135,7 +1135,7 @@ namespace SOPServer.Service.Services.Implements
                 var item = await scopedUnitOfWork.ItemRepository.GetByIdAsync(itemId);
                 if (item == null || string.IsNullOrEmpty(item.ImgUrl))
                     continue;
-                
+
                 var requestBody = new RembgRequest
                 {
                     Input = new RembgInput { Image = item.ImgUrl }
@@ -1178,11 +1178,16 @@ namespace SOPServer.Service.Services.Implements
                     continue;
                 }
 
+                //double check after remove background
+                var itemDoubleCheck = await scopedUnitOfWork.ItemRepository.GetByIdAsync(itemId);
+                if (itemDoubleCheck == null || string.IsNullOrEmpty(item.ImgUrl))
+                    continue;
+
                 await scopedMinioService.DeleteImageByURLAsync(item.ImgUrl);
                 item.ImgUrl = uploadData.DownloadUrl;
                 scopedUnitOfWork.ItemRepository.UpdateAsync(item);
+                await scopedUnitOfWork.SaveAsync();
             }
-            await scopedUnitOfWork.SaveAsync();
         }
 
         public async Task<BaseResponseModel> SplitItem(IFormFile file)

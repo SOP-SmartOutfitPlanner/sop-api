@@ -238,6 +238,7 @@ namespace SOPServer.Service.Constants
         public const string USER_OCCASION_DELETE_SUCCESS = "User occasion deleted successfully";
         public const string GET_LIST_USER_OCCASION_SUCCESS = "Get list user occasion successfully";
         public const string USER_OCCASION_ACCESS_DENIED = "You don't have permission to access this occasion";
+        public const string USER_OCCASION_DAILY_NAME_RESERVED = "The name 'Daily' is reserved and cannot be used for user occasions";
 
         // Newsfeed related messages
         public const string NEWSFEED_GET_SUCCESS = "Newsfeed retrieved successfully";

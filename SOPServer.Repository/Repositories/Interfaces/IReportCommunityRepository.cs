@@ -9,6 +9,7 @@ namespace SOPServer.Repository.Repositories.Interfaces
     {
         Task<ReportCommunity?> GetExistingReportAsync(long userId, long? postId, long? commentId, ReportType type);
         Task<(List<ReportCommunity>, int)> GetPendingReportsAsync(ReportType? type, DateTime? fromDate, DateTime? toDate, PaginationParameter pagination);
+        Task<(List<ReportCommunity>, int)> GetAllReportsAsync(ReportType? type, ReportStatus? status, DateTime? fromDate, DateTime? toDate, PaginationParameter pagination);
         Task<ReportCommunity?> GetReportDetailsAsync(long reportId);
     }
 }

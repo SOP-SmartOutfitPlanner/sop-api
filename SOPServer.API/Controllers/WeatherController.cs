@@ -16,10 +16,16 @@ namespace SOPServer.API.Controllers
             _weatherService = weatherService;
         }
 
-        [HttpGet]
-        public Task<IActionResult> GetWeatherForecast(string cityName,[FromQuery] int cnt)
+        [HttpGet("search-cities")]
+        public Task<IActionResult> SearchCities([FromQuery] string cityName, [FromQuery] int limit = 5)
         {
-            return ValidateAndExecute(async () => await _weatherService.GetWeatherAsync(cityName, cnt));
+            return ValidateAndExecute(async () => await _weatherService.GetCitiesByName(cityName, limit));
+        }
+
+        [HttpGet("by-coordinates")]
+        public Task<IActionResult> GetWeatherByCoordinates([FromQuery] double latitude, [FromQuery] double longitude, [FromQuery] int? cnt)
+        {
+            return ValidateAndExecute(async () => await _weatherService.GetWeatherByCoordinates(latitude, longitude, cnt));
         }
     }
 }

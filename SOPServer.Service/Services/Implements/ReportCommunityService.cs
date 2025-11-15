@@ -127,6 +127,38 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<BaseResponseModel> GetAllReportsAsync(ReportFilterModel filter, PaginationParameter pagination)
+        {
+            var (reports, totalCount) = await _unitOfWork.ReportCommunityRepository.GetAllReportsAsync(
+                filter.Type,
+                filter.Status,
+                filter.FromDate,
+                filter.ToDate,
+                pagination);
+
+            var reportModels = reports.Select(r => new ReportCommunityModel
+            {
+                Id = r.Id,
+                UserId = r.UserId,
+                PostId = r.PostId,
+                CommentId = r.CommentId,
+                Type = r.Type,
+                Action = r.Action,
+                Status = r.Status,
+                Description = r.Description,
+                CreatedDate = r.CreatedDate
+            }).ToList();
+
+            var paginatedResult = new Pagination<ReportCommunityModel>(reportModels, totalCount, pagination.PageIndex, pagination.PageSize);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_ALL_REPORTS_SUCCESS,
+                Data = paginatedResult
+            };
+        }
+
         public async Task<BaseResponseModel> GetReportDetailsAsync(long reportId)
         {
             var report = await _unitOfWork.ReportCommunityRepository.GetReportDetailsAsync(reportId);

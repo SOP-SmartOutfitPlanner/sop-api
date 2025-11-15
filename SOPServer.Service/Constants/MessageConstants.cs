@@ -329,6 +329,8 @@ namespace SOPServer.Service.Constants
         // Subscription related messages
         public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "Plan: ";
 
+        // Weather related messages
         public const string GET_WEATHER_INFO_SUCCESS = "Get weather info success";
+        public const string GET_CITIES_SUCCESS = "Get cities successfully";
     }
 }

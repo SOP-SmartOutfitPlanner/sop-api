@@ -1,5 +1,4 @@
-﻿using CSharpToJsonSchema;
-using SOPServer.Repository.Enums;
+﻿using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.QDrantModels;
 using System;
 using System.Collections.Generic;
@@ -10,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace SOPServer.Service.Services.Interfaces
 {
-    [GenerateJsonSchema(GoogleFunctionTool = true, MeaiFunctionTool = true)]
+    // [GenerateJsonSchema(GoogleFunctionTool = true, MeaiFunctionTool = true, ToolName = "QdrantService")]
     public interface IQdrantService
     {
         Task EnsureCollectionExistsAsync(CancellationToken cancellationToken = default);

@@ -20,7 +20,7 @@ using System.Text.Json.Serialization;
 
 namespace SOPServer.Service.Services.Implements
 {
-    public class GeminiService : IGeminiService
+    public partial class GeminiService : IGeminiService
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly GenerativeModel _generativeModel;
@@ -78,7 +78,7 @@ namespace SOPServer.Service.Services.Implements
             return setting.Value;
         }
 
-        public async Task<ItemModelAI?> ImageGenerateContent(string base64Image, string mimeType, string prompt)
+        public async Task<ItemModelAI?> ImageGenerateContent(string base64Image, string mimeType, string prompt, CancellationToken cancellationToken = default)
         {
             var generateRequest = new GenerateContentRequest();
             generateRequest.AddInlineData(base64Image, mimeType);
@@ -160,7 +160,7 @@ namespace SOPServer.Service.Services.Implements
             return missingFields;
         }
 
-        public async Task<ImageValidation> ImageValidation(string base64Image, string mimeType)
+        public async Task<ImageValidation> ImageValidation(string base64Image, string mimeType, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(mimeType) || !_allowedMime.Contains(mimeType))
             {
@@ -201,7 +201,7 @@ namespace SOPServer.Service.Services.Implements
             throw new BadRequestException(MessageConstants.IMAGE_VALIDATION_FAILED);
         }
 
-        public async Task<List<float>?> EmbeddingText(string textEmbeeding)
+        public async Task<List<float>?> EmbeddingText(string textEmbeeding, CancellationToken cancellationToken = default)
         {
             var request = new EmbedContentRequest
             {
@@ -212,7 +212,7 @@ namespace SOPServer.Service.Services.Implements
             return response.Embedding.Values;
         }
 
-        public async Task<CategoryItemAnalysisModel?> AnalyzingCategory(string base64Image, string mimeType, string finalPrompt)
+        public async Task<CategoryItemAnalysisModel?> AnalyzingCategory(string base64Image, string mimeType, string finalPrompt, CancellationToken cancellationToken = default)
         {
             var generateRequest = new GenerateContentRequest();
             generateRequest.AddInlineData(base64Image, mimeType);
@@ -274,7 +274,7 @@ Output only the JSON of OutfitSelectionModel."
             Console.WriteLine("Suggest Item Time: " + sw.ElapsedMilliseconds + "ms");
         }
 
-        public async Task<List<string>> OutfitSuggestion(string occasion, string usercharacteristic)
+        public async Task<List<string>> OutfitSuggestion(string occasion, string usercharacteristic, CancellationToken cancellationToken = default)
         {
             var outfitPromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_GENERATION_PROMPT);
 
@@ -349,7 +349,7 @@ Output only the JSON of OutfitSelectionModel."
             throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
         }
 
-        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, QuickTools tools)
+        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, CancellationToken cancellationToken = default)
         {
             var choosePromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_CHOOSE_PROMPT);
 
@@ -383,9 +383,6 @@ Output only the JSON of OutfitSelectionModel."
             };
 
             var generateRequest = new GenerateContentRequest();
-
-            // Add function tool for searching system items if needed
-            _suggestionAiClient.AddFunctionTool(tools);
 
             generateRequest.SystemInstruction = new Content
             {

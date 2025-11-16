@@ -43,5 +43,19 @@ namespace SOPServer.Repository.Repositories.Implements
             return await query.AnyAsync();
         }
 
+        public async Task<List<Item>> GetItemsByIdsAsync(List<long> itemIds)
+        {
+            if (itemIds == null || !itemIds.Any())
+                return new List<Item>();
+
+            return await _context.Items
+                .Where(x => !x.IsDeleted && itemIds.Contains(x.Id))
+                .Include(x => x.Category)
+                .Include(x => x.User)
+                .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+                .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+                .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
+                .ToListAsync();
+        }
     }
 }

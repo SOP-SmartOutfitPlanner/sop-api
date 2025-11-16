@@ -357,9 +357,34 @@ namespace SOPServer.Service.Services.Implements
                     generateRequest.AddContent(userContent);
 
                     var response = await model.GenerateContentAsync(generateRequest);
+                    Console.WriteLine("OUTFIT RESPONSE: " + response.Text);
 
-                    var cleanedJson = CleanJsonResponse(response.Text);
-                    var result = JsonSerializer.Deserialize<OutfitSelectionModel>(cleanedJson);
+                    var requestJsonMode = new GenerateContentRequest();
+                    requestJsonMode.UseJsonMode<OutfitSelectionModel>();
+
+                    var systemFormatParts = new List<Part>
+                    {
+                        new Part { Text = @"Format a response to json mode for me { ""itemIds"": [12, 34], ""reason"": ""≤50 words about color harmony, style match, occasion fit."" }" }
+                    };
+
+                    var aiResponsePart = new List<Part>
+                    {
+                        new Part { Text = response.Text },
+                    };
+
+                    requestJsonMode.AddContent(new Content
+                    {
+                        Parts = aiResponsePart,
+                        Role = "user"
+                    });
+
+                    requestJsonMode.SystemInstruction = new Content
+                    {
+                        Parts = systemFormatParts,
+                        Role = "system"
+                    };
+
+                    var result = await _generativeModel.GenerateObjectAsync<OutfitSelectionModel>(requestJsonMode);
 
                     if (result == null || result.ItemIds == null || !result.ItemIds.Any())
                     {
@@ -370,13 +395,13 @@ namespace SOPServer.Service.Services.Implements
                             throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: AI model returned empty outfit selection");
                         }
 
-                        await Task.Delay(500); // 1000ms = 1s
+                        await Task.Delay(500); // 500ms delay before retry
 
                         continue;
                     }
 
-                    _logger.LogInformation("ChooseOutfit: Successfully selected {Count} items on attempt {Attempt}. Reason: {Reason}",
-                              result.ItemIds.Count, attempt, result.Reason);
+                    _logger.LogInformation("ChooseOutfit: Successfully selected {Count} items on attempt {Attempt}", 
+                        result.ItemIds.Count, attempt);
 
                     return result;
                 }
@@ -400,33 +425,33 @@ namespace SOPServer.Service.Services.Implements
             throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
         }
 
-        private string CleanJsonResponse(string responseText)
-        {
-            if (string.IsNullOrWhiteSpace(responseText))
-            {
-                return responseText;
-            }
+        //private string CleanJsonResponse(string responseText)
+        //{
+        //    if (string.IsNullOrWhiteSpace(responseText))
+        //    {
+        //        return responseText;
+        //    }
 
-            var cleaned = responseText.Trim();
+        //    var cleaned = responseText.Trim();
 
-            // Remove ```json at the start
-            if (cleaned.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
-            {
-                cleaned = cleaned.Substring("```json".Length).TrimStart();
-            }
-            else if (cleaned.StartsWith("```", StringComparison.OrdinalIgnoreCase))
-            {
-                cleaned = cleaned.Substring("```".Length).TrimStart();
-            }
+        //    // Remove ```json at the start
+        //    if (cleaned.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        cleaned = cleaned.Substring("```json".Length).TrimStart();
+        //    }
+        //    else if (cleaned.StartsWith("```", StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        cleaned = cleaned.Substring("```".Length).TrimStart();
+        //    }
 
-            // Remove ``` at the end
-            if (cleaned.EndsWith("```", StringComparison.OrdinalIgnoreCase))
-            {
-                cleaned = cleaned.Substring(0, cleaned.Length - "```".Length).TrimEnd();
-            }
+        //    // Remove ``` at the end
+        //    if (cleaned.EndsWith("```", StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        cleaned = cleaned.Substring(0, cleaned.Length - "```".Length).TrimEnd();
+        //    }
 
-            return cleaned;
-        }
+        //    return cleaned;
+        //}
 
         public GenerativeModel CreateSuggestionModel(QuickTools? tools = null)
         {

@@ -26,6 +26,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<CategoryItemAnalysisModel?> AnalyzingCategory(string base64Image, string mimeType, string finalPrompt, CancellationToken cancellationToken = default);
         //Task OutfitSuggestion(string occasion, string usercharacteristic, long userId, QuickTools tools);
         Task<List<string>> OutfitSuggestion(string occasion, string usercharacteristic, CancellationToken cancellationToken = default);
-        Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, CancellationToken cancellationToken = default);
+        Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, QuickTools tools, CancellationToken cancellationToken = default);
     }
 }

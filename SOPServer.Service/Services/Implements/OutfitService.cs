@@ -1039,7 +1039,8 @@ namespace SOPServer.Service.Services.Implements
             }).ToList();
 
             // Choose outfit from the search results
-            var response = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems);
+            QuickTools tools = new QuickTools([_qdrantService.SearchSimilarityItemSystem]);
+            var response = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems, tools);
             
             return new BaseResponseModel
             {

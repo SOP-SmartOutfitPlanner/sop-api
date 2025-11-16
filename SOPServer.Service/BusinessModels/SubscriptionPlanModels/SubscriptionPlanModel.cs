@@ -1,3 +1,4 @@
+using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.SubscriptionLimitModels;
 
 namespace SOPServer.Service.BusinessModels.SubscriptionPlanModels
@@ -9,6 +10,7 @@ namespace SOPServer.Service.BusinessModels.SubscriptionPlanModels
         public string? Description { get; set; }
         public long Price { get; set; }
         public List<Benefit> BenefitLimit { get; set; } = new List<Benefit>();
+        public SubscriptionPlanStatus Status { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
     }

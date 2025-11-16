@@ -88,6 +88,7 @@ namespace SOPServer.Service.Services.Implements
             entity.Description = model.Description;
             entity.Price = model.Price;
             entity.BenefitLimit = JsonSerializer.Serialize(model.BenefitLimit);
+            entity.Status = model.Status;
 
             _unitOfWork.SubscriptionPlanRepository.UpdateAsync(entity);
             await _unitOfWork.SaveAsync();

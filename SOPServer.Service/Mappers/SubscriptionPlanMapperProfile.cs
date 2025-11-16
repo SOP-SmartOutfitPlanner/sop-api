@@ -15,12 +15,12 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.BenefitLimit, opt => opt.MapFrom(src =>
                     string.IsNullOrEmpty(src.BenefitLimit)
                         ? new List<Benefit>()
-                        : JsonSerializer.Deserialize<List<Benefit>>(src.BenefitLimit) ?? new List<Benefit>()));
+                        : JsonSerializer.Deserialize<List<Benefit>>(src.BenefitLimit, (JsonSerializerOptions?)null) ?? new List<Benefit>()));
 
             // RequestModel -> Entity (Serialize List<Benefit> to JSON string)
             CreateMap<SubscriptionPlanRequestModel, SubscriptionPlan>()
                 .ForMember(dest => dest.BenefitLimit, opt => opt.MapFrom(src =>
-                    JsonSerializer.Serialize(src.BenefitLimit)));
+                    JsonSerializer.Serialize(src.BenefitLimit, (JsonSerializerOptions?)null)));
         }
     }
 }

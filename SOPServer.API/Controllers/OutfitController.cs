@@ -100,7 +100,8 @@ namespace SOPServer.API.Controllers
         /// **Note:** Subject to subscription limits based on user's plan
         /// </remarks>
         [HttpPost]
-        [CheckSubscriptionLimit("outfitsCreated", "maxOutfits")]
+        // TODO: Add FeatureCode for outfits or remove subscription limit
+        // [CheckSubscriptionLimit("outfitsCreated", "maxOutfits")]
         public Task<IActionResult> CreateOutfit([FromBody] OutfitCreateModel model)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;

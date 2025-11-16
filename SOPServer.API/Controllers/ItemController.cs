@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SOPServer.API.Attributes;
 using SOPServer.Repository.Commons;
+using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.Services.Interfaces;
 using System.Diagnostics;
@@ -44,7 +45,7 @@ namespace SOPServer.API.Controllers
         //}
 
         [HttpPost]
-        [CheckSubscriptionLimit(SOPServer.Repository.Enums.FeatureCode.ItemWardrobe)]
+        [CheckSubscriptionLimit(FeatureCode.ItemWardrobe)]
         public Task<IActionResult> CreateNewItem(ItemCreateModel model)
         {
             return ValidateAndExecute(async () => await _itemService.AddNewItem(model));

@@ -15,7 +15,7 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.BenefitUsage, opt => opt.MapFrom(src =>
                     string.IsNullOrEmpty(src.BenefitUsed)
                         ? new List<Benefit>()
-                        : JsonSerializer.Deserialize<List<Benefit>>(src.BenefitUsed) ?? new List<Benefit>()));
+                        : JsonSerializer.Deserialize<List<Benefit>>(src.BenefitUsed, (JsonSerializerOptions?)null) ?? new List<Benefit>()));
         }
     }
 }

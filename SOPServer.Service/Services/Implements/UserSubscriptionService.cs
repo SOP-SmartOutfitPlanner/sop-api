@@ -2,6 +2,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Entities;
+using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.SubscriptionLimitModels;
@@ -32,6 +33,23 @@ namespace SOPServer.Service.Services.Implements
             if (plan == null)
                 throw new NotFoundException(MessageConstants.SUBSCRIPTION_PLAN_NOT_FOUND);
 
+            // Check plan status and user eligibility
+            if (plan.Status == SubscriptionPlanStatus.DRAFT)
+                throw new BadRequestException("This subscription plan is not available for purchase yet.");
+
+            if (plan.Status == SubscriptionPlanStatus.ARCHIVED)
+                throw new BadRequestException("This subscription plan is no longer available for purchase.");
+
+            // For INACTIVE plans, only users who previously had this plan can rebuy
+            if (plan.Status == SubscriptionPlanStatus.INACTIVE)
+            {
+                var hasPreviousSubscription = (await _unitOfWork.UserSubscriptionRepository.GetAllAsync())
+                    .Any(s => s.UserId == userId && s.SubscriptionPlanId == plan.Id);
+
+                if (!hasPreviousSubscription)
+                    throw new BadRequestException("This subscription plan is only available for existing customers.");
+            }
+
             // Check if user already has an active subscription
             var existingSubscription = (await _unitOfWork.UserSubscriptionRepository.GetAllAsync())
                 .Where(s => s.UserId == userId && s.IsActive && s.DateExp > DateTime.UtcNow)
@@ -58,9 +76,9 @@ namespace SOPServer.Service.Services.Implements
             await _unitOfWork.SaveAsync();
 
             // Reload with navigation properties
-            var createdSubscription = (await _unitOfWork.UserSubscriptionRepository.GetAllAsync())
+            var createdSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
                 .Include(s => s.SubscriptionPlan)
-                .FirstOrDefault(s => s.Id == userSubscription.Id);
+                .FirstOrDefaultAsync(s => s.Id == userSubscription.Id);
 
             return new BaseResponseModel
             {
@@ -72,11 +90,11 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> GetMySubscriptionAsync(long userId)
         {
-            var subscription = (await _unitOfWork.UserSubscriptionRepository.GetAllAsync())
+            var subscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
                 .Include(s => s.SubscriptionPlan)
                 .Where(s => s.UserId == userId && s.IsActive && s.DateExp > DateTime.UtcNow)
                 .OrderByDescending(s => s.CreatedDate)
-                .FirstOrDefault();
+                .FirstOrDefaultAsync();
 
             if (subscription == null)
             {
@@ -98,7 +116,9 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> GetAvailablePlansAsync()
         {
-            var plans = await _unitOfWork.SubscriptionPlanRepository.GetAllAsync();
+            var plans = (await _unitOfWork.SubscriptionPlanRepository.GetAllAsync())
+                .Where(p => p.Status == SubscriptionPlanStatus.ACTIVE)
+                .ToList();
             var result = _mapper.Map<IEnumerable<SubscriptionPlanModel>>(plans);
 
             return new BaseResponseModel
@@ -111,11 +131,11 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> GetSubscriptionHistoryAsync(long userId)
         {
-            var subscriptions = (await _unitOfWork.UserSubscriptionRepository.GetAllAsync())
+            var subscriptions = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
                 .Include(s => s.SubscriptionPlan)
                 .Where(s => s.UserId == userId)
                 .OrderByDescending(s => s.CreatedDate)
-                .ToList();
+                .ToListAsync();
 
             return new BaseResponseModel
             {

@@ -150,12 +150,11 @@ namespace SOPServer.Service.Services.Implements
 
         private async Task<Repository.Entities.UserSubscription?> GetActiveSubscriptionAsync(long userId)
         {
-            var subscriptions = await _unitOfWork.UserSubscriptionRepository.GetAllAsync();
-            return subscriptions
+            return await _unitOfWork.UserSubscriptionRepository.GetQueryable()
                 .Include(s => s.SubscriptionPlan)
                 .Where(s => s.UserId == userId && s.IsActive && s.DateExp > DateTime.UtcNow)
                 .OrderByDescending(s => s.CreatedDate)
-                .FirstOrDefault();
+                .FirstOrDefaultAsync();
         }
 
         private List<Benefit> DeserializeBenefitUsage(string? jsonString)

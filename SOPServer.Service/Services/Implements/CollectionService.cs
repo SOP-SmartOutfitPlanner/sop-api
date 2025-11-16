@@ -120,8 +120,12 @@ namespace SOPServer.Service.Services.Implements
                     .Include(c => c.User)
                     .Include(c => c.CollectionOutfits.Where(co => !co.IsDeleted))
                         .ThenInclude(co => co.Outfit)
-                    .Include(c => c.LikeCollections)
-                    .Include(c => c.SaveCollections),
+                        .ThenInclude(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                        .ThenInclude(i => i.Category)
+                    .Include(x => x.CommentCollections)
+                    .Include(x => x.LikeCollections)
+                    .Include(x => x.SaveCollections),
                 filter: c => c.UserId == userId &&
                            // If owner, show all collections; if not owner, only show published
                            (isOwner || c.IsPublished) &&
@@ -130,7 +134,7 @@ namespace SOPServer.Service.Services.Implements
                             (c.ShortDescription != null && c.ShortDescription.Contains(paginationParameter.Search))),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
-            var collectionModels = _mapper.Map<Pagination<CollectionModel>>(collections);
+            var collectionModels = _mapper.Map<Pagination<CollectionDetailedModel>>(collections);
 
             // Check following, saved, and liked status if caller user ID is provided
             if (callerUserId.HasValue)

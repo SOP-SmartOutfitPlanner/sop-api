@@ -68,6 +68,54 @@ namespace SOPServer.Repository.Repositories.Implements
             return (reports, totalCount);
         }
 
+        public async Task<(List<ReportCommunity>, int)> GetAllReportsAsync(
+            ReportType? type,
+            ReportStatus? status,
+            DateTime? fromDate,
+            DateTime? toDate,
+            PaginationParameter pagination)
+        {
+            var query = _context.ReportCommunities
+                .Where(r => !r.IsDeleted);
+
+            // Apply filters
+            if (type.HasValue)
+            {
+                query = query.Where(r => r.Type == type.Value);
+            }
+
+            if (status.HasValue)
+            {
+                query = query.Where(r => r.Status == status.Value);
+            }
+
+            if (fromDate.HasValue)
+            {
+                query = query.Where(r => r.CreatedDate >= fromDate.Value);
+            }
+
+            if (toDate.HasValue)
+            {
+                query = query.Where(r => r.CreatedDate <= toDate.Value);
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var reports = await query
+                .Include(r => r.User)
+                .Include(r => r.Post)
+                    .ThenInclude(p => p.User)
+                .Include(r => r.CommentPost)
+                    .ThenInclude(c => c.User)
+                .Include(r => r.ResolvedByAdmin)
+                .OrderByDescending(r => r.CreatedDate)
+                .Skip((pagination.PageIndex - 1) * pagination.PageSize)
+                .Take(pagination.PageSize)
+                .ToListAsync();
+
+            return (reports, totalCount);
+        }
+
         public async Task<ReportCommunity?> GetReportDetailsAsync(long reportId)
         {
             return await _context.ReportCommunities

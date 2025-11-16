@@ -49,6 +49,8 @@ namespace SOPServer.Service.Constants
         public const string ONBOARDING_SUCCESS = "Onboarding data saved successfully";
         public const string INVALID_USER_TOKEN = "Invalid user token";
         public const string ONBOARDING_ALREADY_COMPLETED_MSG = "Onboarding has already been completed";
+        public const string STYLIST_PROFILE_NOT_FOUND = "Stylist profile not found or user is not a stylist";
+        public const string GET_STYLIST_PROFILE_SUCCESS = "Get stylist profile successfully";
 
         public const string TOKEN_NOT_VALID = "Token not valid";
         public const string LOGIN_SUCCESS_MESSAGE = "Login successfully";
@@ -236,6 +238,7 @@ namespace SOPServer.Service.Constants
         public const string USER_OCCASION_DELETE_SUCCESS = "User occasion deleted successfully";
         public const string GET_LIST_USER_OCCASION_SUCCESS = "Get list user occasion successfully";
         public const string USER_OCCASION_ACCESS_DENIED = "You don't have permission to access this occasion";
+        public const string USER_OCCASION_DAILY_NAME_RESERVED = "The name 'Daily' is reserved and cannot be used for user occasions";
 
         // Newsfeed related messages
         public const string NEWSFEED_GET_SUCCESS = "Newsfeed retrieved successfully";
@@ -311,6 +314,7 @@ namespace SOPServer.Service.Constants
         public const string REPORT_NOT_FOUND = "Report not found";
         public const string GET_REPORT_DETAILS_SUCCESS = "Get report details successfully";
         public const string GET_PENDING_REPORTS_SUCCESS = "Get pending reports successfully";
+        public const string GET_ALL_REPORTS_SUCCESS = "Get all reports successfully";
         public const string RESOLVE_REPORT_NO_VIOLATION_SUCCESS = "Report resolved: No violation found";
         public const string RESOLVE_REPORT_WITH_ACTION_SUCCESS = "Report resolved and action applied successfully";
         public const string REPORT_ALREADY_RESOLVED = "Report has already been resolved";

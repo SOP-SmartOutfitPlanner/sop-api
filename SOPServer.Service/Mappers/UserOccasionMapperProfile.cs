@@ -1,6 +1,8 @@
 using AutoMapper;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
+using SOPServer.Service.BusinessModels.OutfitCalendarModels;
+using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.UserOccasionModels;
 using System.Collections.Generic;
 using System.Linq;
@@ -61,6 +63,25 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.User, opt => opt.Ignore())
                 .ForMember(dest => dest.Occasion, opt => opt.Ignore())
                 .ForMember(dest => dest.OutfitUsageHistories, opt => opt.Ignore());
+
+            // Map UserOccasion entity to OutfitCalendarGroupedModel
+            CreateMap<UserOccasion, OutfitCalendarGroupedModel>()
+                .ForMember(dest => dest.UserOccasion, opt => opt.MapFrom(src => src))
+                .ForMember(dest => dest.IsDaily, opt => opt.MapFrom(src => src.Name == "Daily"))
+                .ForMember(dest => dest.Outfits, opt => opt.MapFrom((src, dest, destMember, context) =>
+                    src.OutfitUsageHistories != null
+                        ? src.OutfitUsageHistories
+                            .Where(ouh => !ouh.IsDeleted && ouh.Outfit != null)
+                            .Select(ouh => new OutfitCalendarItemModel
+                            {
+                                CalendarId = ouh.Id,
+                                OutfitId = ouh.OutfitId,
+                                OutfitName = ouh.Outfit.Name ?? "Unnamed Outfit",
+                                OutfitDetails = context.Mapper.Map<OutfitModel>(ouh.Outfit),
+                                CreatedDate = ouh.CreatedDate
+                            })
+                            .ToList()
+                        : new List<OutfitCalendarItemModel>()));
         }
     }
 }

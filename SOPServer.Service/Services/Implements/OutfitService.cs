@@ -539,48 +539,38 @@ namespace SOPServer.Service.Services.Implements
                 }
             }
 
-            // Get all calendar entries (without pagination first to group them)
-            var allCalendars = _unitOfWork.OutfitUsageHistoryRepository.GetQueryable()
-                .Include(x => x.UserOccasion)
-                .Include(x => x.Outfit)
-                    .ThenInclude(o => o.OutfitItems)
-                        .ThenInclude(oi => oi.Item)
+            // Get all user occasions (including those without outfits)
+            var allUserOccasions = _unitOfWork.UserOccasionRepository.GetQueryable()
+                .Include(x => x.User)
+                .Include(x => x.Occasion)
+                .Include(x => x.OutfitUsageHistories)
+                    .ThenInclude(ouh => ouh.Outfit)
+                        .ThenInclude(o => o.User)
+                .Include(x => x.OutfitUsageHistories)
+                    .ThenInclude(ouh => ouh.Outfit)
+                        .ThenInclude(o => o.OutfitItems)
+                            .ThenInclude(oi => oi.Item)
+                                .ThenInclude(i => i.Category)
                 .Where(x => x.UserId == userId &&
-                           x.UserOccasion != null &&
-                           (!filterStartDate.HasValue || x.UserOccasion.DateOccasion >= filterStartDate.Value) &&
-                           (!filterEndDate.HasValue || x.UserOccasion.DateOccasion <= filterEndDate.Value))
-                .OrderBy(x => x.UserOccasion.DateOccasion)
-                .ThenBy(x => x.UserOccasion.StartTime)
+                           (!filterStartDate.HasValue || x.DateOccasion >= filterStartDate.Value) &&
+                           (!filterEndDate.HasValue || x.DateOccasion <= filterEndDate.Value))
+                .OrderBy(x => x.DateOccasion)
+                .ThenBy(x => x.StartTime)
                 .ToList();
 
             // Group by UserOccasion
             // For daily occasions (IsDaily = true), group by date
-            // For specific occasions (IsDaily = false), group by UserOccasionId
-            var grouped = allCalendars
+            // For specific occasions (IsDaily = false), each occasion is its own group
+            var grouped = allUserOccasions
                 .GroupBy(x => new
                 {
-                    IsDaily = x.UserOccasion?.Name == "Daily",
-                    GroupKey = x.UserOccasion?.Name == "Daily"
-                        ? x.UserOccasion.DateOccasion.Date.ToString("yyyy-MM-dd") // Group daily by date
-                        : x.UserOccassionId.ToString() // Group specific by ID
+                    IsDaily = x.Name == "Daily",
+                    GroupKey = x.Name == "Daily"
+                        ? x.DateOccasion.Date.ToString("yyyy-MM-dd") // Group daily by date
+                        : x.Id.ToString() // Group specific by ID
                 })
-                .Select(g =>
-                {
-                    var first = g.First();
-                    return new OutfitCalendarGroupedModel
-                    {
-                        UserOccasion = _mapper.Map<UserOccasionModel>(first.UserOccasion),
-                        IsDaily = first.UserOccasion?.Name == "Daily",
-                        Outfits = g.Select(c => new OutfitCalendarItemModel
-                        {
-                            CalendarId = c.Id,
-                            OutfitId = c.OutfitId,
-                            OutfitName = c.Outfit?.Name ?? "Unnamed Outfit",
-                            OutfitDetails = _mapper.Map<OutfitModel>(c.Outfit),
-                            CreatedDate = c.CreatedDate
-                        }).ToList()
-                    };
-                })
+                .Select(g => g.First())
+                .Select(uo => _mapper.Map<OutfitCalendarGroupedModel>(uo))
                 .ToList();
 
             // Apply pagination to grouped results
@@ -1048,10 +1038,8 @@ namespace SOPServer.Service.Services.Implements
                 return searchModel;
             }).ToList();
 
-            QuickTools tools = new QuickTools([_qdrantService.SearchSimilarityByUserId]);
-
             // Choose outfit from the search results
-            var response = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems, tools);
+            var response = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems);
             
             return new BaseResponseModel
             {

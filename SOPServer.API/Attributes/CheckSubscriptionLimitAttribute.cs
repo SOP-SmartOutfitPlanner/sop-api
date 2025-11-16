@@ -1,28 +1,24 @@
 using Microsoft.AspNetCore.Mvc.Filters;
+using SOPServer.Repository.Enums;
 
 namespace SOPServer.API.Attributes
 {
     /// <summary>
     /// Attribute to check subscription limits before executing an action.
-    /// Automatically checks if user can perform action and increments usage counter on success.
+    /// Automatically checks if user has credits and decrements usage on success.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class CheckSubscriptionLimitAttribute : Attribute, IFilterFactory
     {
         /// <summary>
-        /// The usage key to track (e.g., "outfitsCreated", "wardrobeItems")
+        /// The feature code to check (e.g., FeatureCode.ItemWardrobe, FeatureCode.OutfitSuggestion)
         /// </summary>
-        public string UsageKey { get; }
+        public FeatureCode FeatureCode { get; }
 
         /// <summary>
-        /// The limit key to check against (e.g., "maxOutfits", "maxWardrobeItems")
+        /// Whether to automatically decrement usage counter after successful action (default: true)
         /// </summary>
-        public string LimitKey { get; }
-
-        /// <summary>
-        /// Whether to automatically increment usage counter after successful action (default: true)
-        /// </summary>
-        public bool AutoIncrement { get; set; } = true;
+        public bool AutoDecrement { get; set; } = true;
 
         /// <summary>
         /// Custom error message when limit is reached
@@ -31,18 +27,16 @@ namespace SOPServer.API.Attributes
 
         public bool IsReusable => false;
 
-        public CheckSubscriptionLimitAttribute(string usageKey, string limitKey)
+        public CheckSubscriptionLimitAttribute(FeatureCode featureCode)
         {
-            UsageKey = usageKey ?? throw new ArgumentNullException(nameof(usageKey));
-            LimitKey = limitKey ?? throw new ArgumentNullException(nameof(limitKey));
+            FeatureCode = featureCode;
         }
 
         public IFilterMetadata CreateInstance(IServiceProvider serviceProvider)
         {
             var filter = serviceProvider.GetRequiredService<SubscriptionLimitActionFilter>();
-            filter.UsageKey = UsageKey;
-            filter.LimitKey = LimitKey;
-            filter.AutoIncrement = AutoIncrement;
+            filter.FeatureCode = FeatureCode;
+            filter.AutoDecrement = AutoDecrement;
             filter.ErrorMessage = ErrorMessage;
             return filter;
         }

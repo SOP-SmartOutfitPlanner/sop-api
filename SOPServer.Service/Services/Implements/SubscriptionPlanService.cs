@@ -8,6 +8,7 @@ using SOPServer.Service.BusinessModels.SubscriptionPlanModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
+using System.Text.Json;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -86,7 +87,7 @@ namespace SOPServer.Service.Services.Implements
             entity.Name = model.Name;
             entity.Description = model.Description;
             entity.Price = model.Price;
-            entity.BenefitLimit = model.BenefitLimit;
+            entity.BenefitLimit = JsonSerializer.Serialize(model.BenefitLimit);
 
             _unitOfWork.SubscriptionPlanRepository.UpdateAsync(entity);
             await _unitOfWork.SaveAsync();

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Services.Interfaces;
 
@@ -10,16 +11,15 @@ namespace SOPServer.API.Attributes
     /// </summary>
     public class SubscriptionLimitActionFilter : IAsyncActionFilter
     {
-        private readonly ISubscriptionLimitService _subscriptionLimitService;
+        private readonly IBenefitUsageService _benefitUsageService;
 
-        public string UsageKey { get; set; } = string.Empty;
-        public string LimitKey { get; set; } = string.Empty;
-        public bool AutoIncrement { get; set; } = true;
+        public FeatureCode FeatureCode { get; set; }
+        public bool AutoDecrement { get; set; } = true;
         public string? ErrorMessage { get; set; }
 
-        public SubscriptionLimitActionFilter(ISubscriptionLimitService subscriptionLimitService)
+        public SubscriptionLimitActionFilter(IBenefitUsageService benefitUsageService)
         {
-            _subscriptionLimitService = subscriptionLimitService;
+            _benefitUsageService = benefitUsageService;
         }
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -34,16 +34,16 @@ namespace SOPServer.API.Attributes
                 return;
             }
 
-            // Check if user can perform action
-            var canPerform = await _subscriptionLimitService.CanPerformActionAsync(userId, UsageKey, LimitKey);
+            // Check if user can use this feature (has remaining credits)
+            var canUse = await _benefitUsageService.CanUseFeatureAsync(userId, FeatureCode);
 
-            if (!canPerform)
+            if (!canUse)
             {
                 // Get usage info for detailed error message
-                var (currentUsage, limit) = await _subscriptionLimitService.GetUsageInfoAsync(userId, UsageKey, LimitKey);
+                var (remainingCredits, totalLimit) = await _benefitUsageService.GetUsageInfoAsync(userId, FeatureCode);
 
                 var message = ErrorMessage ??
-                    $"Subscription limit reached. You have used {currentUsage} out of {limit} allowed. Please upgrade your subscription plan.";
+                    $"Subscription limit reached for {FeatureCode}. You have {remainingCredits} credits remaining out of {totalLimit}. Please upgrade your subscription plan.";
 
                 context.Result = new ObjectResult(new BaseResponseModel
                 {
@@ -59,8 +59,8 @@ namespace SOPServer.API.Attributes
             // Execute the action
             var executedContext = await next();
 
-            // Only increment if action succeeded and AutoIncrement is true
-            if (AutoIncrement && executedContext.Exception == null)
+            // Only decrement if action succeeded and AutoDecrement is true
+            if (AutoDecrement && executedContext.Exception == null)
             {
                 // Check if the response is successful (2xx status code)
                 if (executedContext.Result is ObjectResult objectResult)
@@ -68,14 +68,14 @@ namespace SOPServer.API.Attributes
                     if (objectResult.Value is BaseResponseModel baseResponse &&
                         baseResponse.StatusCode >= 200 && baseResponse.StatusCode < 300)
                     {
-                        await _subscriptionLimitService.IncrementUsageAsync(userId, UsageKey);
+                        await _benefitUsageService.DecrementUsageAsync(userId, FeatureCode);
                     }
                 }
                 else if (executedContext.Result is OkObjectResult ||
                          executedContext.Result is CreatedResult ||
                          executedContext.Result is CreatedAtActionResult)
                 {
-                    await _subscriptionLimitService.IncrementUsageAsync(userId, UsageKey);
+                    await _benefitUsageService.DecrementUsageAsync(userId, FeatureCode);
                 }
             }
         }

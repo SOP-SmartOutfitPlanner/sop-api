@@ -1,3 +1,5 @@
+using SOPServer.Service.BusinessModels.SubscriptionLimitModels;
+
 namespace SOPServer.Service.BusinessModels.SubscriptionPlanModels
 {
     public class SubscriptionPlanModel
@@ -6,7 +8,7 @@ namespace SOPServer.Service.BusinessModels.SubscriptionPlanModels
         public string Name { get; set; }
         public string? Description { get; set; }
         public long Price { get; set; }
-        public string? BenefitLimit { get; set; }
+        public List<Benefit> BenefitLimit { get; set; } = new List<Benefit>();
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
     }

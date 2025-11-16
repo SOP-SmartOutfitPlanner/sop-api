@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using SOPServer.Service.BusinessModels.SubscriptionLimitModels;
 
 namespace SOPServer.Service.BusinessModels.SubscriptionPlanModels
 {
@@ -14,6 +15,7 @@ namespace SOPServer.Service.BusinessModels.SubscriptionPlanModels
         [Range(0, long.MaxValue, ErrorMessage = "Price must be a positive number")]
         public long Price { get; set; }
 
-        public string? BenefitLimit { get; set; }
+        [Required(ErrorMessage = "BenefitLimit is required")]
+        public List<Benefit> BenefitLimit { get; set; } = new List<Benefit>();
     }
 }

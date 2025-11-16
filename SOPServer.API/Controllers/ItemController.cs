@@ -44,7 +44,7 @@ namespace SOPServer.API.Controllers
         //}
 
         [HttpPost]
-        [CheckSubscriptionLimit("wardrobeItems", "maxWardrobeItems")]
+        [CheckSubscriptionLimit(SOPServer.Repository.Enums.FeatureCode.ItemWardrobe)]
         public Task<IActionResult> CreateNewItem(ItemCreateModel model)
         {
             return ValidateAndExecute(async () => await _itemService.AddNewItem(model));

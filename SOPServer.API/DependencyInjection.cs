@@ -128,7 +128,9 @@ namespace SOPServer.API
             services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
 
             services.AddScoped<IUserSubscriptionRepository, UserSubscriptionRepository>();
+            services.AddScoped<IUserSubscriptionService, UserSubscriptionService>();
             services.AddScoped<ISubscriptionLimitService, SubscriptionLimitService>();
+            services.AddScoped<IBenefitUsageService, BenefitUsageService>();
 
             // Register the action filter for subscription limit checking
             services.AddScoped<SOPServer.API.Attributes.SubscriptionLimitActionFilter>();

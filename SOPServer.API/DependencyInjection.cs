@@ -133,6 +133,9 @@ namespace SOPServer.API
             services.AddScoped<IQdrantService, QDrantService>();
             services.AddScoped<IPayOSService, PayOSService>();
 
+            // ========== LAZY SERVICES (for circular dependency resolution) ==========
+            services.AddScoped<Lazy<IQdrantService>>(provider => new Lazy<IQdrantService>(() => provider.GetRequiredService<IQdrantService>()));
+
             // ========== EMAIL SERVICES ==========
             services.AddScoped<IMailService, MailService>();
             services.AddScoped<IEmailTemplateService, EmailTemplateService>();

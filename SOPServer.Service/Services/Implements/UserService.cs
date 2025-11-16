@@ -470,9 +470,10 @@ namespace SOPServer.Service.Services.Implements
             var refreshKey = RedisKeyConstants.GetRefreshTokenKey(user.Id, tokenId);
 
             var tokenValidityInMinutes = long.Parse(_configuration["JWT:TokenValidityInMinutes"]);
+            var refreshTokenValidityInDays = long.Parse(_configuration["JWT:RefreshTokenValidityInDays"]);
 
             await _redisService.SetAsync(accessKey, accessToken, TimeSpan.FromMinutes(tokenValidityInMinutes));
-            await _redisService.SetAsync(refreshKey, refreshToken, TimeSpan.FromDays(7));
+            await _redisService.SetAsync(refreshKey, refreshToken, TimeSpan.FromDays(refreshTokenValidityInDays));
 
             return new AuthenResultModel
             {
@@ -789,7 +790,7 @@ namespace SOPServer.Service.Services.Implements
         public async Task<UserCharacteristicModel> GetUserCharacteristic(long userId)
         {
             var user = await _unitOfWork.UserRepository.GetByIdIncludeAsync(
-                userId, 
+                userId,
                 include: x => x.Include(u => u.UserStyles.Where(us => !us.IsDeleted))
                     .ThenInclude(y => y.Style)
             );
@@ -951,6 +952,66 @@ namespace SOPServer.Service.Services.Implements
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.USER_AVATAR_UPDATE_SUCCESS,
                 Data = userProfile
+            };
+        }
+
+        public async Task<BaseResponseModel> GetStylistProfileByUserIdAsync(long userId, long? currentUserId = null)
+        {
+            // Get user and verify is STYLIST
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.STYLIST_PROFILE_NOT_FOUND);
+            }
+
+            // Check if user is a stylist
+            if (user.Role != Role.STYLIST)
+            {
+                throw new NotFoundException(MessageConstants.STYLIST_PROFILE_NOT_FOUND);
+            }
+
+            // Get published collections for this stylist
+            var collections = await _unitOfWork.CollectionRepository.GetQueryable()
+                .Include(c => c.LikeCollections.Where(lc => !lc.IsDeleted))
+                .Include(c => c.SaveCollections.Where(sc => !sc.IsDeleted))
+                .Where(c => c.UserId == userId && c.IsPublished && !c.IsDeleted)
+                .ToListAsync();
+
+            // Calculate statistics
+            var publishedCollectionsCount = collections.Count;
+            var totalLikes = collections.Sum(c => c.LikeCollections.Count);
+            var totalSaves = collections.Sum(c => c.SaveCollections.Count);
+
+            // Check if current user is following this stylist
+            var isFollowed = false;
+            if (currentUserId.HasValue && currentUserId.Value != 0)
+            {
+                isFollowed = await _unitOfWork.FollowerRepository.IsFollowing(currentUserId.Value, userId);
+            }
+
+            // Build response model
+            var stylistProfile = new StylistProfileModel
+            {
+                Id = user.Id,
+                DisplayName = user.DisplayName,
+                Email = user.Email,
+                AvatarUrl = user.AvtUrl,
+                Location = user.Location,
+                Bio = user.Bio,
+                Dob = user.Dob,
+                JobId = user.JobId,
+                JobName = user.Job?.Name,
+                PublishedCollectionsCount = publishedCollectionsCount,
+                TotalCollectionsLikes = totalLikes,
+                TotalCollectionsSaves = totalSaves,
+                IsFollowed = isFollowed
+            };
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_STYLIST_PROFILE_SUCCESS,
+                Data = stylistProfile
             };
         }
     }

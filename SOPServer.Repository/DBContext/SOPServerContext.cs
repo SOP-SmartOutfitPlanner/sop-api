@@ -74,6 +74,8 @@ public partial class SOPServerContext : DbContext
     public virtual DbSet<LikeCollection> LikeCollections { get; set; }
     public virtual DbSet<SaveCollection> SaveCollection { get; set; }
     public virtual DbSet<ReportCommunity> ReportCommunities { get; set; }
+    public virtual DbSet<UserSuspension> UserSuspensions { get; set; }
+    public virtual DbSet<UserViolation> UserViolations { get; set; }
 
     // protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     //#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -660,6 +662,60 @@ public partial class SOPServerContext : DbContext
             entity.HasOne(d => d.SubscriptionPlan).WithMany(p => p.UserSubscriptions)
                 .HasForeignKey(d => d.SubscriptionPlanId)
                 .HasConstraintName("FK_UserSubscription_SubscriptionPlan");
+        });
+
+        modelBuilder.Entity<ReportCommunity>(entity =>
+        {
+            entity.HasOne(d => d.User).WithMany(p => p.ReportCommunities)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_ReportCommunity_User")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.ResolvedByAdmin).WithMany()
+                .HasForeignKey(d => d.ResolvedByAdminId)
+                .HasConstraintName("FK_ReportCommunity_ResolvedByAdmin")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Post).WithMany(p => p.ReportCommunities)
+                .HasForeignKey(d => d.PostId)
+                .HasConstraintName("FK_ReportCommunity_Post")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.CommentPost).WithMany(p => p.ReportCommunities)
+                .HasForeignKey(d => d.CommentId)
+                .HasConstraintName("FK_ReportCommunity_CommentPost")
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<UserSuspension>(entity =>
+        {
+            entity.HasOne(d => d.User).WithMany()
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_UserSuspension_User")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.CreatedByAdmin).WithMany()
+                .HasForeignKey(d => d.CreatedByAdminId)
+                .HasConstraintName("FK_UserSuspension_CreatedByAdmin")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Report).WithMany()
+                .HasForeignKey(d => d.ReportId)
+                .HasConstraintName("FK_UserSuspension_Report")
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<UserViolation>(entity =>
+        {
+            entity.HasOne(d => d.User).WithMany()
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_UserViolation_User")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Report).WithMany()
+                .HasForeignKey(d => d.ReportId)
+                .HasConstraintName("FK_UserViolation_Report")
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
 

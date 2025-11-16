@@ -35,5 +35,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> VerifyResetOtpAsync(VerifyResetOtpRequestModel model);
         Task<BaseResponseModel> ResetPasswordAsync(ResetPasswordRequestModel model);
         Task<UserCharacteristicModel> GetUserCharacteristic(long userId);
+        Task<BaseResponseModel> GetStylistProfileByUserIdAsync(long userId, long? currentUserId = null);
     }
 }

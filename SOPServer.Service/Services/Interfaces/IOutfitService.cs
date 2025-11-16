@@ -1,8 +1,10 @@
+using GenerativeAI.Tools;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.OutfitCalendarModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
 using SOPServer.Service.BusinessModels.ResultModels;
+using SOPServer.Service.BusinessModels.UserModels;
 using System;
 using System.Threading.Tasks;
 
@@ -33,6 +35,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> CreateOutfitCalendarAsync(long userId, OutfitCalendarCreateModel model);
         Task<BaseResponseModel> UpdateOutfitCalendarAsync(long id, long userId, OutfitCalendarUpdateModel model);
         Task<BaseResponseModel> DeleteOutfitCalendarAsync(long id, long userId);
-        Task<BaseResponseModel> OutfitSuggestion(long userId, long? userOccasionId);
+        Task<BaseResponseModel> OutfitSuggestion(long userId, long? occasionId);
     }
 }

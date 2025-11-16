@@ -10,11 +10,9 @@ namespace SOPServer.Service.Services.Interfaces
         // Create
         Task<BaseResponseModel> PushNotificationByUserId(long userId, NotificationRequestModel model);
         Task<BaseResponseModel> PushNotification(NotificationRequestModel model);
-        Task<BaseResponseModel> CreateNotification(NotificationRequestModel model);
-        
         // Read
         Task<BaseResponseModel> GetNotificationById(long id);
-        Task<BaseResponseModel> GetNotificationsByUserId(PaginationParameter paginationParameter, long userId, int type);
+        Task<BaseResponseModel> GetNotificationsByUserId(PaginationParameter paginationParameter, long userId, int type, bool? isRead);
         Task<BaseResponseModel> GetUnreadNotificationCount(long userId);
         Task<BaseResponseModel> GetSystemNotifications(PaginationParameter paginationParameter, bool newestFirst, string? searchTerm);
         Task<BaseResponseModel> GetAllNotifications(PaginationParameter paginationParameter);
@@ -22,5 +20,9 @@ namespace SOPServer.Service.Services.Interfaces
         // Mark as Read (kept for UX purposes)
         Task<BaseResponseModel> MarkNotificationAsRead(long notificationId);
         Task<BaseResponseModel> MarkAllNotificationsAsRead(long userId);
+        
+        // Delete
+        Task<BaseResponseModel> DeleteNotificationsByIdsAsync(long userId, DeleteNotificationsModel model);
+        Task<BaseResponseModel> GetNotificationByUserNotificationId(long notiId);
     }
 }

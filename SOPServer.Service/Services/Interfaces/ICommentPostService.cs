@@ -13,7 +13,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> CreateNewComment(CreateCommentPostModel model);
         Task<BaseResponseModel> UpdateCommentPost(long id, UpdateCommentPostModel model);
         Task<BaseResponseModel> DeleteCommentPost(int id);
-        Task<BaseResponseModel> GetCommentByParentId(PaginationParameter paginationParameter, long id);
-        Task<BaseResponseModel> GetCommentParentByPostId(PaginationParameter paginationParameter, long postId);
+        Task<BaseResponseModel> GetCommentByParentId(PaginationParameter paginationParameter, long id, long? requesterId = null);
+        Task<BaseResponseModel> GetCommentParentByPostId(PaginationParameter paginationParameter, long postId, long? requesterId = null);
     }
 }

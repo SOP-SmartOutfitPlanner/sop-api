@@ -285,6 +285,9 @@ namespace SOPServer.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("bit");
+
                     b.Property<long?>("ParentCommentId")
                         .HasColumnType("bigint");
 
@@ -841,6 +844,9 @@ namespace SOPServer.Repository.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
@@ -935,9 +941,6 @@ namespace SOPServer.Repository.Migrations
                     b.Property<long?>("CommentId")
                         .HasColumnType("bigint");
 
-                    b.Property<long?>("CommentPostId")
-                        .HasColumnType("bigint");
-
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
@@ -948,6 +951,15 @@ namespace SOPServer.Repository.Migrations
                         .HasColumnType("bit");
 
                     b.Property<long?>("PostId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ResolutionNotes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("ResolvedByAdminId")
                         .HasColumnType("bigint");
 
                     b.Property<int>("Status")
@@ -964,9 +976,11 @@ namespace SOPServer.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CommentPostId");
+                    b.HasIndex("CommentId");
 
                     b.HasIndex("PostId");
+
+                    b.HasIndex("ResolvedByAdminId");
 
                     b.HasIndex("UserId");
 
@@ -1465,6 +1479,96 @@ namespace SOPServer.Repository.Migrations
                     b.ToTable("UserSubscriptionTransaction");
                 });
 
+            modelBuilder.Entity("SOPServer.Repository.Entities.UserSuspension", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("CreatedByAdminId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("EndAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long?>("ReportId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("StartAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByAdminId");
+
+                    b.HasIndex("ReportId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserSuspensions");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.UserViolation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("ReportId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ViolationType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserViolations");
+                });
+
             modelBuilder.Entity("Outfit", b =>
                 {
                     b.HasOne("SOPServer.Repository.Entities.User", "User")
@@ -1800,21 +1904,34 @@ namespace SOPServer.Repository.Migrations
                 {
                     b.HasOne("SOPServer.Repository.Entities.CommentPost", "CommentPost")
                         .WithMany("ReportCommunities")
-                        .HasForeignKey("CommentPostId");
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_ReportCommunity_CommentPost");
 
                     b.HasOne("SOPServer.Repository.Entities.Post", "Post")
                         .WithMany("ReportCommunities")
-                        .HasForeignKey("PostId");
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_ReportCommunity_Post");
+
+                    b.HasOne("SOPServer.Repository.Entities.User", "ResolvedByAdmin")
+                        .WithMany()
+                        .HasForeignKey("ResolvedByAdminId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_ReportCommunity_ResolvedByAdmin");
 
                     b.HasOne("SOPServer.Repository.Entities.User", "User")
                         .WithMany("ReportCommunities")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_ReportCommunity_User");
 
                     b.Navigation("CommentPost");
 
                     b.Navigation("Post");
+
+                    b.Navigation("ResolvedByAdmin");
 
                     b.Navigation("User");
                 });
@@ -1949,6 +2066,55 @@ namespace SOPServer.Repository.Migrations
                         .IsRequired();
 
                     b.Navigation("UserSubscription");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.UserSuspension", b =>
+                {
+                    b.HasOne("SOPServer.Repository.Entities.User", "CreatedByAdmin")
+                        .WithMany()
+                        .HasForeignKey("CreatedByAdminId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_UserSuspension_CreatedByAdmin");
+
+                    b.HasOne("SOPServer.Repository.Entities.ReportCommunity", "Report")
+                        .WithMany()
+                        .HasForeignKey("ReportId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_UserSuspension_Report");
+
+                    b.HasOne("SOPServer.Repository.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_UserSuspension_User");
+
+                    b.Navigation("CreatedByAdmin");
+
+                    b.Navigation("Report");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SOPServer.Repository.Entities.UserViolation", b =>
+                {
+                    b.HasOne("SOPServer.Repository.Entities.ReportCommunity", "Report")
+                        .WithMany()
+                        .HasForeignKey("ReportId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_UserViolation_Report");
+
+                    b.HasOne("SOPServer.Repository.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_UserViolation_User");
+
+                    b.Navigation("Report");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Outfit", b =>

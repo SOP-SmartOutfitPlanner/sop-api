@@ -18,23 +18,15 @@ namespace SOPServer.API.Controllers
             _notificationService = notificationService;
         }
 
-        
-        [HttpPost]
-        [Authorize(Roles = "ADMIN")]
-        public Task<IActionResult> CreateNotification([FromBody] NotificationRequestModel model)
-        {
-            return ValidateAndExecute(async () => await _notificationService.CreateNotification(model));
-        }
-
         [HttpPost("push")]
-        [Authorize(Roles = "ADMIN")]
+        //[Authorize(Roles = "ADMIN")]
         public Task<IActionResult> PushNotification([FromBody] NotificationRequestModel model)
         {
             return ValidateAndExecute(async () => await _notificationService.PushNotification(model));
         }
 
         [HttpPost("user/{userId}")]
-        [Authorize(Roles = "ADMIN")]
+        //[Authorize(Roles = "ADMIN")]
         public Task<IActionResult> PushNotificationByUserId(long userId, [FromBody] NotificationRequestModel model)
         {
             return ValidateAndExecute(async () => await _notificationService.PushNotificationByUserId(userId, model));
@@ -43,21 +35,28 @@ namespace SOPServer.API.Controllers
         // ========== READ ==========
 
         [HttpGet("{id}")]
-        [Authorize]
+        //[Authorize]
         public Task<IActionResult> GetNotificationById(long id)
         {
             return ValidateAndExecute(async () => await _notificationService.GetNotificationById(id));
         }
 
+        [HttpGet("user-notification/{notiId}")]
+        //[Authorize]
+        public Task<IActionResult> GetNotiByUserNotificationId(long notiId)
+        {
+            return ValidateAndExecute(async () => await _notificationService.GetNotificationByUserNotificationId(notiId));
+        }
+
         [HttpGet]
-        [Authorize(Roles = "ADMIN")]
+        //[Authorize(Roles = "ADMIN")]
         public Task<IActionResult> GetAllNotifications([FromQuery] PaginationParameter paginationParameter)
         {
             return ValidateAndExecute(async () => await _notificationService.GetAllNotifications(paginationParameter));
         }
 
         [HttpGet("system")]
-        [Authorize(Roles = "ADMIN")]
+        //[Authorize(Roles = "ADMIN")]
         public Task<IActionResult> GetSystemNotifications(
             [FromQuery] PaginationParameter paginationParameter,
             [FromQuery] bool newestFirst = true,
@@ -67,30 +66,31 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpGet("user/{userId}")]
-        [Authorize]
+        //[Authorize]
         public Task<IActionResult> GetNotificationsByUserId(
             [FromQuery] PaginationParameter paginationParameter,
             long userId,
-            [FromQuery] int type = 0)
+            [FromQuery] int type = 0,
+            [FromQuery] bool? isRead = null)
         {
-            var userIdClaim = User.FindFirst("UserId")?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || long.Parse(userIdClaim) != userId)
-            {
-                return Task.FromResult<IActionResult>(Forbid());
-            }
+            //var userIdClaim = User.FindFirst("UserId")?.Value;
+            //if (string.IsNullOrEmpty(userIdClaim) || long.Parse(userIdClaim) != userId)
+            //{
+            //    return Task.FromResult<IActionResult>(Forbid());
+            //}
 
-            return ValidateAndExecute(async () => await _notificationService.GetNotificationsByUserId(paginationParameter, userId, type));
+            return ValidateAndExecute(async () => await _notificationService.GetNotificationsByUserId(paginationParameter, userId, type, isRead));
         }
 
         [HttpGet("user/{userId}/unread-count")]
-        [Authorize]
+        //[Authorize]
         public Task<IActionResult> GetUnreadNotificationCount(long userId)
         {
-            var userIdClaim = User.FindFirst("UserId")?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || long.Parse(userIdClaim) != userId)
-            {
-                return Task.FromResult<IActionResult>(Forbid());
-            }
+            //var userIdClaim = User.FindFirst("UserId")?.Value;
+            //if (string.IsNullOrEmpty(userIdClaim) || long.Parse(userIdClaim) != userId)
+            //{
+            //    return Task.FromResult<IActionResult>(Forbid());
+            //}
 
             return ValidateAndExecute(async () => await _notificationService.GetUnreadNotificationCount(userId));
         }
@@ -98,23 +98,73 @@ namespace SOPServer.API.Controllers
         // ========== MARK AS READ ==========
 
         [HttpPut("{notificationId}/read")]
-        [Authorize]
+        //[Authorize]
         public Task<IActionResult> MarkNotificationAsRead(long notificationId)
         {
             return ValidateAndExecute(async () => await _notificationService.MarkNotificationAsRead(notificationId));
         }
 
         [HttpPut("user/{userId}/read-all")]
-        [Authorize]
+        //[Authorize]
         public Task<IActionResult> MarkAllNotificationsAsRead(long userId)
         {
-            var userIdClaim = User.FindFirst("UserId")?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || long.Parse(userIdClaim) != userId)
-            {
-                return Task.FromResult<IActionResult>(Forbid());
-            }
+            //var userIdClaim = User.FindFirst("UserId")?.Value;
+            //if (string.IsNullOrEmpty(userIdClaim) || long.Parse(userIdClaim) != userId)
+            //{
+            //    return Task.FromResult<IActionResult>(Forbid());
+            //}
 
             return ValidateAndExecute(async () => await _notificationService.MarkAllNotificationsAsRead(userId));
+        }
+
+        // ========== DELETE ==========
+
+        /// <summary>
+        /// Delete multiple notifications by their IDs for the authenticated user
+        /// </summary>
+        /// <param name="model">List of notification IDs to delete</param>
+        /// <returns>Result of the deletion operation</returns>
+        /// <response code="200">Notifications deleted successfully</response>
+        /// <response code="400">Invalid request</response>
+        /// <response code="401">User not authenticated</response>
+        /// <response code="404">User or notifications not found</response>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     DELETE /api/v1/notifications
+        ///     {
+        ///        "notificationIds": [1, 2, 3, 4, 5]
+        ///     }
+        ///     
+        /// **Auth Required:** User ID is extracted from JWT token automatically
+        /// 
+        /// **Features:**
+        /// - Soft deletes notifications (can be restored if needed)
+        /// - Only deletes notifications that belong to the authenticated user
+        /// - Returns count of deleted vs requested notifications
+        /// - Validates user exists before processing
+        /// - Automatically filters out notifications that don't belong to user
+        /// 
+        /// **Response includes:**
+        /// - DeletedCount: Number of notifications successfully deleted
+        /// - RequestedCount: Number of notification IDs provided
+        /// - Message indicates if some notifications were not found or don't belong to user
+        /// </remarks>
+        [HttpDelete]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public Task<IActionResult> DeleteNotificationsByIds([FromBody] DeleteNotificationsModel model)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !long.TryParse(userIdClaim, out long userId))
+            {
+                return Task.FromResult<IActionResult>(Unauthorized());
+            }
+
+            return ValidateAndExecute(async () => await _notificationService.DeleteNotificationsByIdsAsync(userId, model));
         }
     }
 }

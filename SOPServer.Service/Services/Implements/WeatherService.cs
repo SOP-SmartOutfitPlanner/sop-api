@@ -2,10 +2,14 @@
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using SOPServer.Service.BusinessModels.ResultModels;
+using SOPServer.Service.BusinessModels.WeatherModel;
 using SOPServer.Service.Constants;
-using SOPServer.Service.Models;
+using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
+using SOPServer.Service.Utils;
+using System.Globalization;
+using System.Net;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -20,53 +24,242 @@ namespace SOPServer.Service.Services.Implements
             _openWeatherMapSettings = openWeatherMapSettings.Value;
         }
 
-        public async Task<BaseResponseModel> GetWeatherAsync(string cityName, int cnt)
+        public async Task<BaseResponseModel> GetCitiesByName(string cityName, int limit = 5)
         {
+            if (string.IsNullOrWhiteSpace(cityName))
+            {
+                throw new ArgumentException("City name is required.", nameof(cityName));
+            }
+
+            cityName = cityName.Trim();
+            limit = Math.Clamp(limit, 1, 10); // Giới hạn từ 1 đến 10 kết quả
+
             var client = _httpClientFactory.CreateClient("OpenWeatherMap");
-            string fullRequestUri = $"data/2.5/forecast/daily?q={cityName}&cnt={cnt}&units=metric&lang=en&appid={_openWeatherMapSettings.APIKey}";
 
-            var response = await client.GetAsync(fullRequestUri);
+            string cityQuery = StringUtils.ConvertToUnSign(cityName);
+            string geoUri =
+                $"geo/1.0/direct?q={Uri.EscapeDataString(cityQuery)}&limit={limit}&appid={_openWeatherMapSettings.APIKey}";
 
-            var content = await response.Content.ReadAsStringAsync();
-            var json = JObject.Parse(content);
-
-            var result = new WeatherForecastResponse
+            using (var geoResponse = await client.GetAsync(geoUri))
             {
-                CityName = (string)json["city"]?["name"] ?? cityName
-            };
-
-            var list = json["list"];
-            if (list != null)
-            {
-                foreach (var day in list)
+                if (!geoResponse.IsSuccessStatusCode)
                 {
-                    long dt = (long)day["dt"];
-                    var date = DateTimeOffset
-                        .FromUnixTimeSeconds(dt)
-                        .ToLocalTime()
-                        .Date;
+                    string errorMessage = await BuildOpenWeatherErrorMessageAsync(
+                        geoResponse,
+                        "Unable to search cities from OpenWeatherMap."
+                    );
 
-                    double tempDay = (double)day["temp"]["day"];
-                    double tempMin = (double)day["temp"]["min"];
-                    double tempMax = (double)day["temp"]["max"];
-                    string desc = (string)day["weather"][0]["description"];
+                    throw new BaseErrorResponseException(errorMessage, (int)geoResponse.StatusCode);
+                }
 
-                    result.DailyForecasts.Add(new DailyWeather
+                var geoContent = await geoResponse.Content.ReadAsStringAsync();
+                var geoJson = JArray.Parse(geoContent);
+
+                var result = new CitySearchResponse();
+
+                foreach (var city in geoJson)
+                {
+                    string cityNameEn = (string?)city["name"] ?? "";
+                    string? cityNameVi = (string?)city["local_names"]?["vi"];
+                    double lat = (double)city["lat"];
+                    double lon = (double)city["lon"];
+                    string? country = (string?)city["country"];
+                    string? state = (string?)city["state"];
+
+                    result.Cities.Add(new CityLocationModel
                     {
-                        Date = date,
-                        Temperature = tempDay,
-                        MinTemperature = tempMin,
-                        MaxTemperature = tempMax,
-                        Description = desc
+                        Name = cityNameEn,
+                        LocalName = cityNameVi,
+                        Latitude = lat,
+                        Longitude = lon,
+                        Country = country,
+                        State = state
                     });
                 }
+
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = MessageConstants.GET_CITIES_SUCCESS,
+                    Data = result
+                };
             }
-            return new BaseResponseModel
+        }
+
+        public async Task<BaseResponseModel> GetWeatherByCoordinates(double latitude, double longitude, int? cnt)
+        {
+            int days = Math.Clamp(cnt ?? 16, 1, 16);
+
+            var client = _httpClientFactory.CreateClient("OpenWeatherMap");
+
+            string latStr = latitude.ToString(CultureInfo.InvariantCulture);
+            string lonStr = longitude.ToString(CultureInfo.InvariantCulture);
+
+            // Gọi API để lấy tên thành phố từ tọa độ
+            string reverseGeoUri =
+                $"geo/1.0/reverse?lat={latStr}&lon={lonStr}&limit=1&appid={_openWeatherMapSettings.APIKey}";
+
+            string cityDisplayName = "Unknown Location";
+
+            using (var reverseGeoResponse = await client.GetAsync(reverseGeoUri))
             {
-                StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.GET_WEATHER_INFO_SUCCESS,
-                Data = result
-            };
+                if (reverseGeoResponse.IsSuccessStatusCode)
+                {
+                    var reverseGeoContent = await reverseGeoResponse.Content.ReadAsStringAsync();
+                    var reverseGeoJson = JArray.Parse(reverseGeoContent);
+
+                    if (reverseGeoJson.Any())
+                    {
+                        var locationInfo = reverseGeoJson[0];
+
+                        string? englishName = (string?)locationInfo["local_names"]?["en"];
+                        string? defaultName = (string?)locationInfo["name"];
+                        string? stateName = (string?)locationInfo["state"];
+                        string? countryCode = (string?)locationInfo["country"]; // <- quốc gia (VN, US...)
+
+                        // Ưu tiên city English → nếu không lấy name → nếu không có lấy state
+                        string city = englishName
+                                      ?? defaultName
+                                      ?? stateName
+                                      ?? "Unknown";
+
+                        // Build display name: City, State, Country
+                        var parts = new List<string>();
+
+                        if (!string.IsNullOrWhiteSpace(city))
+                            parts.Add(city);
+
+                        if (!string.IsNullOrWhiteSpace(stateName))
+                            parts.Add(stateName);
+
+                        if (!string.IsNullOrWhiteSpace(countryCode))
+                            parts.Add(countryCode);
+
+                        cityDisplayName = string.Join(", ", parts);
+                    }
+                }
+            }
+
+            // Gọi forecast/daily bằng lat/lon
+            string forecastUri =
+                $"data/2.5/forecast/daily?lat={latStr}&lon={lonStr}&cnt={days}&units=metric&lang=en&appid={_openWeatherMapSettings.APIKey}";
+
+            using (var response = await client.GetAsync(forecastUri))
+            {
+                if (!response.IsSuccessStatusCode)
+                {
+                    string parsedMessage = await BuildOpenWeatherErrorMessageAsync(
+                        response,
+                        $"OpenWeatherMap request failed ({(int)response.StatusCode})."
+                    );
+
+                    if (response.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        throw new NotFoundException($"Weather forecast for coordinates ({latitude}, {longitude}) not found.");
+                    }
+
+                    throw new BaseErrorResponseException(parsedMessage, (int)response.StatusCode);
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var json = JObject.Parse(content);
+
+                var result = new WeatherForecastResponse
+                {
+                    CityName = cityDisplayName
+                };
+
+                var list = json["list"] as JArray;
+                if (list != null)
+                {
+                    foreach (var day in list)
+                    {
+                        var dtToken = day["dt"];
+                        var tempToken = day["temp"];
+                        var weatherArray = day["weather"] as JArray;
+
+                        if (dtToken == null || tempToken == null || weatherArray == null || !weatherArray.Any())
+                        {
+                            continue;
+                        }
+
+                        long dt = (long)dtToken;
+                        var date = DateTimeOffset
+                            .FromUnixTimeSeconds(dt)
+                            .ToLocalTime()
+                            .Date;
+
+                        double tempDay = (double)tempToken["day"];
+                        double tempMin = (double)tempToken["min"];
+                        double tempMax = (double)tempToken["max"];
+                        string desc = (string)weatherArray[0]["description"];
+
+                        result.DailyForecasts.Add(new DailyWeather
+                        {
+                            Date = date,
+                            Temperature = tempDay,
+                            MinTemperature = tempMin,
+                            MaxTemperature = tempMax,
+                            Description = desc
+                        });
+                    }
+                }
+
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = MessageConstants.GET_WEATHER_INFO_SUCCESS,
+                    Data = result
+                };
+            }
+        }
+
+        /// <summary>
+        /// Parse error response từ OpenWeatherMap thành message thân thiện.
+        /// </summary>
+        private static async Task<string> BuildOpenWeatherErrorMessageAsync(
+            HttpResponseMessage response,
+            string defaultMessage)
+        {
+            string fallback = defaultMessage ?? $"OpenWeatherMap request failed ({(int)response.StatusCode}).";
+
+            string errorContent;
+            try
+            {
+                errorContent = await response.Content.ReadAsStringAsync();
+            }
+            catch
+            {
+                return fallback;
+            }
+
+            if (string.IsNullOrWhiteSpace(errorContent))
+            {
+                return fallback;
+            }
+
+            try
+            {
+                var errJson = JObject.Parse(errorContent);
+                var msg = (string?)errJson["message"];
+                var cod = (string?)errJson["cod"];
+
+                if (!string.IsNullOrWhiteSpace(msg))
+                {
+                    return msg!;
+                }
+
+                if (!string.IsNullOrWhiteSpace(cod))
+                {
+                    return $"OpenWeatherMap error ({cod}).";
+                }
+            }
+            catch
+            {
+                // ignore parse errors
+            }
+
+            return fallback;
         }
     }
 }

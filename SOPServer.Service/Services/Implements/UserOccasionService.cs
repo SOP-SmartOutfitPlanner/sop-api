@@ -153,6 +153,13 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
+            // Validate that the name is not "Daily" (case-insensitive)
+            if (!string.IsNullOrWhiteSpace(model.Name) &&
+                model.Name.Trim().Equals("Daily", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new BadRequestException(MessageConstants.USER_OCCASION_DAILY_NAME_RESERVED);
+            }
+
             if (model.OccasionId.HasValue)
             {
                 var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(model.OccasionId.Value);
@@ -193,6 +200,13 @@ namespace SOPServer.Service.Services.Implements
             if (userOccasion.UserId != userId)
             {
                 throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
+            }
+
+            // Validate that the name is not "Daily" (case-insensitive)
+            if (!string.IsNullOrWhiteSpace(model.Name) &&
+                model.Name.Trim().Equals("Daily", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new BadRequestException(MessageConstants.USER_OCCASION_DAILY_NAME_RESERVED);
             }
 
             if (model.OccasionId.HasValue)

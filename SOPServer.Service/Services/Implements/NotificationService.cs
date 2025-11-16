@@ -108,7 +108,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetNotificationsByUserId(PaginationParameter paginationParameter, long userId, int type = 0)
+        public async Task<BaseResponseModel> GetNotificationsByUserId(PaginationParameter paginationParameter, long userId, int type, bool? isRead)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
             if (user == null)
@@ -123,7 +123,7 @@ namespace SOPServer.Service.Services.Implements
 
             var notifications = await _unitOfWork.UserNotificationRepository.ToPaginationIncludeAsync(
                 paginationParameter,
-                filter: x => x.UserId == userId && !x.IsDeleted && x.Notification.Type == notificationType,
+                filter: x => x.UserId == userId && !x.IsDeleted && x.Notification.Type == notificationType && (isRead == null || x.IsRead == isRead),
                 include: query => query
                     .Include(x => x.Notification)
                         .ThenInclude(n => n.ActorUser)
@@ -152,7 +152,6 @@ namespace SOPServer.Service.Services.Implements
                 }
             };
         }
-
         public async Task<BaseResponseModel> GetUnreadNotificationCount(long userId)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
@@ -229,6 +228,57 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<BaseResponseModel> DeleteNotificationsByIdsAsync(long userId, DeleteNotificationsModel model)
+        {
+            // Validate user exists
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Get UserNotification records for the specified notification IDs belonging to this user
+            // This removes the relationship between the user and the notifications
+            var userNotificationsToDelete = await _unitOfWork.UserNotificationRepository
+                .GetUserNotificationsByIdsAsync(model.NotificationIds, userId);
+
+            if (!userNotificationsToDelete.Any())
+            {
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status404NotFound,
+                    Message = MessageConstants.NO_NOTIFICATIONS_TO_DELETE
+                };
+            }
+
+            // Soft delete the UserNotification records (removes user's relationship with these notifications)
+            foreach (var userNotification in userNotificationsToDelete)
+            {
+                _unitOfWork.UserNotificationRepository.SoftDeleteAsync(userNotification);
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            // Check if some notifications were not found
+            var deletedCount = userNotificationsToDelete.Count;
+            var requestedCount = model.NotificationIds.Count;
+
+            var message = deletedCount == requestedCount
+                ? MessageConstants.DELETE_NOTIFICATIONS_SUCCESS
+                : MessageConstants.SOME_NOTIFICATIONS_NOT_FOUND;
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = message,
+                Data = new
+                {
+                    DeletedCount = deletedCount,
+                    RequestedCount = requestedCount
+                }
+            };
+        }
+
         public async Task<BaseResponseModel> GetSystemNotifications(PaginationParameter paginationParameter, bool newestFirst, string? searchTerm)
         {
             var notifications = await _unitOfWork.NotificationRepository.ToPaginationIncludeAsync(
@@ -285,22 +335,6 @@ namespace SOPServer.Service.Services.Implements
                     NotificationId = notification.Id,
                     Message = MessageConstants.NOTIFICATION_PROCESS_IN_BACKGROUND
                 }
-            };
-        }
-
-        public async Task<BaseResponseModel> CreateNotification(NotificationRequestModel model)
-        {
-            var notification = _mapper.Map<Notification>(model);
-            notification.Type = NotificationType.SYSTEM;
-
-            await _unitOfWork.NotificationRepository.AddAsync(notification);
-            await _unitOfWork.SaveAsync();
-
-            return new BaseResponseModel
-            {
-                StatusCode = StatusCodes.Status201Created,
-                Message = MessageConstants.NOTIFICATION_CREATE_SUCCESS,
-                Data = _mapper.Map<SystemNotificationModel>(notification)
             };
         }
 
@@ -399,8 +433,33 @@ namespace SOPServer.Service.Services.Implements
             }
             catch (Exception)
             {
-                
+
             }
+        }
+
+        public async Task<BaseResponseModel> GetNotificationByUserNotificationId(long notiId)
+        {
+            var userNotification = await _unitOfWork.UserNotificationRepository.GetByIdIncludeAsync(
+                notiId,
+                include: query => query
+                    .Include(un => un.Notification)
+                        .ThenInclude(n => n.ActorUser)
+                    .Include(un => un.User)
+            );
+
+            if (userNotification == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOTIFICATION_NOT_EXIST);
+            }
+
+            var notification = _mapper.Map<NotificationModel>(userNotification.Notification);
+            notification.Id = userNotification.Id;
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Data = notification,
+                Message = MessageConstants.GET_NOTIFICATION_SUCCESS
+            };
         }
     }
 }

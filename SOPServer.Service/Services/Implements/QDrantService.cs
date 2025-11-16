@@ -1,20 +1,27 @@
+using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
-using SOPServer.Repository.Enums;
+using SOPServer.Repository.UnitOfWork;
+using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.QDrantModels;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
 using SOPServer.Service.Utils;
+using System.Diagnostics;
 
 namespace SOPServer.Service.Services.Implements
 {
-    public class QDrantService : IQdrantService
+    public partial class QDrantService : IQdrantService
     {
         private readonly QDrantClientSettings _qdrantSettings;
         private readonly QdrantClient _client;
+        private readonly IGeminiService _geminiService;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public QDrantService(IOptions<QDrantClientSettings> qdrantClientSettings)
+        public QDrantService(IOptions<QDrantClientSettings> qdrantClientSettings, IGeminiService geminiService, IUnitOfWork unitOfWork, IMapper mapper)
         {
             _qdrantSettings = qdrantClientSettings.Value;
             _client = new QdrantClient(
@@ -23,9 +30,12 @@ namespace SOPServer.Service.Services.Implements
                         apiKey: qdrantClientSettings.Value.SecretKey,
                         https: false
             );
+            _geminiService = geminiService;
+            _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
-        public async Task EnsureCollectionExistsAsync()
+        public async Task EnsureCollectionExistsAsync(CancellationToken cancellationToken = default)
         {
             // Kiểm tra xem collection đã tồn tại chưa
             var collection = await _client.CollectionExistsAsync(_qdrantSettings.Collection);
@@ -43,7 +53,7 @@ namespace SOPServer.Service.Services.Implements
             }
         }
 
-        public async Task<bool> UpSertItem(List<float> embedding, Dictionary<string, object> payload, long id)
+        public async Task<bool> UpSertItem(List<float> embedding, Dictionary<string, object> payload, long id, CancellationToken cancellationToken = default)
         {
             var pointStruct = new PointStruct
             {
@@ -64,7 +74,7 @@ namespace SOPServer.Service.Services.Implements
             return result.Status == UpdateStatus.Completed;
         }
 
-        public async Task<bool> DeleteItem(long id)
+        public async Task<bool> DeleteItem(long id, CancellationToken cancellationToken = default)
         {
             var result = await _client.DeleteAsync(
                 collectionName: _qdrantSettings.Collection,
@@ -74,9 +84,12 @@ namespace SOPServer.Service.Services.Implements
             return result.Status == UpdateStatus.Completed;
         }
 
-        public async Task<List<QDrantSearchModels>> SearchSimilarityByUserId(List<float> embedding, long userId)
+        public async Task<List<QDrantSearchModels>> SearchSimilarityByUserId(string descriptionItem, long userId, CancellationToken cancellationToken = default)
         {
-            List<QDrantSearchModels> result = new List<QDrantSearchModels>();
+            Console.WriteLine("SearchSimilarityByUserId");
+            Stopwatch sw = Stopwatch.StartNew();
+            sw.Start();
+            var embedding = await _geminiService.EmbeddingText(descriptionItem);
             var searchResult = await _client.SearchAsync(
                 collectionName: _qdrantSettings.Collection,
                 vector: embedding.ToArray(),
@@ -91,27 +104,146 @@ namespace SOPServer.Service.Services.Implements
                                 Key = "UserId",
                                 Match = new Match
                                 {
-                                   Integer  = userId
+                                    Integer = userId
                                 }
                             }
                         }
                     }
                 },
-                limit: 5
+                limit: 2
             );
 
-            foreach (var item in searchResult)
-            {
-                if (item.Score > 0.6)
-                {
-                    result.Add(new QDrantSearchModels
-                    {
-                        id = int.Parse(item.Id.Num.ToString()),
-                        score = item.Score
-                    });
-                }
+            var result = new List<QDrantSearchModels>();
 
+            foreach (var searchItem in searchResult)
+            {
+                if (searchItem.Score > 0.6)
+                {
+                    var itemId = long.Parse(searchItem.Id.Num.ToString());
+
+                    // Get item directly from repository with includes
+                    var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(itemId,
+                        include: query => query.Include(x => x.Category)
+                                              .Include(x => x.User)
+                                              .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+                                              .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+                                              .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
+
+                    if (item != null)
+                    {
+                        var itemModel = _mapper.Map<ItemModel>(item);
+                        var mappedItem = _mapper.Map<QDrantSearchModels>(itemModel);
+                        mappedItem.Score = searchItem.Score;
+                        result.Add(mappedItem);
+                    }
+                }
             }
+            sw.Stop();
+            Console.WriteLine("SearchSimilarityByUserId " + sw.ElapsedMilliseconds + "ms");
+            return result;
+        }
+
+        public async Task<List<QDrantSearchModels>> SearchSimilarityItemSystem(string descriptionItem, CancellationToken cancellationToken = default)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            stopwatch.Start();
+            Console.WriteLine("SearchSimilarityItemSystem");
+            var embedding = await _geminiService.EmbeddingText(descriptionItem);
+            var searchResult = await _client.SearchAsync(
+                collectionName: _qdrantSettings.Collection,
+                vector: embedding.ToArray(),
+                filter: new Filter
+                {
+                    Must =
+                    {
+                        new Condition
+                        {
+                            Field = new FieldCondition
+                            {
+                                Key = "ItemType",
+                                Match = new Match
+                                {
+                                    Integer = 1
+                                }
+                            }
+                        }
+                    }
+                },
+                limit: 2
+            );
+
+            var result = new List<QDrantSearchModels>();
+
+            foreach (var searchItem in searchResult)
+            {
+                if (searchItem.Score > 0.6)
+                {
+                    var itemId = long.Parse(searchItem.Id.Num.ToString());
+
+                    // Get item directly from repository with includes
+                    var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(itemId,
+                        include: query => query.Include(x => x.Category)
+                                              .Include(x => x.User)
+                                              .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+                                              .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+                                              .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
+
+                    if (item != null)
+                    {
+                        var itemModel = _mapper.Map<ItemModel>(item);
+                        var mappedItem = _mapper.Map<QDrantSearchModels>(itemModel);
+                        mappedItem.Score = searchItem.Score;
+                        result.Add(mappedItem);
+                    }
+                }
+            }
+            stopwatch.Stop();
+            Console.WriteLine("SearchSimilarityItemSystem " + stopwatch.ElapsedMilliseconds + "ms");
+            return result;
+        }
+
+        public async Task<List<ItemSearchResult>> SearchItemIdsByUserId(string descriptionItem, long userId, CancellationToken cancellationToken = default)
+        {
+            Console.WriteLine("SearchItemIdsByUserId");
+            var sw = Stopwatch.StartNew();
+
+            var embedding = await _geminiService.EmbeddingText(descriptionItem);
+            var searchResult = await _client.SearchAsync(
+                collectionName: _qdrantSettings.Collection,
+                vector: embedding.ToArray(),
+                filter: new Filter
+                {
+                    Must = 
+                    {
+                        new Condition
+                        {
+                            Field = new FieldCondition
+                            {
+                                Key = "UserId",
+                                Match = new Match
+                                {
+                                    Integer = userId
+                                }
+                            }
+                        }
+                    }
+                },
+                limit: 2
+            );
+
+            var result = searchResult != null && searchResult.Any()
+                ? searchResult
+                    .Where(x => x.Score > 0.6)
+                    .Select(x => new ItemSearchResult
+                    {
+                        ItemId = long.Parse(x.Id.Num.ToString()),
+                        Score = x.Score
+                    })
+                    .ToList()
+                : new List<ItemSearchResult>();
+
+            sw.Stop();
+            Console.WriteLine($"SearchItemIdsByUserId {sw.ElapsedMilliseconds}ms - Found {result.Count} items");
 
             return result;
         }

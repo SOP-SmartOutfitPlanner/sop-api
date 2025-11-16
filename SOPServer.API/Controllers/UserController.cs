@@ -131,5 +131,41 @@ namespace SOPServer.API.Controllers
         {
             return await ValidateAndExecute(() => _userService.SoftDeleteUserAsync(userId));
         }
+
+        /// <summary>
+        /// Get stylist profile by user ID (role = STYLIST)
+        /// </summary>
+        /// <remarks>
+        /// Returns basic information of the stylist including:
+        /// - Basic profile info (name, email, avatar, location, bio, etc.)
+        /// - Count of published collections
+        /// - Total likes on all published collections
+        /// - Total saves on all published collections
+        /// - IsFollowed: true if authenticated user is following this stylist, false otherwise or if no token provided
+        /// 
+        /// **Optional Auth:** If a valid JWT token is provided, the API will check if the authenticated user is following the stylist.
+        /// </remarks>
+        /// <param name="userId">The ID of the stylist user</param>
+        /// <returns>Stylist profile with collection statistics</returns>
+        /// <response code="200">Stylist profile retrieved successfully</response>
+        /// <response code="404">Stylist not found or user is not a stylist</response>
+        [HttpGet("stylist/{userId}")]
+        [ProducesResponseType(typeof(StylistProfileModel), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetStylistProfile(long userId)
+        {
+            // Extract current user ID from token if available
+            long? currentUserId = null;
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var userIdClaim = User.FindFirst("UserId")?.Value;
+                if (long.TryParse(userIdClaim, out long parsedUserId))
+                {
+                    currentUserId = parsedUserId;
+                }
+            }
+
+            return await ValidateAndExecute(() => _userService.GetStylistProfileByUserIdAsync(userId, currentUserId));
+        }
     }
 }

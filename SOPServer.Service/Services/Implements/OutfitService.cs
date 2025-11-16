@@ -1,4 +1,5 @@
 using AutoMapper;
+using GenerativeAI.Tools;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Commons;
@@ -9,13 +10,16 @@ using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.OutfitCalendarModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
+using SOPServer.Service.BusinessModels.QDrantModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.UserModels;
 using SOPServer.Service.BusinessModels.UserOccasionModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
+using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -535,40 +539,38 @@ namespace SOPServer.Service.Services.Implements
                 }
             }
 
-            // Get all calendar entries (without pagination first to group them)
-            var allCalendars = _unitOfWork.OutfitUsageHistoryRepository.GetQueryable()
-                .Include(x => x.UserOccasion)
-                .Include(x => x.Outfit)
-                    .ThenInclude(o => o.OutfitItems)
-                        .ThenInclude(oi => oi.Item)
+            // Get all user occasions (including those without outfits)
+            var allUserOccasions = _unitOfWork.UserOccasionRepository.GetQueryable()
+                .Include(x => x.User)
+                .Include(x => x.Occasion)
+                .Include(x => x.OutfitUsageHistories)
+                    .ThenInclude(ouh => ouh.Outfit)
+                        .ThenInclude(o => o.User)
+                .Include(x => x.OutfitUsageHistories)
+                    .ThenInclude(ouh => ouh.Outfit)
+                        .ThenInclude(o => o.OutfitItems)
+                            .ThenInclude(oi => oi.Item)
+                                .ThenInclude(i => i.Category)
                 .Where(x => x.UserId == userId &&
-                           x.UserOccasion != null &&
-                           (!filterStartDate.HasValue || x.UserOccasion.DateOccasion >= filterStartDate.Value) &&
-                           (!filterEndDate.HasValue || x.UserOccasion.DateOccasion <= filterEndDate.Value))
-                .OrderBy(x => x.UserOccasion.DateOccasion)
-                .ThenBy(x => x.UserOccasion.StartTime)
+                           (!filterStartDate.HasValue || x.DateOccasion >= filterStartDate.Value) &&
+                           (!filterEndDate.HasValue || x.DateOccasion <= filterEndDate.Value))
+                .OrderBy(x => x.DateOccasion)
+                .ThenBy(x => x.StartTime)
                 .ToList();
 
             // Group by UserOccasion
-            var grouped = allCalendars
-                .GroupBy(x => x.UserOccassionId)
-                .Select(g =>
+            // For daily occasions (IsDaily = true), group by date
+            // For specific occasions (IsDaily = false), each occasion is its own group
+            var grouped = allUserOccasions
+                .GroupBy(x => new
                 {
-                    var first = g.First();
-                    return new OutfitCalendarGroupedModel
-                    {
-                        UserOccasion = _mapper.Map<UserOccasionModel>(first.UserOccasion),
-                        IsDaily = first.UserOccasion?.Name == "Daily",
-                        Outfits = g.Select(c => new OutfitCalendarItemModel
-                        {
-                            CalendarId = c.Id,
-                            OutfitId = c.OutfitId,
-                            OutfitName = c.Outfit?.Name ?? "Unnamed Outfit",
-                            OutfitDetails = _mapper.Map<OutfitModel>(c.Outfit),
-                            CreatedDate = c.CreatedDate
-                        }).ToList()
-                    };
+                    IsDaily = x.Name == "Daily",
+                    GroupKey = x.Name == "Daily"
+                        ? x.DateOccasion.Date.ToString("yyyy-MM-dd") // Group daily by date
+                        : x.Id.ToString() // Group specific by ID
                 })
+                .Select(g => g.First())
+                .Select(uo => _mapper.Map<OutfitCalendarGroupedModel>(uo))
                 .ToList();
 
             // Apply pagination to grouped results
@@ -708,38 +710,19 @@ namespace SOPServer.Service.Services.Implements
 
             if (model.IsDaily)
             {
-                // Look for existing "Daily" UserOccasion for this user
-                var dailyOccasion = _unitOfWork.UserOccasionRepository.GetQueryable()
-                    .FirstOrDefault(uo => uo.UserId == userId && uo.Name == "Daily");
-
-                if (dailyOccasion == null)
+                // Always create a new "Daily" UserOccasion with the provided time
+                var dailyOccasion = new UserOccasion
                 {
-                    // Create a new "Daily" UserOccasion
-                    dailyOccasion = new UserOccasion
-                    {
-                        UserId = userId,
-                        Name = "Daily",
-                        Description = "Daily outfit schedule",
-                        DateOccasion = model.Time.Value.Date,
-                        StartTime = model.Time.Value,
-                        EndTime = model.EndTime,
-                        OccasionId = null
-                    };
-                    await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
-                    await _unitOfWork.SaveAsync();
-                }
-                else
-                {
-                    // Update the StartTime and EndTime if different
-                    if (dailyOccasion.StartTime != model.Time.Value || dailyOccasion.EndTime != model.EndTime)
-                    {
-                        dailyOccasion.StartTime = model.Time.Value;
-                        dailyOccasion.EndTime = model.EndTime;
-                        dailyOccasion.DateOccasion = model.Time.Value.Date;
-                        _unitOfWork.UserOccasionRepository.UpdateAsync(dailyOccasion);
-                        await _unitOfWork.SaveAsync();
-                    }
-                }
+                    UserId = userId,
+                    Name = "Daily",
+                    Description = "Daily outfit schedule",
+                    DateOccasion = model.Time.Value.Date,
+                    StartTime = model.Time.Value,
+                    EndTime = model.EndTime,
+                    OccasionId = null
+                };
+                await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
+                await _unitOfWork.SaveAsync();
 
                 userOccasionId = dailyOccasion.Id;
             }
@@ -852,38 +835,19 @@ namespace SOPServer.Service.Services.Implements
             // Handle Daily outfit logic
             if (model.IsDaily.HasValue && model.IsDaily.Value)
             {
-                // Look for existing "Daily" UserOccasion for this user
-                var dailyOccasion = _unitOfWork.UserOccasionRepository.GetQueryable()
-                    .FirstOrDefault(uo => uo.UserId == userId && uo.Name == "Daily");
-
-                if (dailyOccasion == null)
+                // Always create a new "Daily" UserOccasion with the provided time
+                var dailyOccasion = new UserOccasion
                 {
-                    // Create a new "Daily" UserOccasion
-                    dailyOccasion = new UserOccasion
-                    {
-                        UserId = userId,
-                        Name = "Daily",
-                        Description = "Daily outfit schedule",
-                        DateOccasion = model.Time.Value.Date,
-                        StartTime = model.Time.Value,
-                        EndTime = model.EndTime,
-                        OccasionId = null
-                    };
-                    await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
-                    await _unitOfWork.SaveAsync();
-                }
-                else
-                {
-                    // Update the StartTime and EndTime if different
-                    if (dailyOccasion.StartTime != model.Time.Value || dailyOccasion.EndTime != model.EndTime)
-                    {
-                        dailyOccasion.StartTime = model.Time.Value;
-                        dailyOccasion.EndTime = model.EndTime;
-                        dailyOccasion.DateOccasion = model.Time.Value.Date;
-                        _unitOfWork.UserOccasionRepository.UpdateAsync(dailyOccasion);
-                        await _unitOfWork.SaveAsync();
-                    }
-                }
+                    UserId = userId,
+                    Name = "Daily",
+                    Description = "Daily outfit schedule",
+                    DateOccasion = model.Time.Value.Date,
+                    StartTime = model.Time.Value,
+                    EndTime = model.EndTime,
+                    OccasionId = null
+                };
+                await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
+                await _unitOfWork.SaveAsync();
 
                 // Set the UserOccasionId to the Daily occasion
                 outfitCalendar.UserOccassionId = dailyOccasion.Id;
@@ -942,141 +906,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> OutfitSuggestion(long userId, long? userOccasionId)
-        {
-            var userCharacteristic = await _userService.GetUserCharacteristic(userId);
 
-            // Build comprehensive user characteristic string
-            string userCharacteristicString = BuildUserCharacteristicString(userCharacteristic);
-
-            // Build comprehensive occasion string if provided
-            string occasionString = string.Empty;
-            if (userOccasionId.HasValue)
-            {
-                var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdIncludeAsync(
-                    userOccasionId.Value, 
-                    include: x => x.Include(x => x.Occasion));
-                
-                if (userOccasion != null)
-                {
-                    occasionString = BuildOccasionString(userOccasion);
-                }
-            }
-
-            // Step 1: Generate outfit item descriptions from Gemini
-            var itemDescriptions = await _geminiService.GenerateOutfitSuggestItem(userCharacteristicString, occasionString);
-            
-            if (itemDescriptions == null || !itemDescriptions.Any())
-            {
-                throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
-            }
-
-            // Step 2: For each description, search for matching items in user's wardrobe
-            var matchedItemsDict = new Dictionary<string, List<(long itemId, float score)>>
-            ();
-            
-            foreach (var description in itemDescriptions)
-            {
-                var embedding = await _geminiService.EmbeddingText(description);
-                if (embedding == null || !embedding.Any())
-                    continue;
-
-                var searchResults = await _qdrantService.SearchSimilarityByUserId(embedding, userId);
-                
-                if (searchResults != null && searchResults.Any())
-                {
-                    matchedItemsDict[description] = searchResults
-                        .Select(r => ((long)r.id, r.score))
-                        .ToList();
-                }
-            }
-
-            // Step 3: Collect all unique matched items
-            var allMatchedItemIds = matchedItemsDict.Values
-                .SelectMany(matches => matches.Select(m => m.itemId))
-                .Distinct()
-                .ToList();
-
-            if (!allMatchedItemIds.Any())
-            {
-                throw new NotFoundException(MessageConstants.NO_MATCHING_ITEMS_FOUND);
-            }
-
-            // Step 4: Get full item details for all matched items
-            var matchedItems = new List<ItemModel>();
-            foreach (var itemId in allMatchedItemIds)
-            {
-                var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(
-                    itemId,
-                    include: query => query
-                        .Include(x => x.Category).ThenInclude(c => c.Parent)
-                        .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
-                        .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-                        .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
-
-                if (item != null && item.UserId == userId)
-                {
-                    matchedItems.Add(_mapper.Map<ItemModel>(item));
-                }
-            }
-
-            if (!matchedItems.Any())
-            {
-                throw new NotFoundException(MessageConstants.NO_MATCHING_ITEMS_FOUND);
-            }
-
-            // Step 5: Let Gemini select the best combination from matched items
-            var outfitSelection = await _geminiService.SelectOutfitFromItems(
-                userCharacteristicString, 
-                occasionString, 
-                matchedItems);
-
-            if (outfitSelection == null || outfitSelection.ItemIds == null || !outfitSelection.ItemIds.Any())
-            {
-                throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
-            }
-
-            // Step 6: Build the response with selected items and their match scores
-            var selectedItems = new List<SuggestedItemModel>();
-            foreach (var itemId in outfitSelection.ItemIds)
-            {
-                var item = matchedItems.FirstOrDefault(i => i.Id == itemId);
-                if (item != null)
-                {
-                    // Find the best match score for this item across all descriptions
-                    var bestScore = matchedItemsDict.Values
-                        .SelectMany(matches => matches)
-                        .Where(m => m.itemId == itemId)
-                        .Select(m => m.score)
-                        .DefaultIfEmpty(0f)
-                        .Max();
-
-                    selectedItems.Add(new SuggestedItemModel
-                    {
-                        ItemId = item.Id,
-                        Name = item.Name,
-                        CategoryName = item.CategoryName,
-                        Color = item.Color,
-                        ImgUrl = item.ImgUrl,
-                        AiDescription = item.AiDescription ?? item.Name,
-                        MatchScore = bestScore
-                    });
-                }
-            }
-
-            var suggestionResponse = new OutfitSuggestionModel
-            {
-                SuggestedItems = selectedItems,
-                Reason = outfitSelection.Reason
-            };
-
-            return new BaseResponseModel
-            {
-                StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.OUTFIT_SUGGESTION_SUCCESS,
-                Data = suggestionResponse
-            };
-        }
 
         private string BuildUserCharacteristicString(UserCharacteristicModel userCharacteristic)
         {
@@ -1138,6 +968,111 @@ namespace SOPServer.Service.Services.Implements
                 occasionDetails.Add($"Weather: {userOccasion.WeatherSnapshot}");
 
             return string.Join("; ", occasionDetails);
+        }
+
+        public async Task<BaseResponseModel> OutfitSuggestion(long userId, long? occasionId)
+        {
+            var overallStopwatch = Stopwatch.StartNew();
+            
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Build occasion string
+            var occasionStopwatch = Stopwatch.StartNew();
+            string occasionString = string.Empty;
+            if (occasionId.HasValue)
+            {
+                var occasion = await _unitOfWork.UserOccasionRepository.GetByIdAsync(occasionId.Value);
+                if (occasion == null)
+                {
+                    throw new NotFoundException(MessageConstants.USER_OCCASION_NOT_FOUND);
+                }
+
+                if (occasion.UserId != userId)
+                {
+                    throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
+                }
+
+                occasionString = BuildOccasionString(occasion);
+            }
+            occasionStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Build occasion string: {occasionStopwatch.ElapsedMilliseconds}ms");
+
+            // Get user characteristics
+            var characteristicStopwatch = Stopwatch.StartNew();
+            var userCharacteristic = await _userService.GetUserCharacteristic(userId);
+            string characteristicString = BuildUserCharacteristicString(userCharacteristic);
+            characteristicStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Get user characteristics: {characteristicStopwatch.ElapsedMilliseconds}ms");
+
+            // Get outfit suggestions from Gemini
+            var geminiStopwatch = Stopwatch.StartNew();
+            var listItem = await _geminiService.OutfitSuggestion(occasionString, characteristicString);
+            listItem.ForEach(x => Console.WriteLine(x));
+            geminiStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Gemini outfit suggestion: {geminiStopwatch.ElapsedMilliseconds}ms");
+
+            // Execute searches in parallel
+            var searchStopwatch = Stopwatch.StartNew();
+            var searchTasks = listItem.Select(item => _qdrantService.SearchItemIdsByUserId(item, userId)).ToList();
+            var searchResults = await Task.WhenAll(searchTasks);
+            var allItemIds = searchResults.SelectMany(result => result).ToList();
+            searchStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Qdrant parallel search ({listItem.Count} queries): {searchStopwatch.ElapsedMilliseconds}ms");
+
+            // Get all items by IDs
+            var dbStopwatch = Stopwatch.StartNew();
+            var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(allItemIds.Select(x => x.ItemId).ToList());
+            dbStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Database query for items ({allItemIds.Count} ids): {dbStopwatch.ElapsedMilliseconds}ms");
+
+            // Map items to QDrantSearchModels
+            var mappingStopwatch = Stopwatch.StartNew();
+            var listPartItems = items.Select(item =>
+            {
+                var itemModel = _mapper.Map<ItemModel>(item);
+                var searchModel = new QDrantSearchModels
+                {
+                    Id = (int)item.Id,
+                    ItemName = itemModel.Name,
+                    ImgURL = itemModel.ImgUrl,
+                    Colors = string.IsNullOrEmpty(itemModel.Color)
+                        ? new List<ColorModel>()
+                        : JsonSerializer.Deserialize<List<ColorModel>>(itemModel.Color),
+                    AiDescription = itemModel.AiDescription,
+                    WeatherSuitable = itemModel.WeatherSuitable,
+                    Condition = itemModel.Condition,
+                    Pattern = itemModel.Pattern,
+                    Fabric = itemModel.Fabric,
+                    Styles = itemModel.Styles,
+                    Occasions = itemModel.Occasions,
+                    Seasons = itemModel.Seasons,
+                    Confidence = itemModel.AIConfidence,
+                    Score = allItemIds.FirstOrDefault(x => x.ItemId == item.Id)?.Score ?? 0
+                };
+                return searchModel;
+            }).ToList();
+            mappingStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Map items to search models ({items.Count} items): {mappingStopwatch.ElapsedMilliseconds}ms");
+
+            // Choose outfit from the search results
+            var chooseOutfitStopwatch = Stopwatch.StartNew();
+            var response = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems);
+            chooseOutfitStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Gemini choose outfit: {chooseOutfitStopwatch.ElapsedMilliseconds}ms");
+            
+            overallStopwatch.Stop();
+            Console.WriteLine($"[TIMING] *** TOTAL EXECUTION TIME: {overallStopwatch.ElapsedMilliseconds}ms ***");
+            
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.OUTFIT_SUGGESTION_SUCCESS,
+                Data = response
+            };
         }
     }
 }

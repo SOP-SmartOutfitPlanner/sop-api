@@ -49,6 +49,8 @@ namespace SOPServer.Service.Constants
         public const string ONBOARDING_SUCCESS = "Onboarding data saved successfully";
         public const string INVALID_USER_TOKEN = "Invalid user token";
         public const string ONBOARDING_ALREADY_COMPLETED_MSG = "Onboarding has already been completed";
+        public const string STYLIST_PROFILE_NOT_FOUND = "Stylist profile not found or user is not a stylist";
+        public const string GET_STYLIST_PROFILE_SUCCESS = "Get stylist profile successfully";
 
         public const string TOKEN_NOT_VALID = "Token not valid";
         public const string LOGIN_SUCCESS_MESSAGE = "Login successfully";
@@ -236,6 +238,7 @@ namespace SOPServer.Service.Constants
         public const string USER_OCCASION_DELETE_SUCCESS = "User occasion deleted successfully";
         public const string GET_LIST_USER_OCCASION_SUCCESS = "Get list user occasion successfully";
         public const string USER_OCCASION_ACCESS_DENIED = "You don't have permission to access this occasion";
+        public const string USER_OCCASION_DAILY_NAME_RESERVED = "The name 'Daily' is reserved and cannot be used for user occasions";
 
         // Newsfeed related messages
         public const string NEWSFEED_GET_SUCCESS = "Newsfeed retrieved successfully";
@@ -308,13 +311,31 @@ namespace SOPServer.Service.Constants
         public const string REPORT_POST_ID_REQUIRED = "PostId is required when reporting a post";
         public const string REPORT_COMMENT_ID_REQUIRED = "CommentId is required when reporting a comment";
         public const string REPORT_ALREADY_EXISTS = "You have already reported this content";
+        public const string REPORT_NOT_FOUND = "Report not found";
+        public const string GET_REPORT_DETAILS_SUCCESS = "Get report details successfully";
+        public const string GET_PENDING_REPORTS_SUCCESS = "Get pending reports successfully";
+        public const string GET_ALL_REPORTS_SUCCESS = "Get all reports successfully";
+        public const string RESOLVE_REPORT_NO_VIOLATION_SUCCESS = "Report resolved: No violation found";
+        public const string RESOLVE_REPORT_WITH_ACTION_SUCCESS = "Report resolved and action applied successfully";
+        public const string REPORT_ALREADY_RESOLVED = "Report has already been resolved";
+        public const string INVALID_REPORT_ACTION = "Invalid report action. Only HIDE, DELETE, WARN, and SUSPEND are allowed for resolution";
+        public const string CONTENT_NOT_FOUND_FOR_ACTION = "The reported content no longer exists";
+        public const string USER_SUSPENDED_CANNOT_CREATE_CONTENT = "Your account is suspended. You cannot create posts, collections, or comments during this period";
+        public const string SUSPENSION_DAYS_REQUIRED = "Suspension days are required when applying SUSPEND action";
+        public const string CONTENT_HIDDEN_NOT_FOUND = "The requested content is not available";
+        public const string COMMENTS_NOT_FOUND_POST_HIDDEN = "Cannot retrieve comments: parent post is hidden";
+
+        public const string NOTIFICATION_PROCESS_IN_BACKGROUND = "Notifications are being processed in the background";
+        public const string DELETE_NOTIFICATIONS_SUCCESS = "Notifications deleted successfully";
+        public const string SOME_NOTIFICATIONS_NOT_FOUND = "Some notifications were not found or already deleted";
+        public const string NO_NOTIFICATIONS_TO_DELETE = "No valid notifications found to delete";
 
         // Subscription related messages
         public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "Plan: ";
 
-        public const string NOTIFICATION_PROCESS_IN_BACKGROUND = "Notification is being processed in background";
-
+        // Weather related messages
         public const string GET_WEATHER_INFO_SUCCESS = "Get weather info success";
+        public const string GET_CITIES_SUCCESS = "Get cities successfully";
 
         // SubscriptionPlan related messages
         public const string SUBSCRIPTION_PLAN_NOT_FOUND = "Subscription plan not found";

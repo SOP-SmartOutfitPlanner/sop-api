@@ -120,8 +120,12 @@ namespace SOPServer.Service.Services.Implements
                     .Include(c => c.User)
                     .Include(c => c.CollectionOutfits.Where(co => !co.IsDeleted))
                         .ThenInclude(co => co.Outfit)
-                    .Include(c => c.LikeCollections)
-                    .Include(c => c.SaveCollections),
+                        .ThenInclude(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                        .ThenInclude(i => i.Category)
+                    .Include(x => x.CommentCollections)
+                    .Include(x => x.LikeCollections)
+                    .Include(x => x.SaveCollections),
                 filter: c => c.UserId == userId &&
                            // If owner, show all collections; if not owner, only show published
                            (isOwner || c.IsPublished) &&
@@ -130,7 +134,7 @@ namespace SOPServer.Service.Services.Implements
                             (c.ShortDescription != null && c.ShortDescription.Contains(paginationParameter.Search))),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
-            var collectionModels = _mapper.Map<Pagination<CollectionModel>>(collections);
+            var collectionModels = _mapper.Map<Pagination<CollectionDetailedModel>>(collections);
 
             // Check following, saved, and liked status if caller user ID is provided
             if (callerUserId.HasValue)
@@ -251,6 +255,15 @@ namespace SOPServer.Service.Services.Implements
             if (user == null)
             {
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Check if user is suspended
+            var suspension = await _unitOfWork.UserSuspensionRepository.GetActiveSuspensionAsync(userId);
+            if (suspension != null && suspension.EndAt > DateTime.UtcNow)
+            {
+                throw new ForbiddenException(
+                    $"Your account is suspended until {suspension.EndAt:yyyy-MM-dd HH:mm} UTC. " +
+                    $"Reason: {suspension.Reason}. You cannot create collections during this period.");
             }
 
             if (model.Outfits != null && model.Outfits.Any())
@@ -460,8 +473,8 @@ namespace SOPServer.Service.Services.Implements
                                 .ThenInclude(oi => oi.Item)
                                     .ThenInclude(i => i.Category));
 
-            var message = collection.IsPublished 
-                ? MessageConstants.COLLECTION_PUBLISH_SUCCESS 
+            var message = collection.IsPublished
+                ? MessageConstants.COLLECTION_PUBLISH_SUCCESS
                 : MessageConstants.COLLECTION_UNPUBLISH_SUCCESS;
 
             return new BaseResponseModel

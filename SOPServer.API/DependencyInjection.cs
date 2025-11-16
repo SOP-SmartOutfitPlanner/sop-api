@@ -107,6 +107,9 @@ namespace SOPServer.API
             services.AddScoped<IReportCommunityRepository, ReportCommunityRepository>();
             services.AddScoped<IReportCommunityService, ReportCommunityService>();
 
+            services.AddScoped<IUserSuspensionRepository, UserSuspensionRepository>();
+            services.AddScoped<IUserViolationRepository, UserViolationRepository>();
+
             // ========== FOLLOWER MANAGEMENT ==========
             services.AddScoped<IFollowerRepository, FollowerRepository>();
             services.AddScoped<IFollowerService, FollowerService>();
@@ -142,6 +145,9 @@ namespace SOPServer.API
             services.AddScoped<IQdrantService, QDrantService>();
             services.AddScoped<IPayOSService, PayOSService>();
 
+            // ========== LAZY SERVICES (for circular dependency resolution) ==========
+            services.AddScoped<Lazy<IQdrantService>>(provider => new Lazy<IQdrantService>(() => provider.GetRequiredService<IQdrantService>()));
+
             // ========== EMAIL SERVICES ==========
             services.AddScoped<IMailService, MailService>();
             services.AddScoped<IEmailTemplateService, EmailTemplateService>();
@@ -149,6 +155,9 @@ namespace SOPServer.API
 
             // ========== WEATHER SERVICES ==========
             services.AddScoped<IWeatherService, WeatherService>();
+
+            // ========== UTILITY SERVICES ==========
+            services.AddScoped<SOPServer.Service.Utils.ContentVisibilityHelper>();
 
             return services;
         }

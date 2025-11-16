@@ -285,22 +285,22 @@ namespace SOPServer.Service.Services.Implements
             }
 
             var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter,
-                                    include: query => query
+     include: query => query
           .Include(x => x.Category)
-            .Include(x => x.User)
+          .Include(x => x.User)
      .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
      .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
         .Include(x => x.ItemStyles).ThenInclude(x => x.Style),
-            filter: x => x.UserId == userid
-               && (!filter.IsAnalyzed.HasValue || x.IsAnalyzed == filter.IsAnalyzed.Value)
-    && (categoryIdsToFilter == null || (x.CategoryId.HasValue && categoryIdsToFilter.Contains(x.CategoryId.Value)))
+     filter: x => x.UserId == userid
+   && (!filter.IsAnalyzed.HasValue || x.IsAnalyzed == filter.IsAnalyzed.Value)
+ && (categoryIdsToFilter == null || (x.CategoryId.HasValue && categoryIdsToFilter.Contains(x.CategoryId.Value)))
    && (!filter.StyleId.HasValue || x.ItemStyles.Any(isr => !isr.IsDeleted && isr.StyleId == filter.StyleId.Value))
-                 && (!filter.SeasonId.HasValue || x.ItemSeasons.Any(ss => !ss.IsDeleted && ss.SeasonId == filter.SeasonId.Value))
+  && (!filter.SeasonId.HasValue || x.ItemSeasons.Any(ss => !ss.IsDeleted && ss.SeasonId == filter.SeasonId.Value))
      && (!filter.OccasionId.HasValue || x.ItemOccasions.Any(ss => !ss.IsDeleted && ss.OccasionId == filter.OccasionId.Value))
   && (string.IsNullOrEmpty(paginationParameter.Search) || x.Name.Contains(paginationParameter.Search)),
-   orderBy: x => filter.SortByDate.HasValue && filter.SortByDate.Value == Repository.Enums.SortOrder.Ascending
-          ? x.OrderBy(item => item.CreatedDate)
-    : x.OrderByDescending(item => item.CreatedDate));
+   orderBy: x => filter.SortByDate.HasValue && filter.SortByDate.Value == SortOrder.Ascending
+          ? x.OrderBy(item => item.UpdatedDate ?? item.CreatedDate)
+    : x.OrderByDescending(item => item.UpdatedDate ?? item.CreatedDate));
 
             var itemModels = _mapper.Map<Pagination<ItemModel>>(items);
 
@@ -1135,7 +1135,7 @@ namespace SOPServer.Service.Services.Implements
                 var item = await scopedUnitOfWork.ItemRepository.GetByIdAsync(itemId);
                 if (item == null || string.IsNullOrEmpty(item.ImgUrl))
                     continue;
-                
+
                 var requestBody = new RembgRequest
                 {
                     Input = new RembgInput { Image = item.ImgUrl }
@@ -1178,11 +1178,16 @@ namespace SOPServer.Service.Services.Implements
                     continue;
                 }
 
+                //double check after remove background
+                var itemDoubleCheck = await scopedUnitOfWork.ItemRepository.GetByIdAsync(itemId);
+                if (itemDoubleCheck == null || string.IsNullOrEmpty(item.ImgUrl))
+                    continue;
+
                 await scopedMinioService.DeleteImageByURLAsync(item.ImgUrl);
                 item.ImgUrl = uploadData.DownloadUrl;
                 scopedUnitOfWork.ItemRepository.UpdateAsync(item);
+                await scopedUnitOfWork.SaveAsync();
             }
-            await scopedUnitOfWork.SaveAsync();
         }
 
         public async Task<BaseResponseModel> SplitItem(IFormFile file)

@@ -2,15 +2,14 @@
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 using SOPServer.Service.BusinessModels.ResultModels;
+using SOPServer.Service.BusinessModels.WeatherModel;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
-using SOPServer.Service.Models;
 using SOPServer.Service.Services.Interfaces;
 using SOPServer.Service.SettingModels;
 using SOPServer.Service.Utils;
 using System.Globalization;
 using System.Net;
-using System.Net.Http;
 
 namespace SOPServer.Service.Services.Implements
 {

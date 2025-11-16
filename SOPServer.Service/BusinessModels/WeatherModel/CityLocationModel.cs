@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SOPServer.Service.Models
+namespace SOPServer.Service.BusinessModels.WeatherModel
 {
     public class CityLocationModel
     {

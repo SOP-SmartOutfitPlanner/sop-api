@@ -93,6 +93,7 @@ namespace SOPServer.Service.Services.Implements
                         .ThenInclude(c => c.LikeCollections)
                     .Include(sc => sc.Collection)
                         .ThenInclude(c => c.CommentCollections),
+                    // REMOVED: .Include(sc => sc.Collection).ThenInclude(c => c.SaveCollections) - causes circular reference
                 filter: sc => sc.UserId == userId,
                 orderBy: q => q.OrderByDescending(sc => sc.CreatedDate)
             );
@@ -103,6 +104,12 @@ namespace SOPServer.Service.Services.Implements
             foreach (var sc in savedCollections)
             {
                 var collectionModel = _mapper.Map<CollectionModel>(sc.Collection);
+                
+                // Manually calculate SavedCount to avoid circular reference
+                collectionModel.SavedCount = await _unitOfWork.SaveCollectionRepository
+                    .GetQueryable()
+                    .Where(save => save.CollectionId == sc.Collection.Id && !save.IsDeleted)
+                    .CountAsync();
                 
                 // Check if caller follows the collection author
                 if (collectionModel.UserId.HasValue && collectionModel.UserId.Value != userId)

@@ -349,8 +349,9 @@ Output only the JSON of OutfitSelectionModel."
             throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
         }
 
-        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, CancellationToken cancellationToken = default)
+        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, QuickTools tools, CancellationToken cancellationToken = default)
         {
+            _suggestionAiClient.AddFunctionTool(tools);
             var choosePromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_CHOOSE_PROMPT);
 
             // Convert items to JSON for the AI to understand

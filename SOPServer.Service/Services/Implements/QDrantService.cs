@@ -231,17 +231,19 @@ namespace SOPServer.Service.Services.Implements
                 limit: 5
             );
 
-            var result = searchResult
-                .Where(x => x.Score > 0.6)
-                .Select(x => new ItemSearchResult
-                {
-                    ItemId = long.Parse(x.Id.Num.ToString()),
-                    Score = x.Score
-                })
-                .ToList();
+            var result = searchResult != null && searchResult.Any()
+                ? searchResult
+                    .Where(x => x.Score > 0.6)
+                    .Select(x => new ItemSearchResult
+                    {
+                        ItemId = long.Parse(x.Id.Num.ToString()),
+                        Score = x.Score
+                    })
+                    .ToList()
+                : new List<ItemSearchResult>();
 
             sw.Stop();
-            Console.WriteLine("SearchItemIdsByUserId " + sw.ElapsedMilliseconds + "ms");
+            Console.WriteLine($"SearchItemIdsByUserId {sw.ElapsedMilliseconds}ms - Found {result.Count} items");
 
             return result;
         }

@@ -199,6 +199,10 @@ namespace SOPServer.Service.Services.Implements
             }
             stopwatch.Stop();
             Console.WriteLine("SearchSimilarityItemSystem " + stopwatch.ElapsedMilliseconds + "ms");
+            foreach (var res in result)
+            {
+                Console.WriteLine($"Found ItemId: {res.Id} with Score: {res.Score}");
+            }
             return result;
         }
 

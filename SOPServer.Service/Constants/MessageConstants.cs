@@ -345,5 +345,24 @@ namespace SOPServer.Service.Constants
         public const string SUBSCRIPTION_PLAN_DELETE_SUCCESS = "Subscription plan deleted successfully";
         public const string GET_LIST_SUBSCRIPTION_PLAN_SUCCESS = "Get list subscription plans successfully";
         public const string SUBSCRIPTION_PLAN_NAME_EXISTS = "A subscription plan with this name already exists";
+        public const string SUBSCRIPTION_PLAN_DRAFT = "This subscription plan is not available for purchase yet.";
+        public const string SUBSCRIPTION_PLAN_ARCHIVED = "This subscription plan is no longer available for purchase.";
+        public const string SUBSCRIPTION_PLAN_INACTIVE_CUSTOMERS_ONLY = "This subscription plan is only available for existing customers.";
+
+        // UserSubscription related messages
+        public const string USER_SUBSCRIPTION_ALREADY_HAS_PAID = "You already have an active paid subscription ({0}). Please wait until it expires on {1} before purchasing a new one.";
+        public const string USER_SUBSCRIPTION_PENDING_PAYMENT = "You already have a pending payment. Please scan the QR code to complete payment.";
+        public const string USER_SUBSCRIPTION_FREE_ACTIVATED = "Free subscription activated successfully!";
+        public const string USER_SUBSCRIPTION_PAYMENT_QR_GENERATED = "Payment QR code generated successfully. Please scan the QR code to complete payment.";
+        public const string USER_SUBSCRIPTION_NO_ACTIVE = "No active subscription found";
+        public const string USER_SUBSCRIPTION_GET_ACTIVE_SUCCESS = "Active subscription retrieved successfully";
+        public const string USER_SUBSCRIPTION_GET_AVAILABLE_PLANS_SUCCESS = "Available subscription plans retrieved successfully";
+        public const string USER_SUBSCRIPTION_GET_HISTORY_SUCCESS = "Subscription history retrieved successfully";
+        public const string USER_SUBSCRIPTION_PAYMENT_SUCCESS = "Payment successful. Subscription activated.";
+        public const string USER_SUBSCRIPTION_PAYMENT_FAILED = "Payment failed. Subscription not activated.";
+        public const string USER_SUBSCRIPTION_TRANSACTION_NOT_FOUND = "Transaction not found";
+        public const string USER_SUBSCRIPTION_TRANSACTION_ALREADY_PROCESSED = "Transaction already processed with status: {0}";
+        public const string USER_SUBSCRIPTION_FREE_DESCRIPTION = "Free subscription: {0}";
+        public const string USER_SUBSCRIPTION_PAYMENT_DESCRIPTION = "Payment for {0} subscription";
     }
 }

@@ -39,10 +39,10 @@ namespace SOPServer.Service.Services.Implements
 
             // Check plan status and user eligibility
             if (plan.Status == SubscriptionPlanStatus.DRAFT)
-                throw new BadRequestException("This subscription plan is not available for purchase yet.");
+                throw new BadRequestException(MessageConstants.SUBSCRIPTION_PLAN_DRAFT);
 
             if (plan.Status == SubscriptionPlanStatus.ARCHIVED)
-                throw new BadRequestException("This subscription plan is no longer available for purchase.");
+                throw new BadRequestException(MessageConstants.SUBSCRIPTION_PLAN_ARCHIVED);
 
             // For INACTIVE plans, only users who previously had this plan can rebuy
             if (plan.Status == SubscriptionPlanStatus.INACTIVE)
@@ -51,7 +51,7 @@ namespace SOPServer.Service.Services.Implements
                     .Any(s => s.UserId == userId && s.SubscriptionPlanId == plan.Id);
 
                 if (!hasPreviousSubscription)
-                    throw new BadRequestException("This subscription plan is only available for existing customers.");
+                    throw new BadRequestException(MessageConstants.SUBSCRIPTION_PLAN_INACTIVE_CUSTOMERS_ONLY);
             }
 
             // Check if user already has an active subscription
@@ -64,7 +64,9 @@ namespace SOPServer.Service.Services.Implements
             {
                 // Allow upgrade from free to paid
                 if (existingSubscription.SubscriptionPlan.Price > 0)
-                    throw new BadRequestException($"You already have an active paid subscription ({existingSubscription.SubscriptionPlan.Name}). Please wait until it expires on {existingSubscription.DateExp:dd-MM-yyyy HH:mm} before purchasing a new one.");
+                    throw new BadRequestException(string.Format(MessageConstants.USER_SUBSCRIPTION_ALREADY_HAS_PAID,
+                        existingSubscription.SubscriptionPlan.Name,
+                        existingSubscription.DateExp.ToString("dd-MM-yyyy HH:mm")));
 
                 // Deactivate free plan to allow upgrade to paid plan
                 existingSubscription.IsActive = false;
@@ -92,7 +94,7 @@ namespace SOPServer.Service.Services.Implements
                     return new BaseResponseModel
                     {
                         StatusCode = StatusCodes.Status200OK,
-                        Message = "You already have a pending payment. Please scan the QR code to complete payment.",
+                        Message = MessageConstants.USER_SUBSCRIPTION_PENDING_PAYMENT,
                         Data = new
                         {
                             QrCode = existingPaymentLink.QrCode,
@@ -137,7 +139,7 @@ namespace SOPServer.Service.Services.Implements
                     TransactionCode = $"FREE-{DateTime.UtcNow.Ticks}",
                     Price = 0,
                     Status = TransactionStatus.COMPLETED,
-                    Description = $"Free subscription: {plan.Name}",
+                    Description = string.Format(MessageConstants.USER_SUBSCRIPTION_FREE_DESCRIPTION, plan.Name),
                     CreatedDate = DateTime.UtcNow,
                     UpdatedDate = DateTime.UtcNow
                 };
@@ -152,7 +154,7 @@ namespace SOPServer.Service.Services.Implements
                 return new BaseResponseModel
                 {
                     StatusCode = StatusCodes.Status200OK,
-                    Message = "Free subscription activated successfully!",
+                    Message = MessageConstants.USER_SUBSCRIPTION_FREE_ACTIVATED,
                     Data = new
                     {
                         SubscriptionPlanName = plan.Name,
@@ -186,7 +188,7 @@ namespace SOPServer.Service.Services.Implements
                 TransactionCode = $"TXN-{DateTime.UtcNow.Ticks}",
                 Price = plan.Price,
                 Status = TransactionStatus.PENDING,
-                Description = $"Payment for {plan.Name} subscription",
+                Description = string.Format(MessageConstants.USER_SUBSCRIPTION_PAYMENT_DESCRIPTION, plan.Name),
                 CreatedDate = DateTime.UtcNow
             };
 
@@ -199,7 +201,7 @@ namespace SOPServer.Service.Services.Implements
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Payment QR code generated successfully. Please scan the QR code to complete payment.",
+                Message = MessageConstants.USER_SUBSCRIPTION_PAYMENT_QR_GENERATED,
                 Data = new
                 {
                     QrCode = paymentLink.QrCode,
@@ -226,7 +228,7 @@ namespace SOPServer.Service.Services.Implements
                 return new BaseResponseModel
                 {
                     StatusCode = StatusCodes.Status200OK,
-                    Message = "No active subscription found",
+                    Message = MessageConstants.USER_SUBSCRIPTION_NO_ACTIVE,
                     Data = null
                 };
             }
@@ -234,7 +236,7 @@ namespace SOPServer.Service.Services.Implements
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Active subscription retrieved successfully",
+                Message = MessageConstants.USER_SUBSCRIPTION_GET_ACTIVE_SUCCESS,
                 Data = _mapper.Map<UserSubscriptionModel>(subscription)
             };
         }
@@ -249,7 +251,7 @@ namespace SOPServer.Service.Services.Implements
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Available subscription plans retrieved successfully",
+                Message = MessageConstants.USER_SUBSCRIPTION_GET_AVAILABLE_PLANS_SUCCESS,
                 Data = result
             };
         }
@@ -265,7 +267,7 @@ namespace SOPServer.Service.Services.Implements
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Subscription history retrieved successfully",
+                Message = MessageConstants.USER_SUBSCRIPTION_GET_HISTORY_SUCCESS,
                 Data = _mapper.Map<IEnumerable<UserSubscriptionModel>>(subscriptions)
             };
         }
@@ -279,7 +281,7 @@ namespace SOPServer.Service.Services.Implements
                 .FirstOrDefaultAsync(t => t.Id == transactionId);
 
             if (transaction == null)
-                throw new NotFoundException("Transaction not found");
+                throw new NotFoundException(MessageConstants.USER_SUBSCRIPTION_TRANSACTION_NOT_FOUND);
 
             // Check if transaction is already processed
             if (transaction.Status != TransactionStatus.PENDING)
@@ -287,7 +289,7 @@ namespace SOPServer.Service.Services.Implements
                 return new BaseResponseModel
                 {
                     StatusCode = StatusCodes.Status200OK,
-                    Message = $"Transaction already processed with status: {transaction.Status}",
+                    Message = string.Format(MessageConstants.USER_SUBSCRIPTION_TRANSACTION_ALREADY_PROCESSED, transaction.Status),
                     Data = null
                 };
             }
@@ -314,7 +316,7 @@ namespace SOPServer.Service.Services.Implements
                 return new BaseResponseModel
                 {
                     StatusCode = StatusCodes.Status200OK,
-                    Message = "Payment successful. Subscription activated.",
+                    Message = MessageConstants.USER_SUBSCRIPTION_PAYMENT_SUCCESS,
                     Data = new
                     {
                         UserId = transaction.UserSubscription.UserId,
@@ -344,7 +346,7 @@ namespace SOPServer.Service.Services.Implements
                 return new BaseResponseModel
                 {
                     StatusCode = StatusCodes.Status200OK,
-                    Message = "Payment failed. Subscription not activated.",
+                    Message = MessageConstants.USER_SUBSCRIPTION_PAYMENT_FAILED,
                     Data = new
                     {
                         UserId = transaction.UserSubscription.UserId,

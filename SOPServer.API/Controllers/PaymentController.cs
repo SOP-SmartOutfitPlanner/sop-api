@@ -30,29 +30,30 @@ namespace SOPServer.API.Controllers
                 // Verify webhook signature from PayOS
                 var webhookData = await _payOSService.VerifyPaymentWebhookAsync(webhook);
 
-                // Extract transaction ID from orderCode
+                // Extract transaction ID and payment status
                 var transactionId = webhookData.OrderCode;
+                var paymentStatus = webhookData.Code; // "00" = success, other codes = failed
 
-                // TODO: Process payment based on webhook data
-                // This will be implemented in the next step
-                // - Update transaction status
-                // - Activate subscription if payment successful
-                // - Handle failed payments
+                // Process payment and update subscription status
+                var result = await _userSubscriptionService.ProcessPaymentWebhookAsync(transactionId, paymentStatus);
 
+                // Return success to PayOS (always 200 OK to prevent retries)
                 return Ok(new
                 {
                     success = true,
-                    message = "Webhook received successfully",
-                    orderCode = transactionId
+                    message = result.Message,
+                    data = result.Data
                 });
             }
             catch (Exception ex)
             {
                 // Log error but return 200 to PayOS to avoid retries
+                // PayOS will not retry if we return 200
                 return Ok(new
                 {
                     success = false,
-                    message = ex.Message
+                    message = $"Webhook processing error: {ex.Message}",
+                    error = ex.GetType().Name
                 });
             }
         }

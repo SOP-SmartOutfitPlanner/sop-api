@@ -6,7 +6,7 @@ namespace SOPServer.Service.Services.Interfaces
     public interface IUserSubscriptionService
     {
         /// <summary>
-        /// Purchase a subscription plan
+        /// Purchase a subscription plan (creates pending subscription and returns payment URL)
         /// </summary>
         Task<BaseResponseModel> PurchaseSubscriptionAsync(long userId, PurchaseSubscriptionRequestModel model);
 
@@ -24,5 +24,10 @@ namespace SOPServer.Service.Services.Interfaces
         /// Get user's subscription history
         /// </summary>
         Task<BaseResponseModel> GetSubscriptionHistoryAsync(long userId);
+
+        /// <summary>
+        /// Process payment webhook to activate subscription after successful payment
+        /// </summary>
+        Task<BaseResponseModel> ProcessPaymentWebhookAsync(long transactionId, string paymentStatus);
     }
 }

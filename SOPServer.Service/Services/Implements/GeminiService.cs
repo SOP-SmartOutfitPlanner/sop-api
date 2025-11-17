@@ -334,7 +334,7 @@ namespace SOPServer.Service.Services.Implements
             if (!string.IsNullOrEmpty(occasion))
             {
                 userParts.Add(new Part { Text = $"Occasion: {occasion}" });
-            }
+            } else userParts.Add(new Part { Text = $"Occasion: null" });
 
             const int maxRetryAttempts = 5;
 

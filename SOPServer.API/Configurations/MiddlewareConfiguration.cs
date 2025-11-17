@@ -20,6 +20,9 @@ namespace SOPServer.API.Configurations
 
             app.UseAuthorization();
 
+            // Auto-renew free subscriptions for users without active subscription
+            app.UseSubscriptionAutoRenewal();
+
             return app;
         }
     }

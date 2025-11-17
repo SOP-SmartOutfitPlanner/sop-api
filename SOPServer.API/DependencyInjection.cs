@@ -135,8 +135,10 @@ namespace SOPServer.API
             services.AddScoped<ISubscriptionLimitService, SubscriptionLimitService>();
             services.AddScoped<IBenefitUsageService, BenefitUsageService>();
 
-            // Register the action filter for subscription limit checking
+            // Register the action filters for subscription management
             services.AddScoped<SOPServer.API.Attributes.SubscriptionLimitActionFilter>();
+            services.AddScoped<SOPServer.API.Attributes.SubscriptionCreditRestoreFilter>();
+            services.AddScoped<SOPServer.API.Attributes.ItemLimitActionFilter>();
 
             // ========== EXTERNAL SERVICES ==========
             services.AddScoped<IGeminiService, GeminiService>();

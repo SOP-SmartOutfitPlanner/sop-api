@@ -45,7 +45,7 @@ namespace SOPServer.API.Controllers
         //}
 
         [HttpPost]
-        [CheckSubscriptionLimit(FeatureCode.ItemWardrobe)]
+        [CheckItemLimit]
         public Task<IActionResult> CreateNewItem(ItemCreateModel model)
         {
             return ValidateAndExecute(async () => await _itemService.AddNewItem(model));
@@ -70,12 +70,14 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpPost("bulk-upload/auto")]
+        [CheckItemLimit]
         public Task<IActionResult> CreateBulkUploadAuto(BulkItemRequestAutoModel bulkUploadModel)
         {
             return ValidateAndExecute(async () => await _itemService.BulkCreateItemAuto(bulkUploadModel));
         }
 
         [HttpPost("bulk-upload/manual")]
+        [CheckItemLimit]
         public Task<IActionResult> CreateBulkUploadManual(BulkItemRequestManualModel bulkUploadModel)
         {
             return ValidateAndExecute(async () => await _itemService.BulkCreateItemManual(bulkUploadModel));

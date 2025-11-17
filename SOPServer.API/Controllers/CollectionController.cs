@@ -59,8 +59,6 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpPost]
-        // TODO: Add FeatureCode for collections or remove subscription limit
-        // [CheckSubscriptionLimit("collections", "maxCollections")]
         public Task<IActionResult> CreateCollection([FromForm] CollectionCreateModel model)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;

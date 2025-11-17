@@ -18,12 +18,14 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public Task<IActionResult> GetAll()
         {
             return ValidateAndExecute(async () => await _subscriptionPlanService.GetAllAsync());
         }
 
         [HttpGet("{id:long}")]
+        [AllowAnonymous]
         public Task<IActionResult> GetById(long id)
         {
             return ValidateAndExecute(async () => await _subscriptionPlanService.GetByIdAsync(id));

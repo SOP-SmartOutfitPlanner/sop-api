@@ -89,7 +89,16 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _itemService.GetUserStats(userId));
         }
 
+        /// <summary>
+        /// Split item image to extract individual clothing pieces using AI
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Note:** Subject to subscription limits based on user's plan (monthly reset)
+        /// </remarks>
         [HttpPost("split-item")]
+        [CheckSubscriptionLimit(FeatureCode.SplitItem)]
         public Task<IActionResult> SplitItem(IFormFile file)
         {
             return ValidateAndExecute(async () => await _itemService.SplitItem(file));

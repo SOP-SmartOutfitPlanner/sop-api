@@ -305,7 +305,16 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _outfitService.DeleteOutfitCalendarAsync(id, userId));
         }
 
+        /// <summary>
+        /// Generate AI-powered outfit suggestions for user
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Note:** Subject to subscription limits based on user's plan (monthly reset)
+        /// </remarks>
         [HttpGet("suggestion")]
+        [CheckSubscriptionLimit(FeatureCode.OutfitSuggestion)]
         public Task<IActionResult> OutfitSuggestion(long userId, long? occasionId)
         {
             return ValidateAndExecute(async () => await _outfitService.OutfitSuggestion(userId, occasionId));

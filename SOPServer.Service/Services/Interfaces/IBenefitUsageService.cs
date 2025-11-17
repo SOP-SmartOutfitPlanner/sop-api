@@ -23,10 +23,5 @@ namespace SOPServer.Service.Services.Interfaces
         /// Get current usage information for a feature
         /// </summary>
         Task<(int remainingCredits, int? totalLimit)> GetUsageInfoAsync(long userId, FeatureCode featureCode);
-
-        /// <summary>
-        /// Reset monthly benefits if needed (checks and resets all Monthly type benefits)
-        /// </summary>
-        Task ResetMonthlyBenefitsIfNeededAsync(long userId);
     }
 }

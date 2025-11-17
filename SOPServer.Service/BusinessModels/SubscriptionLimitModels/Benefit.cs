@@ -6,17 +6,17 @@ namespace SOPServer.Service.BusinessModels.SubscriptionLimitModels
     {
         public FeatureCode FeatureCode { get; set; }
         public int Usage { get; set; }  // In Plan: LIMIT (max credits), In UserSubscription: REMAINING credits
-        public ResetType ResetType { get; set; }
+        public BenefitType BenefitType { get; set; }
 
         public Benefit()
         {
         }
 
-        public Benefit(FeatureCode featureCode, int usage, ResetType resetType)
+        public Benefit(FeatureCode featureCode, int usage, BenefitType benefitType)
         {
             FeatureCode = featureCode;
             Usage = usage;
-            ResetType = resetType;
+            BenefitType = benefitType;
         }
     }
 }

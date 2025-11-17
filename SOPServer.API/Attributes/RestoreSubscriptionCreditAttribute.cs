@@ -5,7 +5,7 @@ namespace SOPServer.API.Attributes
 {
     /// <summary>
     /// Attribute to restore subscription credits after successful deletion.
-    /// Automatically increments usage credits when item is deleted (only for ResetType.Never features).
+    /// Automatically increments usage credits when item is deleted (only for BenefitType.Persistent features).
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class RestoreSubscriptionCreditAttribute : Attribute, IFilterFactory

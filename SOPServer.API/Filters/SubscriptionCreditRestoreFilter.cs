@@ -55,7 +55,7 @@ namespace SOPServer.API.Attributes
 
                     if (shouldRestore)
                     {
-                        // Restore credits (only works for ResetType.Never features)
+                        // Restore credits (only works for BenefitType.Persistent features)
                         await _benefitUsageService.IncrementUsageAsync(userId, FeatureCode, Amount);
                     }
                 }

@@ -331,7 +331,7 @@ namespace SOPServer.Service.Constants
         public const string NO_NOTIFICATIONS_TO_DELETE = "No valid notifications found to delete";
 
         // Subscription related messages
-        public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "Plan: ";
+        public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "SOP - Payment for Plan: ";
 
         // Weather related messages
         public const string GET_WEATHER_INFO_SUCCESS = "Get weather info success";

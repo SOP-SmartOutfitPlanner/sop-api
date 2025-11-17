@@ -20,12 +20,14 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IPayOSService _payOSService;
+        private readonly IRedisService _redisService;
 
-        public UserSubscriptionService(IUnitOfWork unitOfWork, IMapper mapper, IPayOSService payOSService)
+        public UserSubscriptionService(IUnitOfWork unitOfWork, IMapper mapper, IPayOSService payOSService, IRedisService redisService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _payOSService = payOSService;
+            _redisService = redisService;
         }
 
         public async Task<BaseResponseModel> PurchaseSubscriptionAsync(long userId, PurchaseSubscriptionRequestModel model)
@@ -53,12 +55,23 @@ namespace SOPServer.Service.Services.Implements
             }
 
             // Check if user already has an active subscription
-            var existingSubscription = (await _unitOfWork.UserSubscriptionRepository.GetAllAsync())
+            var existingSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
+                .Include(s => s.SubscriptionPlan)
                 .Where(s => s.UserId == userId && s.IsActive && s.DateExp > DateTime.UtcNow)
-                .FirstOrDefault();
+                .FirstOrDefaultAsync();
 
             if (existingSubscription != null)
-                throw new BadRequestException("You already have an active subscription. Please wait until it expires before purchasing a new one.");
+            {
+                // Allow upgrade from free to paid
+                if (existingSubscription.SubscriptionPlan.Price > 0)
+                    throw new BadRequestException($"You already have an active paid subscription ({existingSubscription.SubscriptionPlan.Name}). Please wait until it expires on {existingSubscription.DateExp:dd-MM-yyyy HH:mm} before purchasing a new one.");
+
+                // Deactivate free plan to allow upgrade to paid plan
+                existingSubscription.IsActive = false;
+                existingSubscription.UpdatedDate = DateTime.UtcNow;
+                _unitOfWork.UserSubscriptionRepository.UpdateAsync(existingSubscription);
+                await _unitOfWork.SaveAsync();
+            }
 
             // Check if user has a pending payment
             var pendingSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
@@ -74,14 +87,15 @@ namespace SOPServer.Service.Services.Implements
 
                 if (pendingTransaction != null)
                 {
-                    // User already has a pending payment, return existing payment URL
+                    // User already has a pending payment, return existing payment QR code
                     var existingPaymentLink = await _payOSService.CreatePaymentUrl((int)pendingSubscription.Id);
                     return new BaseResponseModel
                     {
                         StatusCode = StatusCodes.Status200OK,
-                        Message = "You already have a pending payment. Please complete it before creating a new one.",
+                        Message = "You already have a pending payment. Please scan the QR code to complete payment.",
                         Data = new
                         {
+                            QrCode = existingPaymentLink.QrCode,
                             PaymentUrl = existingPaymentLink.CheckoutUrl,
                             Amount = plan.Price,
                             SubscriptionPlanName = plan.Name,
@@ -95,14 +109,70 @@ namespace SOPServer.Service.Services.Implements
             // Deserialize plan benefits to initialize user benefits
             var planBenefits = DeserializeBenefitLimit(plan.BenefitLimit);
 
-            // Create user subscription with PENDING status (IsActive = false)
+            // Calculate initial benefits (carry over Persistent, reset Renewable)
+            var initialBenefits = await CalculateInitialBenefitsAsync(userId, plan.Id, planBenefits);
+
+            // Handle FREE plan differently - activate immediately without payment
+            if (plan.Price == 0)
+            {
+                // Create active subscription immediately for free plans
+                var freeSubscription = new UserSubscription
+                {
+                    UserId = userId,
+                    SubscriptionPlanId = plan.Id,
+                    DateExp = DateTime.UtcNow.AddMonths(1), // 1 month subscription
+                    IsActive = true, // Activate immediately for free plans
+                    BenefitUsed = JsonSerializer.Serialize(initialBenefits),
+                    CreatedDate = DateTime.UtcNow,
+                    UpdatedDate = DateTime.UtcNow
+                };
+
+                await _unitOfWork.UserSubscriptionRepository.AddAsync(freeSubscription);
+                await _unitOfWork.SaveAsync();
+
+                // Create completed transaction record for free plan
+                var freeTransaction = new UserSubscriptionTransaction
+                {
+                    UserSubscriptionId = freeSubscription.Id,
+                    TransactionCode = $"FREE-{DateTime.UtcNow.Ticks}",
+                    Price = 0,
+                    Status = TransactionStatus.COMPLETED,
+                    Description = $"Free subscription: {plan.Name}",
+                    CreatedDate = DateTime.UtcNow,
+                    UpdatedDate = DateTime.UtcNow
+                };
+
+                await _unitOfWork.UserSubscriptionTransactionRepository.AddAsync(freeTransaction);
+                await _unitOfWork.SaveAsync();
+
+                // Clear cache to ensure middleware picks up new subscription
+                var cacheKey = $"user_subscription_check:{userId}";
+                await _redisService.RemoveAsync(cacheKey);
+
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "Free subscription activated successfully!",
+                    Data = new
+                    {
+                        SubscriptionPlanName = plan.Name,
+                        UserSubscriptionId = freeSubscription.Id,
+                        TransactionId = freeTransaction.Id,
+                        DateExp = freeSubscription.DateExp,
+                        IsActive = true,
+                        BenefitUsage = initialBenefits
+                    }
+                };
+            }
+
+            // For PAID plans, create pending subscription and payment flow
             var userSubscription = new UserSubscription
             {
                 UserId = userId,
                 SubscriptionPlanId = plan.Id,
                 DateExp = DateTime.UtcNow.AddMonths(1), // 1 month subscription
                 IsActive = false, // Will be activated after payment
-                BenefitUsed = JsonSerializer.Serialize(planBenefits), // Initialize with full credits
+                BenefitUsed = JsonSerializer.Serialize(initialBenefits), // Smart merge: carry over Persistent, reset Renewable
                 CreatedDate = DateTime.UtcNow
             };
 
@@ -123,15 +193,16 @@ namespace SOPServer.Service.Services.Implements
             await _unitOfWork.UserSubscriptionTransactionRepository.AddAsync(transaction);
             await _unitOfWork.SaveAsync();
 
-            // Generate payment URL from PayOS
+            // Generate payment QR code from PayOS
             var paymentLink = await _payOSService.CreatePaymentUrl((int)userSubscription.Id);
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
-                Message = "Payment URL generated successfully. Please complete the payment to activate your subscription.",
+                Message = "Payment QR code generated successfully. Please scan the QR code to complete payment.",
                 Data = new
                 {
+                    QrCode = paymentLink.QrCode,
                     PaymentUrl = paymentLink.CheckoutUrl,
                     Amount = plan.Price,
                     SubscriptionPlanName = plan.Name,
@@ -236,16 +307,23 @@ namespace SOPServer.Service.Services.Implements
                 _unitOfWork.UserSubscriptionRepository.UpdateAsync(transaction.UserSubscription);
                 await _unitOfWork.SaveAsync();
 
+                // Clear Redis cache to ensure middleware picks up activated subscription
+                var cacheKey = $"user_subscription_check:{transaction.UserSubscription.UserId}";
+                await _redisService.RemoveAsync(cacheKey);
+
                 return new BaseResponseModel
                 {
                     StatusCode = StatusCodes.Status200OK,
                     Message = "Payment successful. Subscription activated.",
                     Data = new
                     {
+                        UserId = transaction.UserSubscription.UserId,
                         TransactionId = transaction.Id,
                         Status = transaction.Status.ToString(),
                         UserSubscriptionId = transaction.UserSubscriptionId,
-                        IsActive = transaction.UserSubscription.IsActive
+                        IsActive = transaction.UserSubscription.IsActive,
+                        DateExp = transaction.UserSubscription.DateExp,
+                        SubscriptionPlanName = transaction.UserSubscription.SubscriptionPlan.Name
                     }
                 };
             }
@@ -269,13 +347,136 @@ namespace SOPServer.Service.Services.Implements
                     Message = "Payment failed. Subscription not activated.",
                     Data = new
                     {
+                        UserId = transaction.UserSubscription.UserId,
                         TransactionId = transaction.Id,
                         Status = transaction.Status.ToString(),
                         UserSubscriptionId = transaction.UserSubscriptionId,
-                        IsActive = transaction.UserSubscription.IsActive
+                        IsActive = transaction.UserSubscription.IsActive,
+                        SubscriptionPlanName = transaction.UserSubscription.SubscriptionPlan.Name
                     }
                 };
             }
+        }
+
+        public async Task EnsureUserHasActiveSubscriptionAsync(long userId)
+        {
+            // Check cache first to avoid DB query on every request
+            var cacheKey = $"user_subscription_check:{userId}";
+            var hasCachedSubscription = await _redisService.ExistsAsync(cacheKey);
+
+            if (hasCachedSubscription)
+                return; // User has active subscription (cached)
+
+            // Check database for active subscription
+            var activeSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
+                .Where(s => s.UserId == userId && s.IsActive && s.DateExp > DateTime.UtcNow)
+                .FirstOrDefaultAsync();
+
+            if (activeSubscription != null)
+            {
+                // User has active subscription, cache it for 5 minutes
+                await _redisService.SetAsync(cacheKey, true, TimeSpan.FromMinutes(5));
+                return;
+            }
+
+            // User has no active subscription - auto-create free plan
+            var freePlan = (await _unitOfWork.SubscriptionPlanRepository.GetAllAsync())
+                .FirstOrDefault(p => p.Price == 0 && p.Status == SubscriptionPlanStatus.ACTIVE);
+
+            if (freePlan == null)
+            {
+                // No free plan exists, user cannot use the app
+                // This should never happen in production - free plan should always exist
+                return;
+            }
+
+            // Deserialize free plan benefits
+            var planBenefits = DeserializeBenefitLimit(freePlan.BenefitLimit);
+
+            // Create new free subscription
+            var newSubscription = new UserSubscription
+            {
+                UserId = userId,
+                SubscriptionPlanId = freePlan.Id,
+                DateExp = DateTime.UtcNow.AddMonths(1), // 1 month free subscription
+                IsActive = true,
+                BenefitUsed = JsonSerializer.Serialize(planBenefits), // Fresh credits
+                CreatedDate = DateTime.UtcNow,
+                UpdatedDate = DateTime.UtcNow
+            };
+
+            await _unitOfWork.UserSubscriptionRepository.AddAsync(newSubscription);
+            await _unitOfWork.SaveAsync();
+
+            // Cache the subscription status for 5 minutes
+            await _redisService.SetAsync(cacheKey, true, TimeSpan.FromMinutes(5));
+        }
+
+        /// <summary>
+        /// Merges previous subscription benefits with new plan benefits.
+        /// - BenefitType.Persistent: Carries over remaining credits from previous subscription
+        /// - BenefitType.Renewable: Resets to fresh credits from plan
+        /// </summary>
+        private async Task<List<Benefit>> CalculateInitialBenefitsAsync(long userId, long subscriptionPlanId, List<Benefit> planBenefits)
+        {
+            // Get the user's most recent expired subscription for the SAME plan
+            var previousSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
+                .Where(s => s.UserId == userId &&
+                            s.SubscriptionPlanId == subscriptionPlanId &&
+                            s.DateExp <= DateTime.UtcNow) // Expired subscriptions only
+                .OrderByDescending(s => s.DateExp)
+                .FirstOrDefaultAsync();
+
+            // If no previous subscription, return fresh credits from plan
+            if (previousSubscription == null || string.IsNullOrEmpty(previousSubscription.BenefitUsed))
+            {
+                return planBenefits;
+            }
+
+            // Deserialize previous subscription's benefits
+            var previousBenefits = DeserializeBenefitLimit(previousSubscription.BenefitUsed);
+
+            // Merge logic
+            var mergedBenefits = new List<Benefit>();
+
+            foreach (var planBenefit in planBenefits)
+            {
+                var previousBenefit = previousBenefits.FirstOrDefault(b => b.FeatureCode == planBenefit.FeatureCode);
+
+                if (previousBenefit == null)
+                {
+                    // New feature in plan, use plan's limit
+                    mergedBenefits.Add(new Benefit
+                    {
+                        FeatureCode = planBenefit.FeatureCode,
+                        Usage = planBenefit.Usage,
+                        BenefitType = planBenefit.BenefitType
+                    });
+                }
+                else if (previousBenefit.BenefitType == BenefitType.Persistent)
+                {
+                    // Persistent feature - carry over remaining credits
+                    // But don't exceed the plan limit if plan was upgraded
+                    mergedBenefits.Add(new Benefit
+                    {
+                        FeatureCode = planBenefit.FeatureCode,
+                        Usage = Math.Min(previousBenefit.Usage, planBenefit.Usage),
+                        BenefitType = BenefitType.Persistent
+                    });
+                }
+                else // BenefitType.Renewable
+                {
+                    // Renewable feature - reset to fresh credits
+                    mergedBenefits.Add(new Benefit
+                    {
+                        FeatureCode = planBenefit.FeatureCode,
+                        Usage = planBenefit.Usage,
+                        BenefitType = BenefitType.Renewable
+                    });
+                }
+            }
+
+            return mergedBenefits;
         }
 
         private List<Benefit> DeserializeBenefitLimit(string? jsonString)

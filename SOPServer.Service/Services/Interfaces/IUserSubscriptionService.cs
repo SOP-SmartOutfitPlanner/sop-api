@@ -29,5 +29,10 @@ namespace SOPServer.Service.Services.Interfaces
         /// Process payment webhook to activate subscription after successful payment
         /// </summary>
         Task<BaseResponseModel> ProcessPaymentWebhookAsync(long transactionId, string paymentStatus);
+
+        /// <summary>
+        /// Ensure user has active subscription, auto-renew free plan if expired/missing
+        /// </summary>
+        Task EnsureUserHasActiveSubscriptionAsync(long userId);
     }
 }

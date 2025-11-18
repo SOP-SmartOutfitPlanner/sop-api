@@ -424,13 +424,6 @@ Ensure the response is valid JSON with proper formatting. Extract item IDs from 
                         Role = "system"
                     };
 
-                    // Add GenerationConfig for consistent JSON formatting
-                    requestJsonMode.GenerationConfig = new GenerationConfig
-                    {
-                        Temperature = 0.7f,
-                        MaxOutputTokens = 200
-                    };
-
                     var result = await _generativeModel.GenerateObjectAsync<OutfitSelectionModel>(requestJsonMode);
 
                     if (result == null || result.ItemIds == null || !result.ItemIds.Any())

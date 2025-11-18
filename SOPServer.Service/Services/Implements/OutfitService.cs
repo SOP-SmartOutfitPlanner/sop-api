@@ -1060,9 +1060,29 @@ namespace SOPServer.Service.Services.Implements
 
             // Choose outfit from the search results
             var chooseOutfitStopwatch = Stopwatch.StartNew();
-            var response = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems, weather, userInstruction);
+            var outfitSelection = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems, weather, userInstruction);
             chooseOutfitStopwatch.Stop();
             Console.WriteLine($"[TIMING] Gemini choose outfit: {chooseOutfitStopwatch.ElapsedMilliseconds}ms");
+
+            // Fetch full item details for the selected items
+            var fetchItemsStopwatch = Stopwatch.StartNew();
+            var selectedItems = new List<ItemModel>();
+            foreach (var itemId in outfitSelection.ItemIds)
+            {
+                var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(itemId,
+                    include: query => query.Include(x => x.Category)
+                                           .Include(x => x.User)
+                                           .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+                                           .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+                                           .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
+                
+                if (item != null)
+                {
+                    selectedItems.Add(_mapper.Map<ItemModel>(item));
+                }
+            }
+            fetchItemsStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Fetch full item details ({selectedItems.Count} items): {fetchItemsStopwatch.ElapsedMilliseconds}ms");
             
             overallStopwatch.Stop();
             Console.WriteLine($"[TIMING] *** TOTAL EXECUTION TIME: {overallStopwatch.ElapsedMilliseconds}ms ***");
@@ -1071,7 +1091,11 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.OUTFIT_SUGGESTION_SUCCESS,
-                Data = response
+                Data = new
+                {
+                    Items = selectedItems,
+                    Reason = outfitSelection.Reason
+                }
             };
         }
     }

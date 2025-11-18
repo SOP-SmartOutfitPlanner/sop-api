@@ -217,7 +217,7 @@ namespace SOPServer.Service.Services.Implements
             return await _generativeModel.GenerateObjectAsync<CategoryItemAnalysisModel>(generateRequest);
         }
 
-        public async Task<List<string>> OutfitSuggestion(string occasion, string usercharacteristic)
+        public async Task<List<string>> OutfitSuggestion(string occasion, string usercharacteristic, string? weather, string? userInstruction)
         {
             var outfitPromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_GENERATION_PROMPT);
 
@@ -243,10 +243,27 @@ namespace SOPServer.Service.Services.Implements
                 userParts.Add(new Part { Text = $"Occasion: {occasion}" });
             }
 
+            if (!string.IsNullOrEmpty(weather))
+            {
+                userParts.Add(new Part { Text = $"Weather: {weather}" });
+            }
+
+            if (!string.IsNullOrEmpty(userInstruction))
+            {
+                userParts.Add(new Part { Text = $"User Instruction: {userInstruction}" });
+            }
+
             var userContent = new Content { Parts = userParts, Role = "user" };
             generateRequest.AddContent(userContent);
 
             generateRequest.UseJsonMode<List<string>>();
+
+            // Add GenerationConfig for more diverse output
+            generateRequest.GenerationConfig = new GenerationConfig
+            {
+                Temperature = 0.7f,
+                MaxOutputTokens = 200
+            };
 
             const int maxRetryAttempts = 3;
 
@@ -292,7 +309,7 @@ namespace SOPServer.Service.Services.Implements
             throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
         }
 
-        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items)
+        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, string? weather, string? userInstruction)
         {
             var choosePromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_CHOOSE_PROMPT);
 
@@ -336,6 +353,16 @@ namespace SOPServer.Service.Services.Implements
                 userParts.Add(new Part { Text = $"Occasion: {occasion}" });
             } else userParts.Add(new Part { Text = $"Occasion: null" });
 
+            if (!string.IsNullOrEmpty(weather))
+            {
+                userParts.Add(new Part { Text = $"Weather: {weather}" });
+            }
+
+            if (!string.IsNullOrEmpty(userInstruction))
+            {
+                userParts.Add(new Part { Text = $"User Instruction: {userInstruction}" });
+            }
+
             const int maxRetryAttempts = 5;
 
             for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
@@ -356,6 +383,13 @@ namespace SOPServer.Service.Services.Implements
                     var userContent = new Content { Parts = userParts, Role = "user" };
                     generateRequest.AddContent(userContent);
 
+                    // Add GenerationConfig for more diverse output
+                    generateRequest.GenerationConfig = new GenerationConfig
+                    {
+                        Temperature = 0.7f,
+                        MaxOutputTokens = 200
+                    };
+
                     var response = await model.GenerateContentAsync(generateRequest);
                     Console.WriteLine("OUTFIT RESPONSE: " + response.Text);
 
@@ -364,7 +398,13 @@ namespace SOPServer.Service.Services.Implements
 
                     var systemFormatParts = new List<Part>
                     {
-                        new Part { Text = @"Format a response to json mode for me { ""itemIds"": [12, 34], ""reason"": ""≤50 words about color harmony, style match, occasion fit."" }" }
+                        new Part { Text = @"You are a JSON formatter. Convert the provided outfit selection response into a clean JSON format with the following structure:
+{
+  ""itemIds"": [array of item IDs as integers],
+  ""reason"": ""brief explanation (maximum 50 words) covering color harmony, style matching, and occasion appropriateness""
+}
+
+Ensure the response is valid JSON with proper formatting. Extract item IDs from the text and create a concise reason explaining why these items work well together." }
                     };
 
                     var aiResponsePart = new List<Part>
@@ -382,6 +422,13 @@ namespace SOPServer.Service.Services.Implements
                     {
                         Parts = systemFormatParts,
                         Role = "system"
+                    };
+
+                    // Add GenerationConfig for consistent JSON formatting
+                    requestJsonMode.GenerationConfig = new GenerationConfig
+                    {
+                        Temperature = 0.7f,
+                        MaxOutputTokens = 200
                     };
 
                     var result = await _generativeModel.GenerateObjectAsync<OutfitSelectionModel>(requestJsonMode);

@@ -169,10 +169,10 @@ namespace SOPServer.Service.Services.Implements
                         }
                     }
                 },
-                limit: 2
+                limit: 10 // Retrieve top 10 items
             );
 
-            var result = new List<QDrantSearchModels>();
+            var topResults = new List<QDrantSearchModels>();
 
             foreach (var searchItem in searchResult)
             {
@@ -193,15 +193,22 @@ namespace SOPServer.Service.Services.Implements
                         var itemModel = _mapper.Map<ItemModel>(item);
                         var mappedItem = _mapper.Map<QDrantSearchModels>(itemModel);
                         mappedItem.Score = searchItem.Score;
-                        result.Add(mappedItem);
+                        topResults.Add(mappedItem);
                     }
                 }
             }
+
+            // Randomly select 2 items from the top results
+            var random = new Random();
+            var result = topResults.Count > 2
+                ? topResults.OrderBy(x => random.Next()).Take(2).ToList()
+                : topResults;
+
             stopwatch.Stop();
-            Console.WriteLine("SearchSimilarityItemSystem " + stopwatch.ElapsedMilliseconds + "ms");
+            Console.WriteLine($"SearchSimilarityItemSystem {stopwatch.ElapsedMilliseconds}ms - Found {topResults.Count} items, selected {result.Count} randomly");
             foreach (var res in result)
             {
-                Console.WriteLine($"Found ItemId: {res.Id} with Score: {res.Score}");
+                Console.WriteLine($"Selected ItemId: {res.Id} with Score: {res.Score}");
             }
             return result;
         }
@@ -232,10 +239,10 @@ namespace SOPServer.Service.Services.Implements
                         }
                     }
                 },
-                limit: 2
+                limit: 10 // Retrieve top 10 items
             );
 
-            var result = searchResult != null && searchResult.Any()
+            var topResults = searchResult != null && searchResult.Any()
                 ? searchResult
                     .Where(x => x.Score > 0.6)
                     .Select(x => new ItemSearchResult
@@ -246,10 +253,16 @@ namespace SOPServer.Service.Services.Implements
                     .ToList()
                 : new List<ItemSearchResult>();
 
-            sw.Stop();
-            Console.WriteLine($"SearchItemIdsByUserId {sw.ElapsedMilliseconds}ms - Found {result.Count} items");
+            // Randomly select 2 items from the top results
+            var random = new Random();
+            var selectedResults = topResults.Count > 2
+                ? topResults.OrderBy(x => random.Next()).Take(2).ToList()
+                : topResults;
 
-            return result;
+            sw.Stop();
+            Console.WriteLine($"SearchItemIdsByUserId {sw.ElapsedMilliseconds}ms - Found {topResults.Count} items, selected {selectedResults.Count} randomly");
+
+            return selectedResults;
         }
     }
 }

@@ -970,7 +970,7 @@ namespace SOPServer.Service.Services.Implements
             return string.Join("; ", occasionDetails);
         }
 
-        public async Task<BaseResponseModel> OutfitSuggestion(long userId, long? occasionId)
+        public async Task<BaseResponseModel> OutfitSuggestion(long userId, long? occasionId, string? weather, string? userInstruction)
         {
             var overallStopwatch = Stopwatch.StartNew();
             
@@ -1010,7 +1010,7 @@ namespace SOPServer.Service.Services.Implements
 
             // Get outfit suggestions from Gemini
             var geminiStopwatch = Stopwatch.StartNew();
-            var listItem = await _geminiService.OutfitSuggestion(occasionString, characteristicString);
+            var listItem = await _geminiService.OutfitSuggestion(occasionString, characteristicString, weather, userInstruction);
             listItem.ForEach(x => Console.WriteLine(x));
             geminiStopwatch.Stop();
             Console.WriteLine($"[TIMING] Gemini outfit suggestion: {geminiStopwatch.ElapsedMilliseconds}ms");
@@ -1060,7 +1060,7 @@ namespace SOPServer.Service.Services.Implements
 
             // Choose outfit from the search results
             var chooseOutfitStopwatch = Stopwatch.StartNew();
-            var response = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems);
+            var response = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems, weather, userInstruction);
             chooseOutfitStopwatch.Stop();
             Console.WriteLine($"[TIMING] Gemini choose outfit: {chooseOutfitStopwatch.ElapsedMilliseconds}ms");
             

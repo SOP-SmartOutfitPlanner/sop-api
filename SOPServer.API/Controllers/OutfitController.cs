@@ -311,13 +311,19 @@ namespace SOPServer.API.Controllers
         /// <remarks>
         /// **Roles:** USER, STYLIST, ADMIN
         ///
+        /// **Query Parameters:**
+        /// - `userId`: User ID (required)
+        /// - `occasionId`: Occasion ID (optional)
+        /// - `weather`: Weather condition information (optional)
+        /// - `userInstruction`: User-specific instructions for outfit generation (optional)
+        ///
         /// **Note:** Subject to subscription limits based on user's plan (monthly reset)
         /// </remarks>
         [HttpGet("suggestion")]
         [CheckSubscriptionLimit(FeatureCode.OutfitSuggestion)]
-        public Task<IActionResult> OutfitSuggestion(long userId, long? occasionId)
+        public Task<IActionResult> OutfitSuggestion(long userId, long? occasionId, string? weather, string? userInstruction)
         {
-            return ValidateAndExecute(async () => await _outfitService.OutfitSuggestion(userId, occasionId));
+            return ValidateAndExecute(async () => await _outfitService.OutfitSuggestion(userId, occasionId, weather, userInstruction));
         }
     }
 }

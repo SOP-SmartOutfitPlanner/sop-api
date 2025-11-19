@@ -9,7 +9,7 @@ namespace SOPServer.Service.BusinessModels.QDrantModels
 {
     public class QDrantSearchModels : ItemModelAI
     {
-        public int Id { get; set; }
+        public long Id { get; set; }
         public float Score { get; set; }
     }
 }

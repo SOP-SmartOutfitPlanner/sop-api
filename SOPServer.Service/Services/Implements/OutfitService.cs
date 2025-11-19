@@ -1023,20 +1023,20 @@ namespace SOPServer.Service.Services.Implements
             searchStopwatch.Stop();
             Console.WriteLine($"[TIMING] Qdrant parallel search ({listItem.Count} queries): {searchStopwatch.ElapsedMilliseconds}ms");
 
-            // Get all items by IDs
+            // Get all items by IDs with full details including related data
             var dbStopwatch = Stopwatch.StartNew();
             var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(allItemIds.Select(x => x.ItemId).ToList());
             dbStopwatch.Stop();
             Console.WriteLine($"[TIMING] Database query for items ({allItemIds.Count} ids): {dbStopwatch.ElapsedMilliseconds}ms");
 
-            // Map items to QDrantSearchModels
+            // Map items to QDrantSearchModels for Gemini selection
             var mappingStopwatch = Stopwatch.StartNew();
             var listPartItems = items.Select(item =>
             {
                 var itemModel = _mapper.Map<ItemModel>(item);
                 var searchModel = new QDrantSearchModels
                 {
-                    Id = (int)item.Id,
+                    Id = item.Id,
                     ItemName = itemModel.Name,
                     ImgURL = itemModel.ImgUrl,
                     Colors = string.IsNullOrEmpty(itemModel.Color)
@@ -1060,9 +1060,51 @@ namespace SOPServer.Service.Services.Implements
 
             // Choose outfit from the search results
             var chooseOutfitStopwatch = Stopwatch.StartNew();
-            var response = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems);
+            var outfitSelection = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems);
             chooseOutfitStopwatch.Stop();
             Console.WriteLine($"[TIMING] Gemini choose outfit: {chooseOutfitStopwatch.ElapsedMilliseconds}ms");
+            Console.WriteLine($"[DEBUG] Gemini selected {outfitSelection.ItemIds?.Count ?? 0} items: {string.Join(", ", outfitSelection.ItemIds ?? new List<long>())}");
+
+            // Query database for the exact items Gemini selected
+            // This handles both user items AND system items that Gemini might choose
+            var finalMappingStopwatch = Stopwatch.StartNew();
+            
+            var selectedItemModels = new List<ItemModel>();
+            if (outfitSelection.ItemIds != null && outfitSelection.ItemIds.Any())
+            {
+                Console.WriteLine($"[DEBUG] Fetching {outfitSelection.ItemIds.Count} selected items from database...");
+                
+                // Query database for selected items with all relationships
+                var selectedItems = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(outfitSelection.ItemIds);
+                
+                Console.WriteLine($"[DEBUG] Database returned {selectedItems.Count} items");
+                
+                // Map to ItemModel
+                selectedItemModels = selectedItems.Select(item => _mapper.Map<ItemModel>(item)).ToList();
+                
+                // Log what we found
+                foreach (var item in selectedItems)
+                {
+                    Console.WriteLine($"[DEBUG] Mapped item ID {item.Id} ({item.Name}) to ItemModel");
+                }
+                
+                // Check for missing items
+                var foundIds = selectedItems.Select(i => i.Id).ToHashSet();
+                var missingIds = outfitSelection.ItemIds.Where(id => !foundIds.Contains(id)).ToList();
+                if (missingIds.Any())
+                {
+                    Console.WriteLine($"[WARNING] Items not found in database: {string.Join(", ", missingIds)}");
+                }
+            }
+            
+            finalMappingStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Query and map selected items to ItemModel ({selectedItemModels.Count} items): {finalMappingStopwatch.ElapsedMilliseconds}ms");
+
+            var response = new OutfitSuggestionModel
+            {
+                SuggestedItems = selectedItemModels,
+                Reason = outfitSelection.Reason
+            };
             
             overallStopwatch.Stop();
             Console.WriteLine($"[TIMING] *** TOTAL EXECUTION TIME: {overallStopwatch.ElapsedMilliseconds}ms ***");

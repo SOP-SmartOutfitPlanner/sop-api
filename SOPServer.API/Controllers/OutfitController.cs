@@ -61,11 +61,13 @@ namespace SOPServer.API.Controllers
         public Task<IActionResult> GetOutfitsByUser(
             [FromQuery] PaginationParameter paginationParameter,
             [FromQuery(Name = "is-favorite")] bool? isFavorite,
-            [FromQuery(Name = "is-saved")] bool? isSaved)
+            [FromQuery(Name = "is-saved")] bool? isSaved,
+            [FromQuery(Name = "start-date")] DateTime? startDate,
+            [FromQuery(Name = "end-date")] DateTime? endDate)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;
             long.TryParse(userIdClaim, out long userId);
-            return ValidateAndExecute(async () => await _outfitService.GetOutfitByUserPaginationAsync(paginationParameter, userId, isFavorite, isSaved));
+            return ValidateAndExecute(async () => await _outfitService.GetOutfitByUserPaginationAsync(paginationParameter, userId, isFavorite, isSaved, startDate, endDate));
         }
 
         /// <summary>

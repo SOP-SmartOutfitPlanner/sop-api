@@ -14,7 +14,12 @@ namespace SOPServer.Service.Services.Interfaces
     {
         Task<BaseResponseModel> GetOutfitByIdAsync(long id, long userId);
         Task<BaseResponseModel> GetAllOutfitPaginationAsync(PaginationParameter paginationParameter);
-        Task<BaseResponseModel> GetOutfitByUserPaginationAsync(PaginationParameter paginationParameter, long userId, bool? isFavorite, bool? isSaved);
+        Task<BaseResponseModel> GetOutfitByUserPaginationAsync(PaginationParameter paginationParameter,
+                                                               long userId,
+                                                               bool? isFavorite,
+                                                               bool? isSaved,
+                                                               DateTime? startDate,
+                                                               DateTime? endDate);
         Task<BaseResponseModel> CreateOutfitAsync(long userId, OutfitCreateModel model);
         Task<BaseResponseModel> UpdateOutfitAsync(long id, long userId, OutfitUpdateModel model);
         Task<BaseResponseModel> DeleteOutfitAsync(long id, long userId);

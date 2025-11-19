@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using PayOS.Models.Webhooks;
+using SOPServer.Service.Hubs;
 using SOPServer.Service.Services.Interfaces;
 
 namespace SOPServer.API.Controllers
@@ -11,6 +13,7 @@ namespace SOPServer.API.Controllers
     {
         private readonly IPayOSService _payOSService;
         private readonly IUserSubscriptionService _userSubscriptionService;
+        private readonly IHubContext<PaymentHub> _hubContext;
 
         public PaymentController(IPayOSService payOSService, IUserSubscriptionService userSubscriptionService)
         {
@@ -36,7 +39,7 @@ namespace SOPServer.API.Controllers
 
                 // Process payment and update subscription status
                 var result = await _userSubscriptionService.ProcessPaymentWebhookAsync(transactionId, paymentStatus);
-
+                await _hubContext.Clients.Group(webhookData.OrderCode.ToString()).SendAsync("PaymentStatusUpdated", result);
                 // Return success to PayOS (always 200 OK to prevent retries)
                 return Ok(new
                 {

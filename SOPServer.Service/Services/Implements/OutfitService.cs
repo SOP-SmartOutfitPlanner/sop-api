@@ -141,7 +141,13 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetOutfitByUserPaginationAsync(PaginationParameter paginationParameter, long userId, bool? isFavorite, bool? isSaved)
+        public async Task<BaseResponseModel> GetOutfitByUserPaginationAsync(
+                                                                            PaginationParameter paginationParameter,
+                                                                            long userId,
+                                                                            bool? isFavorite,
+                                                                            bool? isSaved,
+                                                                            DateTime? startDate,
+                                                                            DateTime? endDate)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
             if (user == null)
@@ -160,11 +166,12 @@ namespace SOPServer.Service.Services.Implements
                             (x.Name != null && x.Name.Contains(paginationParameter.Search)) ||
                             (x.Description != null && x.Description.Contains(paginationParameter.Search))) &&
                            (!isFavorite.HasValue || x.IsFavorite == isFavorite.Value) &&
-                           (!isSaved.HasValue || x.IsSaved == isSaved.Value),
+                           (!isSaved.HasValue || x.IsSaved == isSaved.Value) &&
+                           (!startDate.HasValue || x.CreatedDate >= startDate.Value) &&
+                           (!endDate.HasValue || x.CreatedDate <= endDate.Value),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
             var outfitModels = _mapper.Map<Pagination<OutfitModel>>(outfits);
-
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,

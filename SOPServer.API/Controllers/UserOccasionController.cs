@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SOPServer.API.Attributes;
 using SOPServer.Repository.Commons;
+using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.UserOccasionModels;
 using SOPServer.Service.Services.Interfaces;
 
@@ -94,8 +96,10 @@ namespace SOPServer.API.Controllers
         /// - `weatherSnapshot`: Weather information (optional)
         ///
         /// **Note:** UserId is extracted from JWT token automatically
+        /// **Note:** Subject to subscription limits based on user's plan
         /// </remarks>
         [HttpPost]
+        [CheckSubscriptionLimit(FeatureCode.PlanOccasion)]
         public Task<IActionResult> CreateUserOccasion([FromBody] UserOccasionCreateModel model)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;

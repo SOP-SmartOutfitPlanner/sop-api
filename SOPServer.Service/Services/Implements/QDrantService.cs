@@ -13,7 +13,7 @@ using System.Diagnostics;
 
 namespace SOPServer.Service.Services.Implements
 {
-    public class QDrantService : IQdrantService
+    public partial class QDrantService : IQdrantService
     {
         private readonly QDrantClientSettings _qdrantSettings;
         private readonly QdrantClient _client;
@@ -35,7 +35,7 @@ namespace SOPServer.Service.Services.Implements
             _mapper = mapper;
         }
 
-        public async Task EnsureCollectionExistsAsync()
+        public async Task EnsureCollectionExistsAsync(CancellationToken cancellationToken = default)
         {
             // Kiểm tra xem collection đã tồn tại chưa
             var collection = await _client.CollectionExistsAsync(_qdrantSettings.Collection);
@@ -53,7 +53,7 @@ namespace SOPServer.Service.Services.Implements
             }
         }
 
-        public async Task<bool> UpSertItem(List<float> embedding, Dictionary<string, object> payload, long id)
+        public async Task<bool> UpSertItem(List<float> embedding, Dictionary<string, object> payload, long id, CancellationToken cancellationToken = default)
         {
             var pointStruct = new PointStruct
             {
@@ -74,7 +74,7 @@ namespace SOPServer.Service.Services.Implements
             return result.Status == UpdateStatus.Completed;
         }
 
-        public async Task<bool> DeleteItem(long id)
+        public async Task<bool> DeleteItem(long id, CancellationToken cancellationToken = default)
         {
             var result = await _client.DeleteAsync(
                 collectionName: _qdrantSettings.Collection,
@@ -84,7 +84,7 @@ namespace SOPServer.Service.Services.Implements
             return result.Status == UpdateStatus.Completed;
         }
 
-        public async Task<List<QDrantSearchModels>> SearchSimilarityByUserId(string descriptionItem, long userId)
+        public async Task<List<QDrantSearchModels>> SearchSimilarityByUserId(string descriptionItem, long userId, CancellationToken cancellationToken = default)
         {
             Console.WriteLine("SearchSimilarityByUserId");
             Stopwatch sw = Stopwatch.StartNew();
@@ -110,7 +110,7 @@ namespace SOPServer.Service.Services.Implements
                         }
                     }
                 },
-                limit: 5
+                limit: 2
             );
 
             var result = new List<QDrantSearchModels>();
@@ -143,7 +143,7 @@ namespace SOPServer.Service.Services.Implements
             return result;
         }
 
-        public async Task<List<QDrantSearchModels>> SearchSimilarityItemSystem(string descriptionItem)
+        public async Task<List<QDrantSearchModels>> SearchSimilarityItemSystem(string descriptionItem, CancellationToken cancellationToken = default)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
             stopwatch.Start();
@@ -169,7 +169,7 @@ namespace SOPServer.Service.Services.Implements
                         }
                     }
                 },
-                limit: 5
+                limit: 2
             );
 
             var result = new List<QDrantSearchModels>();
@@ -199,10 +199,14 @@ namespace SOPServer.Service.Services.Implements
             }
             stopwatch.Stop();
             Console.WriteLine("SearchSimilarityItemSystem " + stopwatch.ElapsedMilliseconds + "ms");
+            foreach (var res in result)
+            {
+                Console.WriteLine($"Found ItemId: {res.Id} with Score: {res.Score}");
+            }
             return result;
         }
 
-        public async Task<List<ItemSearchResult>> SearchItemIdsByUserId(string descriptionItem, long userId)
+        public async Task<List<ItemSearchResult>> SearchItemIdsByUserId(string descriptionItem, long userId, CancellationToken cancellationToken = default)
         {
             Console.WriteLine("SearchItemIdsByUserId");
             var sw = Stopwatch.StartNew();
@@ -228,20 +232,22 @@ namespace SOPServer.Service.Services.Implements
                         }
                     }
                 },
-                limit: 5
+                limit: 2
             );
 
-            var result = searchResult
-                .Where(x => x.Score > 0.6)
-                .Select(x => new ItemSearchResult
-                {
-                    ItemId = long.Parse(x.Id.Num.ToString()),
-                    Score = x.Score
-                })
-                .ToList();
+            var result = searchResult != null && searchResult.Any()
+                ? searchResult
+                    .Where(x => x.Score > 0.6)
+                    .Select(x => new ItemSearchResult
+                    {
+                        ItemId = long.Parse(x.Id.Num.ToString()),
+                        Score = x.Score
+                    })
+                    .ToList()
+                : new List<ItemSearchResult>();
 
             sw.Stop();
-            Console.WriteLine("SearchItemIdsByUserId " + sw.ElapsedMilliseconds + "ms");
+            Console.WriteLine($"SearchItemIdsByUserId {sw.ElapsedMilliseconds}ms - Found {result.Count} items");
 
             return result;
         }

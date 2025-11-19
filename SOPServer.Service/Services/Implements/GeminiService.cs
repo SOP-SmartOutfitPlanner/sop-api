@@ -25,20 +25,21 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly GenerativeModel _generativeModel;
         private readonly EmbeddingModel _embeddingModel;
-        private readonly GenerativeModel _suggestionAiClient;
         private readonly QDrantClientSettings _qdrantClientSettings;
         private readonly ILogger<GeminiService> _logger;
+        private readonly Lazy<IQdrantService> _qdrantService;
         private readonly HashSet<string> _allowedMime = new(StringComparer.OrdinalIgnoreCase)
         {
             "image/jpeg", "image/png", "image/webp", "image/gif"
         };
 
 
-        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IOptions<QDrantClientSettings> qdrantClientSettings, ILogger<GeminiService> logger)
+        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IOptions<QDrantClientSettings> qdrantClientSettings, ILogger<GeminiService> logger, Lazy<IQdrantService> qdrantService)
         {
             _unitOfWork = unitOfWork;
             _qdrantClientSettings = qdrantClientSettings.Value;
             _logger = logger;
+            _qdrantService = qdrantService;
 
             // AI model for item analyzing
             var apiKeyAnalyzing = GetAiSettingValue(AISettingType.API_ITEM_ANALYZING);
@@ -51,11 +52,6 @@ namespace SOPServer.Service.Services.Implements
             var modelIdEmbedding = GetAiSettingValue(AISettingType.MODEL_EMBEDDING);
             var embeddingAiClient = new GoogleAi(apiKeyEmbedding);
             _embeddingModel = embeddingAiClient.CreateEmbeddingModel(modelIdEmbedding);
-
-            var apiKeySuggest = GetAiSettingValue(AISettingType.API_SUGGESTION);
-            var modelSuggestion = GetAiSettingValue(AISettingType.MODEL_SUGGESTION);
-            var suggestionAiClient = new GoogleAi(apiKeySuggest);
-            _suggestionAiClient = suggestionAiClient.CreateGenerativeModel(modelSuggestion);
         }
 
         private string GetAiSettingValue(AISettingType type)
@@ -221,59 +217,6 @@ namespace SOPServer.Service.Services.Implements
             return await _generativeModel.GenerateObjectAsync<CategoryItemAnalysisModel>(generateRequest);
         }
 
-        public async Task OutfitSuggestion(string occasion, string usercharacteristic, long userId, QuickTools tools)
-        {
-            var systemParts = new List<Part>
-            {
-                new Part { Text = @"You are an expert fashion stylist AI integrated with a vector-based retrieval system (Qdrant).
-Your task is to generate a complete outfit using the user’s characteristics and occasion.
-Follow this workflow exactly:
-Analyze the user info (characteristics, style preferences, occasion).
-Use the search item:
-First, search user items by calling the SearchSimilarityByUserId function.
-If user items are not sufficient, call the SearchSimilarityItemSystem function to retrieve system items.
-Select the most suitable items to form a coherent outfit.
-Combine the chosen items into a final outfit (list of item IDs).
-Explain shortly why these items were chosen (color harmony, style, season, occasion fit, etc.).
-Return the result strictly as JSON matching the structure of OutfitSelectionModel: {
-  ""itemIds"": [1, 2, 3],
-  ""reason"": ""...""
-} Do not include any extra text, no formatting, no explanation outside the JSON.
-Output only the JSON of OutfitSelectionModel."
-                },
-            };
-
-            var generateRequest = new GenerateContentRequest();
-
-            _suggestionAiClient.AddFunctionTool(tools);
-
-            generateRequest.SystemInstruction = new Content
-            {
-                Parts = systemParts
-            };
-
-            var userParts = new List<Part>
-                    {
-                        new Part { Text = usercharacteristic },
-                        new Part { Text = "User id: " + userId  },
-                    };
-
-            if (!string.IsNullOrEmpty(occasion))
-            {
-                userParts.Add(new Part { Text = occasion });
-            }
-
-            var userContent = new Content { Parts = userParts, Role = "user" };
-            var systemContent = new Content { Parts = systemParts, Role = "user" };
-            generateRequest.AddContent(userContent);
-            generateRequest.AddContent(systemContent);
-            Stopwatch sw = Stopwatch.StartNew();
-            sw.Start();
-            var response = await _suggestionAiClient.GenerateContentAsync(generateRequest);
-            sw.Stop();
-            Console.WriteLine("Suggest Item Time: " + sw.ElapsedMilliseconds + "ms");
-        }
-
         public async Task<List<string>> OutfitSuggestion(string occasion, string usercharacteristic)
         {
             var outfitPromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_GENERATION_PROMPT);
@@ -313,7 +256,7 @@ Output only the JSON of OutfitSelectionModel."
                 {
                     _logger.LogInformation("OutfitSuggestion: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
 
-                    var result = await _suggestionAiClient.GenerateObjectAsync<List<string>>(generateRequest);
+                    var result = await _generativeModel.GenerateObjectAsync<List<string>>(generateRequest);
 
                     if (result == null || result.Count() == 0)
                     {
@@ -349,7 +292,7 @@ Output only the JSON of OutfitSelectionModel."
             throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
         }
 
-        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, QuickTools tools)
+        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items)
         {
             var choosePromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_CHOOSE_PROMPT);
 
@@ -382,16 +325,6 @@ Output only the JSON of OutfitSelectionModel."
                 new Part { Text = choosePromptSetting.Value }
             };
 
-            var generateRequest = new GenerateContentRequest();
-
-            // Add function tool for searching system items if needed
-            _suggestionAiClient.AddFunctionTool(tools);
-
-            generateRequest.SystemInstruction = new Content
-            {
-                Parts = systemParts
-            };
-
             var userParts = new List<Part>
             {
                 new Part { Text = $"User Characteristics: {usercharacteristic}" },
@@ -401,10 +334,7 @@ Output only the JSON of OutfitSelectionModel."
             if (!string.IsNullOrEmpty(occasion))
             {
                 userParts.Add(new Part { Text = $"Occasion: {occasion}" });
-            }
-
-            var userContent = new Content { Parts = userParts, Role = "user" };
-            generateRequest.AddContent(userContent);
+            } else userParts.Add(new Part { Text = $"Occasion: null" });
 
             const int maxRetryAttempts = 5;
 
@@ -412,11 +342,49 @@ Output only the JSON of OutfitSelectionModel."
             {
                 try
                 {
-                    _logger.LogInformation("ChooseOutfit: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+                    QuickTools tools = new QuickTools([_qdrantService.Value.SearchSimilarityItemSystem]);
+                    var model = CreateSuggestionModel(tools);
 
-                    var response = await _suggestionAiClient.GenerateContentAsync(generateRequest);
-                    
-                    var result = JsonSerializer.Deserialize<OutfitSelectionModel>(response.Text);
+                    var generateRequest = new GenerateContentRequest();
+
+                    generateRequest.SystemInstruction = new Content
+                    {
+                        Parts = systemParts,
+                        Role = "system"
+                    };
+
+                    var userContent = new Content { Parts = userParts, Role = "user" };
+                    generateRequest.AddContent(userContent);
+
+                    var response = await model.GenerateContentAsync(generateRequest);
+                    Console.WriteLine("OUTFIT RESPONSE: " + response.Text);
+
+                    var requestJsonMode = new GenerateContentRequest();
+                    requestJsonMode.UseJsonMode<OutfitSelectionModel>();
+
+                    var systemFormatParts = new List<Part>
+                    {
+                        new Part { Text = @"Format a response to json mode for me { ""itemIds"": [12, 34], ""reason"": ""≤50 words about color harmony, style match, occasion fit."" }" }
+                    };
+
+                    var aiResponsePart = new List<Part>
+                    {
+                        new Part { Text = response.Text },
+                    };
+
+                    requestJsonMode.AddContent(new Content
+                    {
+                        Parts = aiResponsePart,
+                        Role = "user"
+                    });
+
+                    requestJsonMode.SystemInstruction = new Content
+                    {
+                        Parts = systemFormatParts,
+                        Role = "system"
+                    };
+
+                    var result = await _generativeModel.GenerateObjectAsync<OutfitSelectionModel>(requestJsonMode);
 
                     if (result == null || result.ItemIds == null || !result.ItemIds.Any())
                     {
@@ -426,11 +394,14 @@ Output only the JSON of OutfitSelectionModel."
                         {
                             throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: AI model returned empty outfit selection");
                         }
+
+                        await Task.Delay(500); // 500ms delay before retry
+
                         continue;
                     }
 
-                    _logger.LogInformation("ChooseOutfit: Successfully selected {Count} items on attempt {Attempt}. Reason: {Reason}",
-                              result.ItemIds.Count, attempt, result.Reason);
+                    _logger.LogInformation("ChooseOutfit: Successfully selected {Count} items on attempt {Attempt}", 
+                        result.ItemIds.Count, attempt);
 
                     return result;
                 }
@@ -446,10 +417,54 @@ Output only the JSON of OutfitSelectionModel."
                     {
                         throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: {ex.Message}");
                     }
+
+                    await Task.Delay(1000); // ví dụ 1.5s
                 }
             }
 
             throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
+        }
+
+        //private string CleanJsonResponse(string responseText)
+        //{
+        //    if (string.IsNullOrWhiteSpace(responseText))
+        //    {
+        //        return responseText;
+        //    }
+
+        //    var cleaned = responseText.Trim();
+
+        //    // Remove ```json at the start
+        //    if (cleaned.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        cleaned = cleaned.Substring("```json".Length).TrimStart();
+        //    }
+        //    else if (cleaned.StartsWith("```", StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        cleaned = cleaned.Substring("```".Length).TrimStart();
+        //    }
+
+        //    // Remove ``` at the end
+        //    if (cleaned.EndsWith("```", StringComparison.OrdinalIgnoreCase))
+        //    {
+        //        cleaned = cleaned.Substring(0, cleaned.Length - "```".Length).TrimEnd();
+        //    }
+
+        //    return cleaned;
+        //}
+
+        public GenerativeModel CreateSuggestionModel(QuickTools? tools = null)
+        {
+            var apiKeySuggest = GetAiSettingValue(AISettingType.API_SUGGESTION);
+            var modelSuggestion = GetAiSettingValue(AISettingType.MODEL_SUGGESTION);
+            var suggestionAiClient = new GoogleAi(apiKeySuggest);
+
+            var suggestClient = suggestionAiClient.CreateGenerativeModel(modelSuggestion);
+            if (tools != null)
+            {
+                suggestClient.AddFunctionTool(tools);
+            }
+            return suggestClient;
         }
     }
 }

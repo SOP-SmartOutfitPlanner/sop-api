@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using SOPServer.Repository.Enums;
 
 namespace SOPServer.Repository.Entities
 {
@@ -11,13 +12,9 @@ namespace SOPServer.Repository.Entities
 
         public string? Description { get; set; }
 
-        public int ChatRateLimit { get; set; }
+        public string? BenefitLimit { get; set; }
 
-        public int ItemLimit { get; set; }
-
-        public int AISuggestionLimit { get; set; }
-
-        public bool IsSuggestWeather { get; set; }
+        public SubscriptionPlanStatus Status { get; set; }
 
         public virtual ICollection<UserSubscription> UserSubscriptions { get; set; } = new List<UserSubscription>();
     }

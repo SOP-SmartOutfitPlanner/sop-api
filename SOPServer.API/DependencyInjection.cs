@@ -126,12 +126,29 @@ namespace SOPServer.API
             services.AddScoped<IAISettingRepository, AISettingRepository>();
             services.AddScoped<IAISettingService, AISettingService>();
 
+            // ========== SUBSCRIPTION PLAN MANAGEMENT ==========
+            services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
+            services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
+
+            services.AddScoped<IUserSubscriptionRepository, UserSubscriptionRepository>();
+            services.AddScoped<IUserSubscriptionService, UserSubscriptionService>();
+            services.AddScoped<ISubscriptionLimitService, SubscriptionLimitService>();
+            services.AddScoped<IBenefitUsageService, BenefitUsageService>();
+
+            // Register the action filters for subscription management
+            services.AddScoped<SOPServer.API.Attributes.SubscriptionLimitActionFilter>();
+            services.AddScoped<SOPServer.API.Attributes.SubscriptionCreditRestoreFilter>();
+            services.AddScoped<SOPServer.API.Attributes.ItemLimitActionFilter>();
+
             // ========== EXTERNAL SERVICES ==========
             services.AddScoped<IGeminiService, GeminiService>();
             services.AddScoped<IRedisService, RedisService>();
             services.AddScoped<IMinioService, MinioService>();
             services.AddScoped<IQdrantService, QDrantService>();
             services.AddScoped<IPayOSService, PayOSService>();
+
+            // ========== LAZY SERVICES (for circular dependency resolution) ==========
+            services.AddScoped<Lazy<IQdrantService>>(provider => new Lazy<IQdrantService>(() => provider.GetRequiredService<IQdrantService>()));
 
             // ========== EMAIL SERVICES ==========
             services.AddScoped<IMailService, MailService>();

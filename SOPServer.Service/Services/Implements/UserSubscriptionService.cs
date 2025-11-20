@@ -330,6 +330,7 @@ namespace SOPServer.Service.Services.Implements
                     {
                         UserId = transaction.UserSubscription.UserId,
                         TransactionId = transaction.Id,
+                        TransactionCode = transaction.TransactionCode,
                         Status = transaction.Status.ToString(),
                         UserSubscriptionId = transaction.UserSubscriptionId,
                         IsActive = transaction.UserSubscription.IsActive,
@@ -358,6 +359,7 @@ namespace SOPServer.Service.Services.Implements
                     {
                         UserId = transaction.UserSubscription.UserId,
                         TransactionId = transaction.Id,
+                        TransactionCode = transaction.TransactionCode,
                         Status = transaction.Status.ToString(),
                         UserSubscriptionId = transaction.UserSubscriptionId,
                         IsActive = transaction.UserSubscription.IsActive,
@@ -385,6 +387,7 @@ namespace SOPServer.Service.Services.Implements
                     {
                         UserId = transaction.UserSubscription.UserId,
                         TransactionId = transaction.Id,
+                        TransactionCode = transaction.TransactionCode,
                         Status = transaction.Status.ToString(),
                         UserSubscriptionId = transaction.UserSubscriptionId,
                         IsActive = transaction.UserSubscription.IsActive,

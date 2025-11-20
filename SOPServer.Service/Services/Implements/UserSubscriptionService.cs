@@ -141,7 +141,8 @@ namespace SOPServer.Service.Services.Implements
                 var freeTransaction = new UserSubscriptionTransaction
                 {
                     UserSubscriptionId = freeSubscription.Id,
-                    TransactionCode = $"FREE-{DateTime.UtcNow.Ticks}",
+                    UserId = userId,
+                    TransactionCode = GenerateTransactionCode(),
                     Price = 0,
                     Status = TransactionStatus.COMPLETED,
                     Description = string.Format(MessageConstants.USER_SUBSCRIPTION_FREE_DESCRIPTION, plan.Name),
@@ -190,7 +191,8 @@ namespace SOPServer.Service.Services.Implements
             var transaction = new UserSubscriptionTransaction
             {
                 UserSubscriptionId = userSubscription.Id,
-                TransactionCode = $"TXN-{DateTime.UtcNow.Ticks}",
+                UserId = userId,
+                TransactionCode = GenerateTransactionCode(),
                 Price = plan.Price,
                 Status = TransactionStatus.PENDING,
                 Description = string.Format(MessageConstants.USER_SUBSCRIPTION_PAYMENT_DESCRIPTION, plan.Name),
@@ -564,6 +566,15 @@ namespace SOPServer.Service.Services.Implements
             {
                 return new List<Benefit>();
             }
+        }
+
+        private int GenerateTransactionCode()
+        {
+            int timestamp = (int)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+            var random = new Random();
+            int randomComponent = random.Next(100, 999);
+            int transactionCode = Math.Abs((timestamp * 1000 + randomComponent) % int.MaxValue);
+            return transactionCode;
         }
     }
 }

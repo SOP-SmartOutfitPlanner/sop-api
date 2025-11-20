@@ -49,14 +49,18 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _userSubscriptionService.GetSubscriptionHistoryAsync(userId));
         }
 
-        /// <summary>
-        /// Purchase a subscription plan
-        /// </summary>
         [HttpPost("purchase")]
         public Task<IActionResult> PurchaseSubscription([FromBody] PurchaseSubscriptionRequestModel model)
         {
             var userId = long.Parse(User.FindFirst("UserId")?.Value ?? "0");
             return ValidateAndExecute(async () => await _userSubscriptionService.PurchaseSubscriptionAsync(userId, model));
+        }
+
+        [HttpDelete("cancel/{transactionId}")]
+        public Task<IActionResult> CancelPendingPayment(long transactionId)
+        {
+            var userId = long.Parse(User.FindFirst("UserId")?.Value ?? "0");
+            return ValidateAndExecute(async () => await _userSubscriptionService.CancelPendingPaymentAsync(userId, transactionId));
         }
     }
 }

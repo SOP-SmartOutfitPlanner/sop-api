@@ -38,7 +38,7 @@ namespace SOPServer.Repository.Repositories.Implements
         public async Task<List<UserNotification>> GetUserNotificationsByIdsAsync(List<long> notificationIds, long userId)
         {
             return await _context.Set<UserNotification>()
-                .Where(un => notificationIds.Contains(un.NotificationId)
+                .Where(un => notificationIds.Contains(un.Id)
                     && un.UserId == userId
                     && !un.IsDeleted)
                 .ToListAsync();

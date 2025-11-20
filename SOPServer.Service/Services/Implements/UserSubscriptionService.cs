@@ -286,13 +286,13 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> ProcessPaymentWebhookAsync(long transactionId, string paymentStatus)
+        public async Task<BaseResponseModel> ProcessPaymentWebhookAsync(long transactionCode, string paymentStatus)
         {
             // Find the transaction
             var transaction = await _unitOfWork.UserSubscriptionTransactionRepository.GetQueryable()
                 .Include(t => t.UserSubscription)
                     .ThenInclude(us => us.SubscriptionPlan)
-                .FirstOrDefaultAsync(t => t.Id == transactionId);
+                .FirstOrDefaultAsync(t => t.TransactionCode == transactionCode);
 
             if (transaction == null)
                 throw new NotFoundException(MessageConstants.USER_SUBSCRIPTION_TRANSACTION_NOT_FOUND);

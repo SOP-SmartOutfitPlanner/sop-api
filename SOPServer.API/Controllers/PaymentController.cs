@@ -33,7 +33,7 @@ namespace SOPServer.API.Controllers
             {
                 var webhookData = await _payOSService.VerifyPaymentWebhookAsync(webhook);
 
-                var transactionId = webhookData.OrderCode;
+                var transactionCode = webhookData.OrderCode;
                 var paymentStatus = webhookData.Code;
 
                 var result = await _userSubscriptionService.ProcessPaymentWebhookAsync(transactionId, paymentStatus);

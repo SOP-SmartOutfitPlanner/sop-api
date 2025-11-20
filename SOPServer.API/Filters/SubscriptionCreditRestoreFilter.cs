@@ -24,13 +24,16 @@ namespace SOPServer.API.Attributes
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            // Execute the action first (e.g., delete item)
             var executedContext = await next();
 
-            // Only increment if action succeeded and AutoIncrement is true
             if (AutoIncrement && executedContext.Exception == null)
             {
-                // Get user ID from claims
+                var roleClaim = context.HttpContext.User.FindFirst("role")?.Value;
+                if (roleClaim == "ADMIN")
+                {
+                    return;
+                }
+
                 var userIdClaim = context.HttpContext.User.FindFirst("UserId")?.Value;
 
                 if (!string.IsNullOrEmpty(userIdClaim) && long.TryParse(userIdClaim, out var userId))

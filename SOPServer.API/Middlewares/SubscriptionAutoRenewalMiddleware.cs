@@ -17,28 +17,29 @@ namespace SOPServer.API.Middlewares
 
         public async Task InvokeAsync(HttpContext context, IUserSubscriptionService subscriptionService)
         {
-            // Only check for authenticated users
             if (context.User?.Identity?.IsAuthenticated == true)
             {
+                var roleClaim = context.User.FindFirst("role")?.Value;
+                if (roleClaim == "ADMIN")
+                {
+                    await _next(context);
+                    return;
+                }
+
                 var userIdClaim = context.User.FindFirst("UserId")?.Value;
                 if (long.TryParse(userIdClaim, out long userId))
                 {
                     try
                     {
-                        // Ensure user has active subscription (auto-renew if needed)
-                        // Uses Redis caching to minimize DB overhead
                         await subscriptionService.EnsureUserHasActiveSubscriptionAsync(userId);
                     }
                     catch (Exception ex)
                     {
-                        // Log error but don't block request
-                        // Subscription checks in individual endpoints will catch any issues
                         Console.WriteLine($"Error in SubscriptionAutoRenewalMiddleware: {ex.Message}");
                     }
                 }
             }
 
-            // Continue to next middleware
             await _next(context);
         }
     }

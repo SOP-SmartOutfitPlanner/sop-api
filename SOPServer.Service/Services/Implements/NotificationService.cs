@@ -257,6 +257,7 @@ namespace SOPServer.Service.Services.Implements
         {
             // Validate user exists
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+
             if (user == null)
             {
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);

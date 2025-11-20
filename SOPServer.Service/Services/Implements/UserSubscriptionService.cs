@@ -273,6 +273,7 @@ namespace SOPServer.Service.Services.Implements
         {
             var subscriptions = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
                 .Include(s => s.SubscriptionPlan)
+                .Include(s => s.UserSubscriptionTransactions)
                 .Where(s => s.UserId == userId)
                 .OrderByDescending(s => s.CreatedDate)
                 .ToListAsync();
@@ -314,6 +315,13 @@ namespace SOPServer.Service.Services.Implements
 
                 transaction.UserSubscription.IsActive = true;
                 transaction.UserSubscription.UpdatedDate = DateTime.UtcNow;
+
+                var user = await _unitOfWork.UserRepository.GetByIdAsync(transaction.UserId);
+                if (user != null && transaction.UserSubscription.SubscriptionPlan.Price > 0)
+                {
+                    user.IsPremium = true;
+                    _unitOfWork.UserRepository.UpdateAsync(user);
+                }
 
                 _unitOfWork.UserSubscriptionTransactionRepository.UpdateAsync(transaction);
                 _unitOfWork.UserSubscriptionRepository.UpdateAsync(transaction.UserSubscription);
@@ -406,6 +414,7 @@ namespace SOPServer.Service.Services.Implements
                 return;
 
             var activeSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
+                .Include(s => s.SubscriptionPlan)
                 .Where(s => s.UserId == userId && s.IsActive && s.DateExp > DateTime.UtcNow)
                 .FirstOrDefaultAsync();
 
@@ -413,6 +422,21 @@ namespace SOPServer.Service.Services.Implements
             {
                 await _redisService.SetAsync(cacheKey, true, TimeSpan.FromMinutes(5));
                 return;
+            }
+
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user != null && user.IsPremium)
+            {
+                var hasPaidSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
+                    .Include(s => s.SubscriptionPlan)
+                    .AnyAsync(s => s.UserId == userId && s.IsActive && s.SubscriptionPlan.Price > 0);
+
+                if (!hasPaidSubscription)
+                {
+                    user.IsPremium = false;
+                    _unitOfWork.UserRepository.UpdateAsync(user);
+                    await _unitOfWork.SaveAsync();
+                }
             }
 
             var freePlan = (await _unitOfWork.SubscriptionPlanRepository.GetAllAsync())

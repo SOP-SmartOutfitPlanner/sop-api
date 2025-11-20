@@ -364,5 +364,6 @@ namespace SOPServer.Service.Constants
         public const string USER_SUBSCRIPTION_TRANSACTION_ALREADY_PROCESSED = "Transaction already processed with status: {0}";
         public const string USER_SUBSCRIPTION_FREE_DESCRIPTION = "Free subscription: {0}";
         public const string USER_SUBSCRIPTION_PAYMENT_DESCRIPTION = "Payment for {0} subscription";
+        public const string USER_SUBSCRIPTION_TRANSACTION_ALREADY_COMPLETED = "User subscription has been completed";
     }
 }

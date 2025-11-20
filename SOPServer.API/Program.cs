@@ -31,6 +31,8 @@ builder.Services.AddServiceConfiguration(builder.Configuration);
 // Database Configuration
 builder.Services.AddDatabaseConfiguration(builder.Configuration);
 
+builder.Services.AddSignalRConfiguration();
+
 // FirebaseApp Configuration
 FirebaseAppConfiguration.AddFirebaseAppConfiguration(env);
 
@@ -51,6 +53,8 @@ await app.UseQDrantInitializationAsync();
 
 // Middleware Pipeline (HTTPS, CORS, Authentication, Authorization, Exception Handling)
 app.UseMiddlewareConfiguration(CorsConfiguration.PolicyName);
+
+HubConfiguration.UseHub(app);
 
 // Map Controllers
 app.MapControllers();

@@ -189,10 +189,47 @@ namespace SOPServer.Service.Services.Implements
                             .ToLocalTime()
                             .Date;
 
+                        // Temperature data
                         double tempDay = (double)tempToken["day"];
                         double tempMin = (double)tempToken["min"];
                         double tempMax = (double)tempToken["max"];
+                        
+                        // Feels like temperature
+                        double feelsLikeDay = day["feels_like"]?["day"]?.Value<double>() ?? tempDay;
+                        
+                        // Pressure and humidity
+                        double pressure = day["pressure"]?.Value<double>() ?? 0;
+                        int humidity = day["humidity"]?.Value<int>() ?? 0;
+                        
+                        // Weather description
                         string desc = (string)weatherArray[0]["description"];
+                        
+                        // Wind data
+                        var windToken = day["wind"];
+                        double windSpeed = windToken?["speed"]?.Value<double>() ?? 0;
+                        int windDeg = windToken?["deg"]?.Value<int>() ?? 0;
+                        
+                        var windInfo = new WindInfo
+                        {
+                            Speed = new WindSpeed
+                            {
+                                Value = windSpeed,
+                                Unit = "m/s",
+                                Name = GetWindSpeedName(windSpeed)
+                            },
+                            Direction = new WindDirection
+                            {
+                                Value = windDeg,
+                                Code = GetWindDirectionCode(windDeg),
+                                Name = GetWindDirectionName(windDeg)
+                            }
+                        };
+                        
+                        // Cloud coverage
+                        int cloudCoverage = day["clouds"]?.Value<int>() ?? 0;
+                        
+                        // Rain (precipitation in mm/h)
+                        double? rain = day["rain"]?.Value<double?>();
 
                         result.DailyForecasts.Add(new DailyWeather
                         {
@@ -200,7 +237,13 @@ namespace SOPServer.Service.Services.Implements
                             Temperature = tempDay,
                             MinTemperature = tempMin,
                             MaxTemperature = tempMax,
-                            Description = desc
+                            FeelsLike = feelsLikeDay,
+                            Pressure = pressure,
+                            Humidity = humidity,
+                            Description = desc,
+                            Wind = windInfo,
+                            CloudCoverage = cloudCoverage,
+                            Rain = rain
                         });
                     }
                 }
@@ -260,6 +303,45 @@ namespace SOPServer.Service.Services.Implements
             }
 
             return fallback;
+        }
+
+        private static string GetWindDirectionCode(int degree)
+        {
+            var directions = new[] { "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW" };
+            int index = (int)Math.Round(((degree % 360) / 22.5));
+            if (index >= directions.Length) index = 0;
+            return directions[index];
+        }
+
+        private static string GetWindDirectionName(int degree)
+        {
+            var directions = new[] 
+            { 
+                "North", "North-Northeast", "Northeast", "East-Northeast", 
+                "East", "East-Southeast", "Southeast", "South-Southeast",
+                "South", "South-Southwest", "Southwest", "West-Southwest",
+                "West", "West-Northwest", "Northwest", "North-Northwest"
+            };
+            int index = (int)Math.Round(((degree % 360) / 22.5));
+            if (index >= directions.Length) index = 0;
+            return directions[index];
+        }
+
+        private static string GetWindSpeedName(double speed)
+        {
+            if (speed < 0.3) return "Calm";
+            if (speed < 1.6) return "Light air";
+            if (speed < 3.4) return "Light breeze";
+            if (speed < 5.5) return "Gentle breeze";
+            if (speed < 8.0) return "Moderate breeze";
+            if (speed < 10.8) return "Fresh breeze";
+            if (speed < 13.9) return "Strong breeze";
+            if (speed < 17.2) return "High wind";
+            if (speed < 20.8) return "Gale";
+            if (speed < 24.5) return "Strong gale";
+            if (speed < 28.5) return "Storm";
+            if (speed < 32.7) return "Violent storm";
+            return "Hurricane";
         }
     }
 }

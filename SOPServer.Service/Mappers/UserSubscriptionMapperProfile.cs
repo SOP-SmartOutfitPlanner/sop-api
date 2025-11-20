@@ -10,12 +10,14 @@ namespace SOPServer.Service.Mappers
     {
         public UserSubscriptionMapperProfile()
         {
-            // Entity -> Model (Deserialize JSON string to List<Benefit>)
             CreateMap<UserSubscription, UserSubscriptionModel>()
                 .ForMember(dest => dest.BenefitUsage, opt => opt.MapFrom(src =>
                     string.IsNullOrEmpty(src.BenefitUsed)
                         ? new List<Benefit>()
-                        : JsonSerializer.Deserialize<List<Benefit>>(src.BenefitUsed, (JsonSerializerOptions?)null) ?? new List<Benefit>()));
+                        : JsonSerializer.Deserialize<List<Benefit>>(src.BenefitUsed, (JsonSerializerOptions?)null) ?? new List<Benefit>()))
+                .ForMember(dest => dest.Transactions, opt => opt.MapFrom(src => src.UserSubscriptionTransactions));
+
+            CreateMap<UserSubscriptionTransaction, UserSubscriptionTransactionModel>();
         }
     }
 }

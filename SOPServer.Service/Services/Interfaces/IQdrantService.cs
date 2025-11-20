@@ -17,7 +17,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<bool> DeleteItem(long id, CancellationToken cancellationToken = default);
         Task<List<QDrantSearchModels>> SearchSimilarityByUserId(string descriptionItem, long userId, CancellationToken cancellationToken = default);
 
-        [Description("Search for top 5 items in system wardrobe matching with text descriptions")]
+        [Description("Search for items in system wardrobe matching with list text descriptions")]
         Task<List<QDrantSearchModels>> SearchSimilarityItemSystem([Description("List of item descriptions to find similarities")] List<string> descriptionItems, CancellationToken cancellationToken = default);
         
         /// <summary>

@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
@@ -11,6 +12,7 @@ using SOPServer.Service.BusinessModels.UserSubscriptionModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
+using SOPServer.Service.SettingModels;
 using System.Text.Json;
 
 namespace SOPServer.Service.Services.Implements
@@ -21,13 +23,15 @@ namespace SOPServer.Service.Services.Implements
         private readonly IMapper _mapper;
         private readonly IPayOSService _payOSService;
         private readonly IRedisService _redisService;
+        private readonly PayOSSettings _payOSSettings;
 
-        public UserSubscriptionService(IUnitOfWork unitOfWork, IMapper mapper, IPayOSService payOSService, IRedisService redisService)
+        public UserSubscriptionService(IUnitOfWork unitOfWork, IMapper mapper, IPayOSService payOSService, IRedisService redisService, IOptions<PayOSSettings> payOSSettings)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _payOSService = payOSService;
             _redisService = redisService;
+            _payOSSettings = payOSSettings.Value;
         }
 
         public async Task<BaseResponseModel> PurchaseSubscriptionAsync(long userId, PurchaseSubscriptionRequestModel model)
@@ -89,7 +93,6 @@ namespace SOPServer.Service.Services.Implements
 
                 if (pendingTransaction != null)
                 {
-                    // User already has a pending payment, return existing payment QR code
                     var existingPaymentLink = await _payOSService.CreatePaymentUrl((int)pendingSubscription.Id);
                     return new BaseResponseModel
                     {
@@ -102,7 +105,14 @@ namespace SOPServer.Service.Services.Implements
                             Amount = plan.Price,
                             SubscriptionPlanName = plan.Name,
                             TransactionId = pendingTransaction.Id,
-                            ExpiredAt = existingPaymentLink.ExpiredAt
+                            ExpiredAt = existingPaymentLink.ExpiredAt,
+                            BankInfo = new
+                            {
+                                AccountNumber = _payOSSettings.BankAccountNumber,
+                                AccountName = _payOSSettings.BankAccountName,
+                                BankName = _payOSSettings.BankName,
+                                BankCode = _payOSSettings.BankCode
+                            }
                         }
                     };
                 }
@@ -210,7 +220,14 @@ namespace SOPServer.Service.Services.Implements
                     SubscriptionPlanName = plan.Name,
                     UserSubscriptionId = userSubscription.Id,
                     TransactionId = transaction.Id,
-                    ExpiredAt = paymentLink.ExpiredAt
+                    ExpiredAt = paymentLink.ExpiredAt,
+                    BankInfo = new
+                    {
+                        AccountNumber = _payOSSettings.BankAccountNumber,
+                        AccountName = _payOSSettings.BankAccountName,
+                        BankName = _payOSSettings.BankName,
+                        BankCode = _payOSSettings.BankCode
+                    }
                 }
             };
         }

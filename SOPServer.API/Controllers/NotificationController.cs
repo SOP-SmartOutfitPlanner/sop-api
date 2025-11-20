@@ -70,7 +70,7 @@ namespace SOPServer.API.Controllers
         public Task<IActionResult> GetNotificationsByUserId(
             [FromQuery] PaginationParameter paginationParameter,
             long userId,
-            [FromQuery] int type = 0,
+            [FromQuery] int? type,
             [FromQuery] bool? isRead = null)
         {
             //var userIdClaim = User.FindFirst("UserId")?.Value;

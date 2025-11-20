@@ -12,7 +12,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> PushNotification(NotificationRequestModel model);
         // Read
         Task<BaseResponseModel> GetNotificationById(long id);
-        Task<BaseResponseModel> GetNotificationsByUserId(PaginationParameter paginationParameter, long userId, int type, bool? isRead);
+        Task<BaseResponseModel> GetNotificationsByUserId(PaginationParameter paginationParameter, long userId, int? type, bool? isRead);
         Task<BaseResponseModel> GetUnreadNotificationCount(long userId);
         Task<BaseResponseModel> GetSystemNotifications(PaginationParameter paginationParameter, bool newestFirst, string? searchTerm);
         Task<BaseResponseModel> GetAllNotifications(PaginationParameter paginationParameter);

@@ -141,7 +141,13 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetOutfitByUserPaginationAsync(PaginationParameter paginationParameter, long userId, bool? isFavorite, bool? isSaved)
+        public async Task<BaseResponseModel> GetOutfitByUserPaginationAsync(
+                                                                            PaginationParameter paginationParameter,
+                                                                            long userId,
+                                                                            bool? isFavorite,
+                                                                            bool? isSaved,
+                                                                            DateTime? startDate,
+                                                                            DateTime? endDate)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
             if (user == null)
@@ -160,11 +166,12 @@ namespace SOPServer.Service.Services.Implements
                             (x.Name != null && x.Name.Contains(paginationParameter.Search)) ||
                             (x.Description != null && x.Description.Contains(paginationParameter.Search))) &&
                            (!isFavorite.HasValue || x.IsFavorite == isFavorite.Value) &&
-                           (!isSaved.HasValue || x.IsSaved == isSaved.Value),
+                           (!isSaved.HasValue || x.IsSaved == isSaved.Value) &&
+                           (!startDate.HasValue || x.CreatedDate >= startDate.Value) &&
+                           (!endDate.HasValue || x.CreatedDate <= endDate.Value),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
 
             var outfitModels = _mapper.Map<Pagination<OutfitModel>>(outfits);
-
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
@@ -667,7 +674,6 @@ namespace SOPServer.Service.Services.Implements
                 {
                     throw new BadRequestException("Time is required when IsDaily is true");
                 }
-
                 if (model.UserOccasionId.HasValue)
                 {
                     throw new BadRequestException("UserOccasionId should not be provided when IsDaily is true. The Daily occasion will be auto-created.");
@@ -680,7 +686,6 @@ namespace SOPServer.Service.Services.Implements
                 {
                     throw new BadRequestException("UserOccasionId is required when IsDaily is false");
                 }
-
                 if (model.Time.HasValue)
                 {
                     throw new BadRequestException("Time should not be provided when IsDaily is false. Use the UserOccasion's time instead.");
@@ -696,35 +701,52 @@ namespace SOPServer.Service.Services.Implements
                 {
                     throw new NotFoundException($"Outfit with ID {outfitId} not found");
                 }
-
                 if (outfit.UserId != userId)
                 {
                     throw new ForbiddenException($"Access denied to outfit {outfitId}");
                 }
-
                 outfits.Add(outfit);
             }
 
             // Handle Daily outfit logic
             long? userOccasionId = null;
-
             if (model.IsDaily)
             {
-                // Always create a new "Daily" UserOccasion with the provided time
-                var dailyOccasion = new UserOccasion
-                {
-                    UserId = userId,
-                    Name = "Daily",
-                    Description = "Daily outfit schedule",
-                    DateOccasion = model.Time.Value.Date,
-                    StartTime = model.Time.Value,
-                    EndTime = model.EndTime,
-                    OccasionId = null
-                };
-                await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
-                await _unitOfWork.SaveAsync();
+                var targetDate = model.Time.Value.Date;
 
-                userOccasionId = dailyOccasion.Id;
+                // Check if a "Daily" UserOccasion already exists for this user on this date
+                var existingDailyOccasions = await _unitOfWork.UserOccasionRepository
+                    .GetAllAsync();
+
+                var existingDailyOccasion = existingDailyOccasions
+                    .FirstOrDefault(uo => uo.UserId == userId
+                                       && uo.Name == "Daily"
+                                       && uo.OccasionId == 7
+                                       && uo.DateOccasion.Date == targetDate
+                                       && !uo.IsDeleted);
+
+                if (existingDailyOccasion != null)
+                {
+                    // Use the existing Daily UserOccasion
+                    userOccasionId = existingDailyOccasion.Id;
+                }
+                else
+                {
+                    // Create a new "Daily" UserOccasion
+                    var dailyOccasion = new UserOccasion
+                    {
+                        UserId = userId,
+                        Name = "Daily",
+                        Description = "Daily outfit schedule",
+                        DateOccasion = targetDate,
+                        StartTime = model.Time.Value,
+                        EndTime = model.EndTime,
+                        OccasionId = 7
+                    };
+                    await _unitOfWork.UserOccasionRepository.AddAsync(dailyOccasion);
+                    await _unitOfWork.SaveAsync();
+                    userOccasionId = dailyOccasion.Id;
+                }
             }
             else
             {
@@ -734,20 +756,31 @@ namespace SOPServer.Service.Services.Implements
                 {
                     throw new NotFoundException(MessageConstants.USER_OCCASION_NOT_FOUND);
                 }
-
                 if (userOccasion.UserId != userId)
                 {
                     throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
                 }
-
                 userOccasionId = model.UserOccasionId.Value;
             }
 
+            // Get existing outfits for this UserOccasion to prevent duplicates
+            var existingOutfitCalendars = await _unitOfWork.OutfitRepository
+                .GetOutfitCalendarByUserOccasionAsync(userOccasionId.Value, userId);
+
+            var existingOutfitIds = existingOutfitCalendars
+                .Select(oc => oc.OutfitId)
+                .ToHashSet();
+
             // Create calendar entries for all outfits
             var createdCalendars = new List<OutfitCalendarModel>();
-
             foreach (var outfitId in model.OutfitIds)
             {
+                // Check if outfit already exists in this UserOccasion
+                if (existingOutfitIds.Contains(outfitId))
+                {
+                    throw new BadRequestException($"Outfit with ID {outfitId} is already added to this occasion");
+                }
+
                 var outfitCalendar = new OutfitUsageHistory
                 {
                     UserId = userId,
@@ -755,7 +788,6 @@ namespace SOPServer.Service.Services.Implements
                     UserOccassionId = userOccasionId,
                     CreatedBy = OutfitCreatedBy.USER
                 };
-
                 await _unitOfWork.OutfitRepository.AddOutfitCalendarAsync(outfitCalendar);
                 await _unitOfWork.SaveAsync();
 
@@ -1023,20 +1055,20 @@ namespace SOPServer.Service.Services.Implements
             searchStopwatch.Stop();
             Console.WriteLine($"[TIMING] Qdrant parallel search ({listItem.Count} queries): {searchStopwatch.ElapsedMilliseconds}ms");
 
-            // Get all items by IDs
+            // Get all items by IDs with full details including related data
             var dbStopwatch = Stopwatch.StartNew();
             var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(allItemIds.Select(x => x.ItemId).ToList());
             dbStopwatch.Stop();
             Console.WriteLine($"[TIMING] Database query for items ({allItemIds.Count} ids): {dbStopwatch.ElapsedMilliseconds}ms");
 
-            // Map items to QDrantSearchModels
+            // Map items to QDrantSearchModels for Gemini selection
             var mappingStopwatch = Stopwatch.StartNew();
             var listPartItems = items.Select(item =>
             {
                 var itemModel = _mapper.Map<ItemModel>(item);
                 var searchModel = new QDrantSearchModels
                 {
-                    Id = (int)item.Id,
+                    Id = item.Id,
                     ItemName = itemModel.Name,
                     ImgURL = itemModel.ImgUrl,
                     Colors = string.IsNullOrEmpty(itemModel.Color)
@@ -1060,9 +1092,51 @@ namespace SOPServer.Service.Services.Implements
 
             // Choose outfit from the search results
             var chooseOutfitStopwatch = Stopwatch.StartNew();
-            var response = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems);
+            var outfitSelection = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems);
             chooseOutfitStopwatch.Stop();
             Console.WriteLine($"[TIMING] Gemini choose outfit: {chooseOutfitStopwatch.ElapsedMilliseconds}ms");
+            Console.WriteLine($"[DEBUG] Gemini selected {outfitSelection.ItemIds?.Count ?? 0} items: {string.Join(", ", outfitSelection.ItemIds ?? new List<long>())}");
+
+            // Query database for the exact items Gemini selected
+            // This handles both user items AND system items that Gemini might choose
+            var finalMappingStopwatch = Stopwatch.StartNew();
+            
+            var selectedItemModels = new List<ItemModel>();
+            if (outfitSelection.ItemIds != null && outfitSelection.ItemIds.Any())
+            {
+                Console.WriteLine($"[DEBUG] Fetching {outfitSelection.ItemIds.Count} selected items from database...");
+                
+                // Query database for selected items with all relationships
+                var selectedItems = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(outfitSelection.ItemIds);
+                
+                Console.WriteLine($"[DEBUG] Database returned {selectedItems.Count} items");
+                
+                // Map to ItemModel
+                selectedItemModels = selectedItems.Select(item => _mapper.Map<ItemModel>(item)).ToList();
+                
+                // Log what we found
+                foreach (var item in selectedItems)
+                {
+                    Console.WriteLine($"[DEBUG] Mapped item ID {item.Id} ({item.Name}) to ItemModel");
+                }
+                
+                // Check for missing items
+                var foundIds = selectedItems.Select(i => i.Id).ToHashSet();
+                var missingIds = outfitSelection.ItemIds.Where(id => !foundIds.Contains(id)).ToList();
+                if (missingIds.Any())
+                {
+                    Console.WriteLine($"[WARNING] Items not found in database: {string.Join(", ", missingIds)}");
+                }
+            }
+            
+            finalMappingStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Query and map selected items to ItemModel ({selectedItemModels.Count} items): {finalMappingStopwatch.ElapsedMilliseconds}ms");
+
+            var response = new OutfitSuggestionModel
+            {
+                SuggestedItems = selectedItemModels,
+                Reason = outfitSelection.Reason
+            };
             
             overallStopwatch.Stop();
             Console.WriteLine($"[TIMING] *** TOTAL EXECUTION TIME: {overallStopwatch.ElapsedMilliseconds}ms ***");

@@ -36,7 +36,7 @@ namespace SOPServer.API.Controllers
                 var transactionCode = webhookData.OrderCode;
                 var paymentStatus = webhookData.Code;
 
-                var result = await _userSubscriptionService.ProcessPaymentWebhookAsync(transactionId, paymentStatus);
+                var result = await _userSubscriptionService.ProcessPaymentWebhookAsync(transactionCode, paymentStatus);
 
                 await _hubContext.Clients.Group(webhookData.OrderCode.ToString()).SendAsync("PaymentStatusUpdated", result);
 

@@ -204,10 +204,9 @@ namespace SOPServer.Service.Services.Implements
                         // Weather description
                         string desc = (string)weatherArray[0]["description"];
                         
-                        // Wind data
-                        var windToken = day["wind"];
-                        double windSpeed = windToken?["speed"]?.Value<double>() ?? 0;
-                        int windDeg = windToken?["deg"]?.Value<int>() ?? 0;
+                        // Wind data - in daily forecast API, speed and deg are at root level, not in a "wind" object
+                        double windSpeed = day["speed"]?.Value<double>() ?? 0;
+                        int windDeg = day["deg"]?.Value<int>() ?? 0;
                         
                         var windInfo = new WindInfo
                         {

@@ -108,10 +108,9 @@ namespace SOPServer.Service.Services.Implements
                             ExpiredAt = existingPaymentLink.ExpiredAt,
                             BankInfo = new
                             {
-                                AccountNumber = _payOSSettings.BankAccountNumber,
-                                AccountName = _payOSSettings.BankAccountName,
-                                BankName = _payOSSettings.BankName,
-                                BankCode = _payOSSettings.BankCode
+                                Bin = existingPaymentLink.Bin,
+                                AccountNumber = existingPaymentLink.AccountNumber,
+                                AccountName = existingPaymentLink.AccountName
                             }
                         }
                     };
@@ -223,10 +222,9 @@ namespace SOPServer.Service.Services.Implements
                     ExpiredAt = paymentLink.ExpiredAt,
                     BankInfo = new
                     {
-                        AccountNumber = _payOSSettings.BankAccountNumber,
-                        AccountName = _payOSSettings.BankAccountName,
-                        BankName = _payOSSettings.BankName,
-                        BankCode = _payOSSettings.BankCode
+                        Bin = paymentLink.Bin,
+                        AccountNumber = paymentLink.AccountNumber,
+                        AccountName = paymentLink.AccountName
                     }
                 }
             };

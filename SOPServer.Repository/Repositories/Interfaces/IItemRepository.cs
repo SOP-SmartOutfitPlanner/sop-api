@@ -18,5 +18,18 @@ namespace SOPServer.Repository.Repositories.Interfaces
         /// Get items by their IDs with all related data included
         /// </summary>
         Task<List<Item>> GetItemsByIdsAsync(List<long> itemIds);
+
+        /// <summary>
+        /// Query items for a user based on multiple criteria (category, styles, occasions, seasons, colors)
+        /// </summary>
+        Task<List<Item>> QueryItemsByCriteriaAsync(
+            long userId,
+            string? category = null,
+            List<string>? styles = null,
+            List<string>? occasions = null,
+            List<string>? seasons = null,
+            List<string>? colors = null,
+            string? weatherSuitable = null,
+            int maxResults = 10);
     }
 }

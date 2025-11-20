@@ -292,6 +292,88 @@ namespace SOPServer.Service.Services.Implements
             throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
         }
 
+        public async Task<ItemQueryStructure> OutfitSuggestionStructured(string occasion, string usercharacteristic)
+        {
+            var outfitPromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_GENERATION_PROMPT);
+
+            var systemParts = new List<Part>
+            {
+                new Part { Text = outfitPromptSetting.Value + 
+                    "\n\nIMPORTANT: Return a structured JSON with item criteria including category, styles, occasions, seasons, colors, and weatherSuitable for each clothing piece needed in the outfit. " +
+                    "Be specific but flexible enough to match actual items in the user's wardrobe. Each outfit should have 3-6 items (e.g., top, bottom, shoes, and optional accessories/outerwear)." }
+            };
+
+            var generateRequest = new GenerateContentRequest();
+
+            generateRequest.SystemInstruction = new Content
+            {
+                Parts = systemParts
+            };
+
+            var userParts = new List<Part>
+            {
+                new Part { Text = $"User Characteristics: {usercharacteristic}" }
+            };
+
+            if (!string.IsNullOrEmpty(occasion))
+            {
+                userParts.Add(new Part { Text = $"Occasion: {occasion}" });
+            }
+
+            var userContent = new Content { Parts = userParts, Role = "user" };
+            generateRequest.AddContent(userContent);
+
+            generateRequest.UseJsonMode<ItemQueryStructure>();
+            generateRequest.GenerationConfig = new GenerationConfig
+            {
+                Temperature = 0.7f,
+                MaxOutputTokens = 2000
+            };
+
+            const int maxRetryAttempts = 3;
+
+            for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
+            {
+                try
+                {
+                    _logger.LogInformation("OutfitSuggestionStructured: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    var result = await _generativeModel.GenerateObjectAsync<ItemQueryStructure>(generateRequest);
+
+                    if (result == null || result.Items == null || result.Items.Count == 0)
+                    {
+                        _logger.LogWarning("OutfitSuggestionStructured: Attempt {Attempt} returned empty result", attempt);
+
+                        if (attempt == maxRetryAttempts)
+                        {
+                            throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: AI model returned empty outfit criteria");
+                        }
+                        continue;
+                    }
+
+                    _logger.LogInformation("OutfitSuggestionStructured: Successfully generated {Count} item criteria on attempt {Attempt}",
+                        result.Items.Count, attempt);
+
+                    return result;
+                }
+                catch (BadRequestException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "OutfitSuggestionStructured: Error on attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    if (attempt == maxRetryAttempts)
+                    {
+                        throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: {ex.Message}");
+                    }
+                }
+            }
+
+            throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
+        }
+
         public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items)
         {
             var choosePromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_CHOOSE_PROMPT);
@@ -355,6 +437,13 @@ namespace SOPServer.Service.Services.Implements
 
                     var userContent = new Content { Parts = userParts, Role = "user" };
                     generateRequest.AddContent(userContent);
+
+                    // Add temperature for variety in outfit selection
+                    generateRequest.GenerationConfig = new GenerationConfig
+                    {
+                        Temperature = 0.8f,
+                        MaxOutputTokens = 2000
+                    };
 
                     var response = await model.GenerateContentAsync(generateRequest);
                     Console.WriteLine("OUTFIT RESPONSE: " + response.Text);

@@ -57,5 +57,78 @@ namespace SOPServer.Repository.Repositories.Implements
                 .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
                 .ToListAsync();
         }
+
+        public async Task<List<Item>> QueryItemsByCriteriaAsync(
+            long userId,
+            string? category = null,
+            List<string>? styles = null,
+            List<string>? occasions = null,
+            List<string>? seasons = null,
+            List<string>? colors = null,
+            string? weatherSuitable = null,
+            int maxResults = 10)
+        {
+            var query = _context.Items
+                .Where(x => !x.IsDeleted && x.UserId == userId)
+                .Include(x => x.Category)
+                .Include(x => x.User)
+                .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+                .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+                .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
+                .AsQueryable();
+
+            // Filter by category name (case-insensitive)
+            if (!string.IsNullOrWhiteSpace(category))
+            {
+                query = query.Where(x => x.Category != null && 
+                    x.Category.Name.ToLower().Contains(category.ToLower()));
+            }
+
+            // Filter by styles (any match)
+            if (styles != null && styles.Any())
+            {
+                var lowerStyles = styles.Select(s => s.ToLower()).ToList();
+                query = query.Where(x => x.ItemStyles.Any(ist => 
+                    ist.Style != null && lowerStyles.Contains(ist.Style.Name.ToLower())));
+            }
+
+            // Filter by occasions (any match)
+            if (occasions != null && occasions.Any())
+            {
+                var lowerOccasions = occasions.Select(o => o.ToLower()).ToList();
+                query = query.Where(x => x.ItemOccasions.Any(io => 
+                    io.Occasion != null && lowerOccasions.Contains(io.Occasion.Name.ToLower())));
+            }
+
+            // Filter by seasons (any match)
+            if (seasons != null && seasons.Any())
+            {
+                var lowerSeasons = seasons.Select(s => s.ToLower()).ToList();
+                query = query.Where(x => x.ItemSeasons.Any(ise => 
+                    ise.Season != null && lowerSeasons.Contains(ise.Season.Name.ToLower())));
+            }
+
+            // Filter by weather suitable (case-insensitive contains)
+            if (!string.IsNullOrWhiteSpace(weatherSuitable))
+            {
+                query = query.Where(x => x.WeatherSuitable != null && 
+                    x.WeatherSuitable.ToLower().Contains(weatherSuitable.ToLower()));
+            }
+
+            // Filter by colors (check if any of the requested colors exist in the item's color JSON)
+            if (colors != null && colors.Any())
+            {
+                var lowerColors = colors.Select(c => c.ToLower()).ToList();
+                query = query.Where(x => x.Color != null && 
+                    lowerColors.Any(color => x.Color.ToLower().Contains(color)));
+            }
+
+            // Order by analyzed confidence and take max results
+            return await query
+                .OrderByDescending(x => x.AIConfidence ?? 0)
+                .ThenByDescending(x => x.LastWornAt)
+                .Take(maxResults)
+                .ToListAsync();
+        }
     }
 }

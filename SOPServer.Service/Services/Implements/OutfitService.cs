@@ -1040,30 +1040,67 @@ namespace SOPServer.Service.Services.Implements
             characteristicStopwatch.Stop();
             Console.WriteLine($"[TIMING] Get user characteristics: {characteristicStopwatch.ElapsedMilliseconds}ms");
 
-            // Get outfit suggestions from Gemini
+            // Step 1: Get structured item criteria from Gemini (with variety via temperature)
             var geminiStopwatch = Stopwatch.StartNew();
-            var listItem = await _geminiService.OutfitSuggestion(occasionString, characteristicString);
-            listItem.ForEach(x => Console.WriteLine(x));
+            var itemQueryStructure = await _geminiService.OutfitSuggestionStructured(occasionString, characteristicString);
+            Console.WriteLine($"[DEBUG] Gemini returned {itemQueryStructure.Items.Count} item criteria");
             geminiStopwatch.Stop();
-            Console.WriteLine($"[TIMING] Gemini outfit suggestion: {geminiStopwatch.ElapsedMilliseconds}ms");
+            Console.WriteLine($"[TIMING] Gemini structured outfit suggestion: {geminiStopwatch.ElapsedMilliseconds}ms");
 
-            // Execute searches in parallel
-            var searchStopwatch = Stopwatch.StartNew();
-            var searchTasks = listItem.Select(item => _qdrantService.SearchItemIdsByUserId(item, userId)).ToList();
-            var searchResults = await Task.WhenAll(searchTasks);
-            var allItemIds = searchResults.SelectMany(result => result).ToList();
-            searchStopwatch.Stop();
-            Console.WriteLine($"[TIMING] Qdrant parallel search ({listItem.Count} queries): {searchStopwatch.ElapsedMilliseconds}ms");
+            // Step 2: Query database for items matching each criteria
+            var dbQueryStopwatch = Stopwatch.StartNew();
+            var allCandidateItems = new List<Item>();
+            var criteriaMatchMap = new Dictionary<int, List<Item>>(); // Track which items match which criteria
 
-            // Get all items by IDs with full details including related data
-            var dbStopwatch = Stopwatch.StartNew();
-            var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(allItemIds.Select(x => x.ItemId).ToList());
-            dbStopwatch.Stop();
-            Console.WriteLine($"[TIMING] Database query for items ({allItemIds.Count} ids): {dbStopwatch.ElapsedMilliseconds}ms");
+            for (int i = 0; i < itemQueryStructure.Items.Count; i++)
+            {
+                var criteria = itemQueryStructure.Items[i];
+                Console.WriteLine($"[DEBUG] Querying for criteria {i + 1}: Category={criteria.Category}, " +
+                    $"Styles={string.Join(",", criteria.Styles ?? new List<string>())}, " +
+                    $"Occasions={string.Join(",", criteria.Occasions ?? new List<string>())}, " +
+                    $"Seasons={string.Join(",", criteria.Seasons ?? new List<string>())}");
 
-            // Map items to QDrantSearchModels for Gemini selection
+                var matchingItems = await _unitOfWork.ItemRepository.QueryItemsByCriteriaAsync(
+                    userId,
+                    criteria.Category,
+                    criteria.Styles,
+                    criteria.Occasions,
+                    criteria.Seasons,
+                    criteria.Colors,
+                    criteria.WeatherSuitable,
+                    maxResults: 15 // Get more candidates for Gemini to choose from
+                );
+
+                Console.WriteLine($"[DEBUG] Found {matchingItems.Count} items matching criteria {i + 1}");
+                criteriaMatchMap[i] = matchingItems;
+                allCandidateItems.AddRange(matchingItems);
+            }
+
+            // Remove duplicates (same item might match multiple criteria)
+            var uniqueItems = allCandidateItems.GroupBy(x => x.Id).Select(g => g.First()).ToList();
+            Console.WriteLine($"[DEBUG] Total unique candidate items: {uniqueItems.Count}");
+            dbQueryStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Database query for candidate items: {dbQueryStopwatch.ElapsedMilliseconds}ms");
+
+            // If no items found, return empty suggestion
+            if (!uniqueItems.Any())
+            {
+                Console.WriteLine("[WARNING] No items found matching any criteria");
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "No suitable items found in your wardrobe for this outfit",
+                    Data = new OutfitSuggestionModel
+                    {
+                        SuggestedItems = new List<ItemModel>(),
+                        Reason = "No items in your wardrobe match the suggested outfit criteria. Try adding more items or adjusting your preferences."
+                    }
+                };
+            }
+
+            // Step 3: Map items to QDrantSearchModels for Gemini selection
             var mappingStopwatch = Stopwatch.StartNew();
-            var listPartItems = items.Select(item =>
+            var listPartItems = uniqueItems.Select(item =>
             {
                 var itemModel = _mapper.Map<ItemModel>(item);
                 var searchModel = new QDrantSearchModels
@@ -1083,22 +1120,21 @@ namespace SOPServer.Service.Services.Implements
                     Occasions = itemModel.Occasions,
                     Seasons = itemModel.Seasons,
                     Confidence = itemModel.AIConfidence,
-                    Score = allItemIds.FirstOrDefault(x => x.ItemId == item.Id)?.Score ?? 0
+                    Score = 1.0f // Default score since we're using DB query instead of vector search
                 };
                 return searchModel;
             }).ToList();
             mappingStopwatch.Stop();
-            Console.WriteLine($"[TIMING] Map items to search models ({items.Count} items): {mappingStopwatch.ElapsedMilliseconds}ms");
+            Console.WriteLine($"[TIMING] Map items to search models ({uniqueItems.Count} items): {mappingStopwatch.ElapsedMilliseconds}ms");
 
-            // Choose outfit from the search results
+            // Step 4: Let Gemini choose the best outfit combination (with variety via temperature)
             var chooseOutfitStopwatch = Stopwatch.StartNew();
             var outfitSelection = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems);
             chooseOutfitStopwatch.Stop();
             Console.WriteLine($"[TIMING] Gemini choose outfit: {chooseOutfitStopwatch.ElapsedMilliseconds}ms");
             Console.WriteLine($"[DEBUG] Gemini selected {outfitSelection.ItemIds?.Count ?? 0} items: {string.Join(", ", outfitSelection.ItemIds ?? new List<long>())}");
 
-            // Query database for the exact items Gemini selected
-            // This handles both user items AND system items that Gemini might choose
+            // Step 5: Query database for the exact items Gemini selected
             var finalMappingStopwatch = Stopwatch.StartNew();
             
             var selectedItemModels = new List<ItemModel>();

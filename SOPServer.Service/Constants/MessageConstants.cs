@@ -365,8 +365,5 @@ namespace SOPServer.Service.Constants
         public const string USER_SUBSCRIPTION_FREE_DESCRIPTION = "Free subscription: {0}";
         public const string USER_SUBSCRIPTION_PAYMENT_DESCRIPTION = "Payment for {0} subscription";
         public const string USER_SUBSCRIPTION_TRANSACTION_ALREADY_COMPLETED = "User subscription has been completed";
-        public const string USER_SUBSCRIPTION_PAYMENT_CANCELLED = "Payment cancelled successfully";
-        public const string USER_SUBSCRIPTION_TRANSACTION_NOT_PENDING = "Cannot cancel transaction. Transaction must be in pending status";
-        public const string USER_SUBSCRIPTION_TRANSACTION_NOT_OWNED = "You do not have permission to cancel this transaction";
     }
 }

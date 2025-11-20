@@ -46,7 +46,7 @@ namespace SOPServer.Service.Hubs
                     break;
             }
 
-            await Groups.AddToGroupAsync(Context.ConnectionId, userSubTrans.TransactionCode.ToString());
+            await Groups.AddToGroupAsync(Context.ConnectionId, userSubTrans.TransactionCode);
         }
 
         public async Task RemoveGroup(long userSubTransId)
@@ -57,7 +57,7 @@ namespace SOPServer.Service.Hubs
                 throw new NotFoundException(MessageConstants.USER_SUBSCRIPTION_TRANSACTION_NOT_FOUND);
             }
 
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, userSubTrans.TransactionCode.ToString());
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, userSubTrans.TransactionCode);
         }
     }
 }

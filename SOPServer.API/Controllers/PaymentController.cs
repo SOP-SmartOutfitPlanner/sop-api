@@ -15,11 +15,10 @@ namespace SOPServer.API.Controllers
         private readonly IUserSubscriptionService _userSubscriptionService;
         private readonly IHubContext<PaymentHub> _hubContext;
 
-        public PaymentController(IPayOSService payOSService, IUserSubscriptionService userSubscriptionService, IHubContext<PaymentHub> hubContext)
+        public PaymentController(IPayOSService payOSService, IUserSubscriptionService userSubscriptionService)
         {
             _payOSService = payOSService;
             _userSubscriptionService = userSubscriptionService;
-            _hubContext = hubContext;
         }
 
         /// <summary>
@@ -31,15 +30,17 @@ namespace SOPServer.API.Controllers
         {
             try
             {
+                // Verify webhook signature from PayOS
                 var webhookData = await _payOSService.VerifyPaymentWebhookAsync(webhook);
 
+                // Extract transaction ID and payment status
                 var transactionId = webhookData.OrderCode;
-                var paymentStatus = webhookData.Code;
+                var paymentStatus = webhookData.Code; // "00" = success, other codes = failed
 
+                // Process payment and update subscription status
                 var result = await _userSubscriptionService.ProcessPaymentWebhookAsync(transactionId, paymentStatus);
-
                 await _hubContext.Clients.Group(webhookData.OrderCode.ToString()).SendAsync("PaymentStatusUpdated", result);
-
+                // Return success to PayOS (always 200 OK to prevent retries)
                 return Ok(new
                 {
                     success = true,
@@ -49,6 +50,8 @@ namespace SOPServer.API.Controllers
             }
             catch (Exception ex)
             {
+                // Log error but return 200 to PayOS to avoid retries
+                // PayOS will not retry if we return 200
                 return Ok(new
                 {
                     success = false,

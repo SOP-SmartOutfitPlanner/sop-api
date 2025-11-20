@@ -60,7 +60,7 @@ namespace SOPServer.Service.Services.Implements
             var paymentData =
                 new CreatePaymentLinkRequest()
                 {
-                    OrderCode = transaction.TransactionCode,
+                    OrderCode = transaction.Id,
                     Amount = (long)transaction.Price,
                     Description = MessageConstants.SUBSCRIPTION_TRANSACTION_DESCRIPTION + userSubscription.SubscriptionPlan.Name,
                     Items = items,

@@ -89,6 +89,7 @@ namespace SOPServer.Service.Services.Implements
 
                 if (pendingTransaction != null)
                 {
+                    // User already has a pending payment, return existing payment QR code
                     var existingPaymentLink = await _payOSService.CreatePaymentUrl((int)pendingSubscription.Id);
                     return new BaseResponseModel
                     {
@@ -101,13 +102,7 @@ namespace SOPServer.Service.Services.Implements
                             Amount = plan.Price,
                             SubscriptionPlanName = plan.Name,
                             TransactionId = pendingTransaction.Id,
-                            ExpiredAt = existingPaymentLink.ExpiredAt,
-                            BankInfo = new
-                            {
-                                Bin = existingPaymentLink.Bin,
-                                AccountNumber = existingPaymentLink.AccountNumber,
-                                AccountName = existingPaymentLink.AccountName
-                            }
+                            ExpiredAt = existingPaymentLink.ExpiredAt
                         }
                     };
                 }
@@ -141,8 +136,7 @@ namespace SOPServer.Service.Services.Implements
                 var freeTransaction = new UserSubscriptionTransaction
                 {
                     UserSubscriptionId = freeSubscription.Id,
-                    UserId = userId,
-                    TransactionCode = GenerateTransactionCode(),
+                    TransactionCode = $"FREE-{DateTime.UtcNow.Ticks}",
                     Price = 0,
                     Status = TransactionStatus.COMPLETED,
                     Description = string.Format(MessageConstants.USER_SUBSCRIPTION_FREE_DESCRIPTION, plan.Name),
@@ -191,8 +185,7 @@ namespace SOPServer.Service.Services.Implements
             var transaction = new UserSubscriptionTransaction
             {
                 UserSubscriptionId = userSubscription.Id,
-                UserId = userId,
-                TransactionCode = GenerateTransactionCode(),
+                TransactionCode = $"TXN-{DateTime.UtcNow.Ticks}",
                 Price = plan.Price,
                 Status = TransactionStatus.PENDING,
                 Description = string.Format(MessageConstants.USER_SUBSCRIPTION_PAYMENT_DESCRIPTION, plan.Name),
@@ -217,13 +210,7 @@ namespace SOPServer.Service.Services.Implements
                     SubscriptionPlanName = plan.Name,
                     UserSubscriptionId = userSubscription.Id,
                     TransactionId = transaction.Id,
-                    ExpiredAt = paymentLink.ExpiredAt,
-                    BankInfo = new
-                    {
-                        Bin = paymentLink.Bin,
-                        AccountNumber = paymentLink.AccountNumber,
-                        AccountName = paymentLink.AccountName
-                    }
+                    ExpiredAt = paymentLink.ExpiredAt
                 }
             };
         }
@@ -273,7 +260,6 @@ namespace SOPServer.Service.Services.Implements
         {
             var subscriptions = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
                 .Include(s => s.SubscriptionPlan)
-                .Include(s => s.UserSubscriptionTransactions)
                 .Where(s => s.UserId == userId)
                 .OrderByDescending(s => s.CreatedDate)
                 .ToListAsync();
@@ -308,25 +294,22 @@ namespace SOPServer.Service.Services.Implements
                 };
             }
 
-            if (paymentStatus == "PAID" || paymentStatus == "00")
+            // Process based on payment status from PayOS webhook
+            if (paymentStatus == "PAID" || paymentStatus == "00") // PayOS success codes
             {
+                // Update transaction status to COMPLETED
                 transaction.Status = TransactionStatus.COMPLETED;
                 transaction.UpdatedDate = DateTime.UtcNow;
 
+                // Activate the subscription
                 transaction.UserSubscription.IsActive = true;
                 transaction.UserSubscription.UpdatedDate = DateTime.UtcNow;
-
-                var user = await _unitOfWork.UserRepository.GetByIdAsync(transaction.UserId);
-                if (user != null && transaction.UserSubscription.SubscriptionPlan.Price > 0)
-                {
-                    user.IsPremium = true;
-                    _unitOfWork.UserRepository.UpdateAsync(user);
-                }
 
                 _unitOfWork.UserSubscriptionTransactionRepository.UpdateAsync(transaction);
                 _unitOfWork.UserSubscriptionRepository.UpdateAsync(transaction.UserSubscription);
                 await _unitOfWork.SaveAsync();
 
+                // Clear Redis cache to ensure middleware picks up activated subscription
                 var cacheKey = $"user_subscription_check:{transaction.UserSubscription.UserId}";
                 await _redisService.RemoveAsync(cacheKey);
 
@@ -338,7 +321,6 @@ namespace SOPServer.Service.Services.Implements
                     {
                         UserId = transaction.UserSubscription.UserId,
                         TransactionId = transaction.Id,
-                        TransactionCode = transaction.TransactionCode,
                         Status = transaction.Status.ToString(),
                         UserSubscriptionId = transaction.UserSubscriptionId,
                         IsActive = transaction.UserSubscription.IsActive,
@@ -347,39 +329,13 @@ namespace SOPServer.Service.Services.Implements
                     }
                 };
             }
-            else if (paymentStatus == "CANCELLED" || paymentStatus == "CANCELED")
+            else // Payment failed or cancelled
             {
-                transaction.Status = TransactionStatus.CANCELLED;
-                transaction.UpdatedDate = DateTime.UtcNow;
-
-                transaction.UserSubscription.IsActive = false;
-                transaction.UserSubscription.UpdatedDate = DateTime.UtcNow;
-
-                _unitOfWork.UserSubscriptionTransactionRepository.UpdateAsync(transaction);
-                _unitOfWork.UserSubscriptionRepository.UpdateAsync(transaction.UserSubscription);
-                await _unitOfWork.SaveAsync();
-
-                return new BaseResponseModel
-                {
-                    StatusCode = StatusCodes.Status200OK,
-                    Message = MessageConstants.USER_SUBSCRIPTION_PAYMENT_CANCELLED,
-                    Data = new
-                    {
-                        UserId = transaction.UserSubscription.UserId,
-                        TransactionId = transaction.Id,
-                        TransactionCode = transaction.TransactionCode,
-                        Status = transaction.Status.ToString(),
-                        UserSubscriptionId = transaction.UserSubscriptionId,
-                        IsActive = transaction.UserSubscription.IsActive,
-                        SubscriptionPlanName = transaction.UserSubscription.SubscriptionPlan.Name
-                    }
-                };
-            }
-            else
-            {
+                // Update transaction status to FAILED
                 transaction.Status = TransactionStatus.FAILED;
                 transaction.UpdatedDate = DateTime.UtcNow;
 
+                // Keep subscription inactive
                 transaction.UserSubscription.IsActive = false;
                 transaction.UserSubscription.UpdatedDate = DateTime.UtcNow;
 
@@ -395,7 +351,6 @@ namespace SOPServer.Service.Services.Implements
                     {
                         UserId = transaction.UserSubscription.UserId,
                         TransactionId = transaction.Id,
-                        TransactionCode = transaction.TransactionCode,
                         Status = transaction.Status.ToString(),
                         UserSubscriptionId = transaction.UserSubscriptionId,
                         IsActive = transaction.UserSubscription.IsActive,
@@ -407,55 +362,47 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task EnsureUserHasActiveSubscriptionAsync(long userId)
         {
+            // Check cache first to avoid DB query on every request
             var cacheKey = $"user_subscription_check:{userId}";
             var hasCachedSubscription = await _redisService.ExistsAsync(cacheKey);
 
             if (hasCachedSubscription)
-                return;
+                return; // User has active subscription (cached)
 
+            // Check database for active subscription
             var activeSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
-                .Include(s => s.SubscriptionPlan)
                 .Where(s => s.UserId == userId && s.IsActive && s.DateExp > DateTime.UtcNow)
                 .FirstOrDefaultAsync();
 
             if (activeSubscription != null)
             {
+                // User has active subscription, cache it for 5 minutes
                 await _redisService.SetAsync(cacheKey, true, TimeSpan.FromMinutes(5));
                 return;
             }
 
-            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
-            if (user != null && user.IsPremium)
-            {
-                var hasPaidSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
-                    .Include(s => s.SubscriptionPlan)
-                    .AnyAsync(s => s.UserId == userId && s.IsActive && s.SubscriptionPlan.Price > 0);
-
-                if (!hasPaidSubscription)
-                {
-                    user.IsPremium = false;
-                    _unitOfWork.UserRepository.UpdateAsync(user);
-                    await _unitOfWork.SaveAsync();
-                }
-            }
-
+            // User has no active subscription - auto-create free plan
             var freePlan = (await _unitOfWork.SubscriptionPlanRepository.GetAllAsync())
                 .FirstOrDefault(p => p.Price == 0 && p.Status == SubscriptionPlanStatus.ACTIVE);
 
             if (freePlan == null)
             {
+                // No free plan exists, user cannot use the app
+                // This should never happen in production - free plan should always exist
                 return;
             }
 
+            // Deserialize free plan benefits
             var planBenefits = DeserializeBenefitLimit(freePlan.BenefitLimit);
 
+            // Create new free subscription
             var newSubscription = new UserSubscription
             {
                 UserId = userId,
                 SubscriptionPlanId = freePlan.Id,
-                DateExp = DateTime.UtcNow.AddMonths(1),
+                DateExp = DateTime.UtcNow.AddMonths(1), // 1 month free subscription
                 IsActive = true,
-                BenefitUsed = JsonSerializer.Serialize(planBenefits),
+                BenefitUsed = JsonSerializer.Serialize(planBenefits), // Fresh credits
                 CreatedDate = DateTime.UtcNow,
                 UpdatedDate = DateTime.UtcNow
             };
@@ -463,54 +410,8 @@ namespace SOPServer.Service.Services.Implements
             await _unitOfWork.UserSubscriptionRepository.AddAsync(newSubscription);
             await _unitOfWork.SaveAsync();
 
+            // Cache the subscription status for 5 minutes
             await _redisService.SetAsync(cacheKey, true, TimeSpan.FromMinutes(5));
-        }
-
-        public async Task<BaseResponseModel> CancelPendingPaymentAsync(long userId, long transactionId)
-        {
-            var transaction = await _unitOfWork.UserSubscriptionTransactionRepository.GetQueryable()
-                .Include(t => t.UserSubscription)
-                    .ThenInclude(us => us.SubscriptionPlan)
-                .FirstOrDefaultAsync(t => t.Id == transactionId);
-
-            if (transaction == null)
-                throw new NotFoundException(MessageConstants.USER_SUBSCRIPTION_TRANSACTION_NOT_FOUND);
-
-            if (transaction.UserSubscription.UserId != userId)
-                throw new UnauthorizedAccessException(MessageConstants.USER_SUBSCRIPTION_TRANSACTION_NOT_OWNED);
-
-            if (transaction.Status != TransactionStatus.PENDING)
-                throw new BadRequestException(MessageConstants.USER_SUBSCRIPTION_TRANSACTION_NOT_PENDING);
-
-            try
-            {
-                await _payOSService.CancelPayment((int)transactionId, "Cancelled by user");
-            }
-            catch
-            {
-            }
-
-            transaction.Status = TransactionStatus.CANCELLED;
-            transaction.UpdatedDate = DateTime.UtcNow;
-
-            transaction.UserSubscription.IsActive = false;
-            transaction.UserSubscription.UpdatedDate = DateTime.UtcNow;
-
-            _unitOfWork.UserSubscriptionTransactionRepository.UpdateAsync(transaction);
-            _unitOfWork.UserSubscriptionRepository.UpdateAsync(transaction.UserSubscription);
-            await _unitOfWork.SaveAsync();
-
-            return new BaseResponseModel
-            {
-                StatusCode = StatusCodes.Status200OK,
-                Message = MessageConstants.USER_SUBSCRIPTION_PAYMENT_CANCELLED,
-                Data = new
-                {
-                    TransactionId = transaction.Id,
-                    Status = transaction.Status.ToString(),
-                    SubscriptionPlanName = transaction.UserSubscription.SubscriptionPlan.Name
-                }
-            };
         }
 
         /// <summary>
@@ -593,15 +494,6 @@ namespace SOPServer.Service.Services.Implements
             {
                 return new List<Benefit>();
             }
-        }
-
-        private int GenerateTransactionCode()
-        {
-            int timestamp = (int)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-            var random = new Random();
-            int randomComponent = random.Next(100, 999);
-            int transactionCode = Math.Abs((timestamp * 1000 + randomComponent) % int.MaxValue);
-            return transactionCode;
         }
     }
 }

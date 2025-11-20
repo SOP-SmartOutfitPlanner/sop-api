@@ -12,7 +12,6 @@ namespace SOPServer.Service.BusinessModels.UserSubscriptionModels
         public bool IsActive { get; set; }
         public List<Benefit> BenefitUsage { get; set; } = new List<Benefit>();
         public SubscriptionPlanModel? SubscriptionPlan { get; set; }
-        public List<UserSubscriptionTransactionModel> Transactions { get; set; } = new List<UserSubscriptionTransactionModel>();
         public DateTime CreatedDate { get; set; }
     }
 }

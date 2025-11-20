@@ -24,17 +24,21 @@ namespace SOPServer.API.Attributes
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            // Get user ID from claims
-            var userIdClaim = context.HttpContext.User.FindFirst("UserId")?.Value;
-
-            if (string.IsNullOrEmpty(userIdClaim) || !long.TryParse(userIdClaim, out var userId))
+            var roleClaim = context.HttpContext.User.FindFirst("role")?.Value;
+            if (roleClaim == "ADMIN")
             {
-                // If user is not authenticated, let the [Authorize] attribute handle it
                 await next();
                 return;
             }
 
-            // Check if user can use this feature (has remaining credits)
+            var userIdClaim = context.HttpContext.User.FindFirst("UserId")?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !long.TryParse(userIdClaim, out var userId))
+            {
+                await next();
+                return;
+            }
+
             var canUse = await _benefitUsageService.CanUseFeatureAsync(userId, FeatureCode);
 
             if (!canUse)

@@ -27,12 +27,17 @@ namespace SOPServer.API.Attributes
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            // Get user ID from claims
+            var roleClaim = context.HttpContext.User.FindFirst("role")?.Value;
+            if (roleClaim == "ADMIN")
+            {
+                await next();
+                return;
+            }
+
             var userIdClaim = context.HttpContext.User.FindFirst("UserId")?.Value;
 
             if (string.IsNullOrEmpty(userIdClaim) || !long.TryParse(userIdClaim, out var userId))
             {
-                // If user is not authenticated, let the [Authorize] attribute handle it
                 await next();
                 return;
             }

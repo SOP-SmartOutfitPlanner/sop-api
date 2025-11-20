@@ -1,7 +1,6 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
@@ -12,7 +11,6 @@ using SOPServer.Service.BusinessModels.UserSubscriptionModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
-using SOPServer.Service.SettingModels;
 using System.Text.Json;
 
 namespace SOPServer.Service.Services.Implements
@@ -23,15 +21,13 @@ namespace SOPServer.Service.Services.Implements
         private readonly IMapper _mapper;
         private readonly IPayOSService _payOSService;
         private readonly IRedisService _redisService;
-        private readonly PayOSSettings _payOSSettings;
 
-        public UserSubscriptionService(IUnitOfWork unitOfWork, IMapper mapper, IPayOSService payOSService, IRedisService redisService, IOptions<PayOSSettings> payOSSettings)
+        public UserSubscriptionService(IUnitOfWork unitOfWork, IMapper mapper, IPayOSService payOSService, IRedisService redisService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _payOSService = payOSService;
             _redisService = redisService;
-            _payOSSettings = payOSSettings.Value;
         }
 
         public async Task<BaseResponseModel> PurchaseSubscriptionAsync(long userId, PurchaseSubscriptionRequestModel model)

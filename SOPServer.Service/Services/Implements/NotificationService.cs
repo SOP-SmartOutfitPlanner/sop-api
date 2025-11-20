@@ -11,6 +11,7 @@ using SOPServer.Service.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,12 +25,14 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ILogger<NotificationService> _logger;
 
-        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IServiceScopeFactory scopeFactory)
+        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IServiceScopeFactory scopeFactory, ILogger<NotificationService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _scopeFactory = scopeFactory;
+            _logger = logger;
         }
 
         public async Task<BaseResponseModel> GetNotificationById(long id)
@@ -96,9 +99,23 @@ namespace SOPServer.Service.Services.Implements
                 };
             }
 
-            foreach (var device in userDevices)
+            // Collect tokens and send via batch method
+            var tokens = userDevices.Select(d => d.DeviceToken).Distinct().ToList();
+            
+            try
             {
-                await FirebaseLibrary.SendMessageFireBase(model.Title, model.Message, device.DeviceToken);
+                var tokensNotValid = await FirebaseLibrary.SendRangeMessageFireBase(model.Title, model.Message, tokens);
+
+                // Remove invalid tokens
+                if (tokensNotValid.Any())
+                {
+                    await RemoveTokenNotValid(tokensNotValid);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending Firebase notification to user {UserId}", userId);
+                // Continue execution - notification is saved in DB even if push fails
             }
 
             return new BaseResponseModel
@@ -108,7 +125,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetNotificationsByUserId(PaginationParameter paginationParameter, long userId, int type, bool? isRead)
+        public async Task<BaseResponseModel> GetNotificationsByUserId(PaginationParameter paginationParameter, long userId, int? type, bool? isRead)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
             if (user == null)
@@ -116,14 +133,22 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
-            if (!Enum.TryParse(type.ToString(), out NotificationType notificationType))
+            NotificationType? notificationType = null;
+            if (type.HasValue)
             {
-                throw new BadRequestException(MessageConstants.ENUM_NOTIFICATION_NOT_VALID);
+                if (!Enum.TryParse(type.Value.ToString(), out NotificationType parsedType))
+                {
+                    throw new BadRequestException(MessageConstants.ENUM_NOTIFICATION_NOT_VALID);
+                }
+                notificationType = parsedType;
             }
 
             var notifications = await _unitOfWork.UserNotificationRepository.ToPaginationIncludeAsync(
                 paginationParameter,
-                filter: x => x.UserId == userId && !x.IsDeleted && x.Notification.Type == notificationType && (isRead == null || x.IsRead == isRead),
+                filter: x => x.UserId == userId && 
+                            !x.IsDeleted && 
+                            (notificationType == null || x.Notification.Type == notificationType) && 
+                            (isRead == null || x.IsRead == isRead),
                 include: query => query
                     .Include(x => x.Notification)
                         .ThenInclude(n => n.ActorUser)
@@ -324,7 +349,18 @@ namespace SOPServer.Service.Services.Implements
             await _unitOfWork.SaveAsync();
 
             // Fire-and-forget background task to create user notifications and send Firebase
-            _ = ProcessNotificationInBackground(notification.Id, model.Title, model.Message);
+            // Use Task.Run to ensure it runs on thread pool
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await ProcessNotificationInBackground(notification.Id, model.Title, model.Message);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing notification in background for NotificationId: {NotificationId}", notification.Id);
+                }
+            });
 
             return new BaseResponseModel
             {
@@ -387,14 +423,19 @@ namespace SOPServer.Service.Services.Implements
             // Create a new scope so we use scoped services safely in a background task
             using var scope = _scopeFactory.CreateScope();
             var scopedUnitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+            var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<NotificationService>>();
 
             try
             {
+                scopedLogger.LogInformation("Starting background notification processing for NotificationId: {NotificationId}", notificationId);
+
                 // Get all users to create user notifications (in background, không block API response)
                 var allUsers = await scopedUnitOfWork.UserRepository.GetQueryable()
                         .Where(u => !u.IsDeleted)
                         .Select(u => u.Id)
                         .ToListAsync();
+
+                scopedLogger.LogInformation("Found {UserCount} users for notification", allUsers.Count);
 
                 // Batch create user notifications
                 var userNotifications = allUsers.Select(userId => new UserNotification
@@ -407,6 +448,8 @@ namespace SOPServer.Service.Services.Implements
                 await scopedUnitOfWork.UserNotificationRepository.AddRangeAsync(userNotifications);
                 await scopedUnitOfWork.SaveAsync();
 
+                scopedLogger.LogInformation("Created {Count} user notifications", userNotifications.Count);
+
                 // Get all user devices for push notifications
                 var userDevices = await scopedUnitOfWork.UserDeviceRepository.GetAllWithUser();
 
@@ -414,10 +457,14 @@ namespace SOPServer.Service.Services.Implements
                 {
                     var tokens = userDevices.Select(x => x.DeviceToken).Distinct().ToList();
 
+                    scopedLogger.LogInformation("Sending Firebase notifications to {TokenCount} devices", tokens.Count);
+
                     var tokensNotValid = await FirebaseLibrary.SendRangeMessageFireBase(title, message, tokens);
 
                     if (tokensNotValid.Any())
                     {
+                        scopedLogger.LogWarning("Found {InvalidTokenCount} invalid tokens", tokensNotValid.Count);
+
                         // Remove invalid tokens
                         foreach (var token in tokensNotValid)
                         {
@@ -429,11 +476,18 @@ namespace SOPServer.Service.Services.Implements
                         }
                         await scopedUnitOfWork.SaveAsync();
                     }
+
+                    scopedLogger.LogInformation("Successfully completed background notification processing");
+                }
+                else
+                {
+                    scopedLogger.LogWarning("No user devices found for push notifications");
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                scopedLogger.LogError(ex, "Error in ProcessNotificationInBackground for NotificationId: {NotificationId}", notificationId);
+                throw; // Re-throw to be caught by the outer try-catch in Task.Run
             }
         }
 

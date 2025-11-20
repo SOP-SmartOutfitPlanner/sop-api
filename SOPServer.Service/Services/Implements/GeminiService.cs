@@ -228,6 +228,12 @@ namespace SOPServer.Service.Services.Implements
 
             var generateRequest = new GenerateContentRequest();
 
+            generateRequest.GenerationConfig = new GenerationConfig
+            {
+                Temperature = 0.7f,
+                MaxOutputTokens = 800
+            };
+
             generateRequest.SystemInstruction = new Content
             {
                 Parts = systemParts
@@ -346,7 +352,11 @@ namespace SOPServer.Service.Services.Implements
                     var model = CreateSuggestionModel(tools);
 
                     var generateRequest = new GenerateContentRequest();
-
+                    generateRequest.GenerationConfig = new GenerationConfig
+                    {
+                        Temperature = 0.5f,
+                        MaxOutputTokens = 2000
+                    };
                     generateRequest.SystemInstruction = new Content
                     {
                         Parts = systemParts,

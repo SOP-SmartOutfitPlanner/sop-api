@@ -5,58 +5,51 @@ using System.ComponentModel.DataAnnotations;
 namespace SOPServer.Service.BusinessModels.DashboardModels
 {
     /// <summary>
-    /// Collection statistics dashboard model
+    /// Post statistics dashboard model
     /// </summary>
-    public class CollectionStatisticsModel
+    public class PostStatisticsModel
     {
-        public int TotalCollections { get; set; }
-        public int PublishedCollections { get; set; }
-        public int UnpublishedCollections { get; set; }
+        public int TotalPosts { get; set; }
         public int TotalLikes { get; set; }
         public int TotalComments { get; set; }
-        public int TotalSaves { get; set; }
         public int TotalFollowers { get; set; }
         public int FollowersThisMonth { get; set; }
-        public List<MonthlyStatisticsModel> MonthlyStats { get; set; } = new List<MonthlyStatisticsModel>();
-        public List<TopCollectionModel> TopCollections { get; set; } = new List<TopCollectionModel>();
+        public List<MonthlyPostStatisticsModel> MonthlyStats { get; set; } = new List<MonthlyPostStatisticsModel>();
+        public List<TopPostModel> TopPosts { get; set; } = new List<TopPostModel>();
     }
 
     /// <summary>
-    /// Monthly statistics breakdown
+    /// Monthly post statistics breakdown
     /// </summary>
-    public class MonthlyStatisticsModel
+    public class MonthlyPostStatisticsModel
     {
         public int Month { get; set; }
         public int Year { get; set; }
         public string MonthName { get; set; }
-        public int CollectionsCreated { get; set; }
+        public int PostsCreated { get; set; }
         public int LikesReceived { get; set; }
         public int CommentsReceived { get; set; }
-        public int SavesReceived { get; set; }
         public int TotalEngagement { get; set; }
     }
 
     /// <summary>
-    /// Top performing collection model
+    /// Top performing post model
     /// </summary>
-    public class TopCollectionModel
+    public class TopPostModel
     {
         public long Id { get; set; }
-        public string? ThumbnailURL { get; set; }
-        public string Title { get; set; }
-        public string ShortDescription { get; set; }
-        public bool IsPublished { get; set; }
+        public string Body { get; set; }
+        public List<string> Images { get; set; } = new List<string>();
         public int LikeCount { get; set; }
         public int CommentCount { get; set; }
-        public int SaveCount { get; set; }
         public int TotalEngagement { get; set; }
         public DateTime CreatedDate { get; set; }
     }
 
     /// <summary>
-    /// Filter model for dashboard statistics
+    /// Filter model for post dashboard statistics
     /// </summary>
-    public class DashboardFilterModel
+    public class PostDashboardFilterModel
     {
         /// <summary>
         /// Filter by specific year (default: current year)
@@ -73,10 +66,10 @@ namespace SOPServer.Service.BusinessModels.DashboardModels
         public int? Month { get; set; }
 
         /// <summary>
-        /// Number of top collections to return (default: 5, min: 1, max: 50)
+        /// Number of top posts to return (default: 5, min: 1, max: 50)
         /// </summary>
         /// <example>10</example>
-        [Range(1, 50, ErrorMessage = "Top collections count must be between 1 and 50")]
-        public int TopCollectionsCount { get; set; } = 5;
+        [Range(1, 50, ErrorMessage = "Top posts count must be between 1 and 50")]
+        public int TopPostsCount { get; set; } = 5;
     }
 }

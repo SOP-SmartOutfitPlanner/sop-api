@@ -7,5 +7,6 @@ namespace SOPServer.Service.Services.Interfaces
     public interface IStylistDashboardService
     {
         Task<BaseResponseModel> GetCollectionStatisticsByUserAsync(long userId, DashboardFilterModel filter);
+        Task<BaseResponseModel> GetPostStatisticsByUserAsync(long userId, PostDashboardFilterModel filter);
     }
 }

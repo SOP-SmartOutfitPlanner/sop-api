@@ -32,6 +32,30 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> PurchaseSubscriptionAsync(long userId, PurchaseSubscriptionRequestModel model)
         {
+            // Check Redis cache for existing pending payment response
+            var purchaseCacheKey = $"purchase_subscription_pending:{userId}";
+            var (cachedData, remainingTtl) = await _redisService.GetWithTtlAsync<PendingPaymentCacheModel>(purchaseCacheKey);
+            if (cachedData != null && remainingTtl.HasValue && remainingTtl.Value > TimeSpan.Zero)
+            {
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = MessageConstants.USER_SUBSCRIPTION_PENDING_PAYMENT,
+                    Data = new
+                    {
+                        cachedData.QrCode,
+                        cachedData.PaymentUrl,
+                        cachedData.Amount,
+                        cachedData.SubscriptionPlanName,
+                        cachedData.UserSubscriptionId,
+                        cachedData.TransactionId,
+                        cachedData.Description,
+                        ExpiredAt = (long)remainingTtl.Value.TotalSeconds,
+                        cachedData.BankInfo
+                    }
+                };
+            }
+
             // Get the subscription plan
             var plan = await _unitOfWork.SubscriptionPlanRepository.GetByIdAsync(model.SubscriptionPlanId);
             if (plan == null)
@@ -75,42 +99,19 @@ namespace SOPServer.Service.Services.Implements
                 await _unitOfWork.SaveAsync();
             }
 
-            // Check if user has a pending payment
-            var pendingSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
-                .Include(s => s.UserSubscriptionTransactions)
-                .Where(s => s.UserId == userId && !s.IsActive)
-                .OrderByDescending(s => s.CreatedDate)
-                .FirstOrDefaultAsync();
+            var pendingTransactions = await _unitOfWork.UserSubscriptionTransactionRepository.GetQueryable()
+                .Where(t => t.UserId == userId && t.Status == TransactionStatus.PENDING)
+                .ToListAsync();
 
-            if (pendingSubscription != null)
+            foreach (var pt in pendingTransactions)
             {
-                var pendingTransaction = pendingSubscription.UserSubscriptionTransactions
-                    .FirstOrDefault(t => t.Status == TransactionStatus.PENDING);
-
-                if (pendingTransaction != null)
-                {
-                    var existingPaymentLink = await _payOSService.CreatePaymentUrl((int)pendingSubscription.Id);
-                    return new BaseResponseModel
-                    {
-                        StatusCode = StatusCodes.Status200OK,
-                        Message = MessageConstants.USER_SUBSCRIPTION_PENDING_PAYMENT,
-                        Data = new
-                        {
-                            QrCode = existingPaymentLink.QrCode,
-                            PaymentUrl = existingPaymentLink.CheckoutUrl,
-                            Amount = plan.Price,
-                            SubscriptionPlanName = plan.Name,
-                            TransactionId = pendingTransaction.Id,
-                            ExpiredAt = existingPaymentLink.ExpiredAt,
-                            BankInfo = new
-                            {
-                                Bin = existingPaymentLink.Bin,
-                                AccountNumber = existingPaymentLink.AccountNumber,
-                                AccountName = existingPaymentLink.AccountName
-                            }
-                        }
-                    };
-                }
+                pt.Status = TransactionStatus.FAILED;
+                pt.UpdatedDate = DateTime.UtcNow;
+                _unitOfWork.UserSubscriptionTransactionRepository.UpdateAsync(pt);
+            }
+            if (pendingTransactions.Any())
+            {
+                await _unitOfWork.SaveAsync();
             }
 
             // Deserialize plan benefits to initialize user benefits
@@ -205,27 +206,73 @@ namespace SOPServer.Service.Services.Implements
             // Generate payment QR code from PayOS
             var paymentLink = await _payOSService.CreatePaymentUrl((int)userSubscription.Id);
 
+            // Calculate TTL and cache the payment data (without ExpiredAt)
+            TimeSpan? ttl = null;
+            if (paymentLink.ExpiredAt.HasValue)
+            {
+                var expiredAtDateTime = DateTimeOffset.FromUnixTimeSeconds(paymentLink.ExpiredAt.Value);
+                ttl = expiredAtDateTime - DateTimeOffset.Now;
+            }
+
+            var paymentData = new PendingPaymentCacheModel
+            {
+                QrCode = paymentLink.QrCode,
+                PaymentUrl = paymentLink.CheckoutUrl,
+                Amount = plan.Price,
+                SubscriptionPlanName = plan.Name,
+                UserSubscriptionId = userSubscription.Id,
+                TransactionId = transaction.Id,
+                Description = MessageConstants.SUBSCRIPTION_TRANSACTION_DESCRIPTION + plan.Name,
+                BankInfo = new BankInfoModel
+                {
+                    Bin = paymentLink.Bin,
+                    AccountNumber = paymentLink.AccountNumber,
+                    AccountName = paymentLink.AccountName
+                }
+            };
+
+            // Cache the payment data with TTL
+            if (ttl.HasValue && ttl.Value > TimeSpan.Zero)
+            {
+                await _redisService.SetAsync(purchaseCacheKey, paymentData, ttl);
+            }
+
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.USER_SUBSCRIPTION_PAYMENT_QR_GENERATED,
                 Data = new
                 {
-                    QrCode = paymentLink.QrCode,
-                    PaymentUrl = paymentLink.CheckoutUrl,
-                    Amount = plan.Price,
-                    SubscriptionPlanName = plan.Name,
-                    UserSubscriptionId = userSubscription.Id,
-                    TransactionId = transaction.Id,
-                    ExpiredAt = paymentLink.ExpiredAt,
-                    BankInfo = new
-                    {
-                        Bin = paymentLink.Bin,
-                        AccountNumber = paymentLink.AccountNumber,
-                        AccountName = paymentLink.AccountName
-                    }
+                    paymentData.QrCode,
+                    paymentData.PaymentUrl,
+                    paymentData.Amount,
+                    paymentData.SubscriptionPlanName,
+                    paymentData.UserSubscriptionId,
+                    paymentData.TransactionId,
+                    paymentData.Description,
+                    ExpiredAt = (long)(ttl?.TotalSeconds ?? 0),
+                    paymentData.BankInfo
                 }
             };
+        }
+
+        private class PendingPaymentCacheModel
+        {
+            public string QrCode { get; set; }
+            public string PaymentUrl { get; set; }
+            public decimal Amount { get; set; }
+            public string SubscriptionPlanName { get; set; }
+            public long UserSubscriptionId { get; set; }
+            public long TransactionId { get; set; }
+            public string Description { get; set; }
+            public BankInfoModel BankInfo { get; set; }
+        }
+
+        private class BankInfoModel
+        {
+            public string Bin { get; set; }
+            public string AccountNumber { get; set; }
+            public string AccountName { get; set; }
         }
 
         public async Task<BaseResponseModel> GetMySubscriptionAsync(long userId)
@@ -330,6 +377,10 @@ namespace SOPServer.Service.Services.Implements
                 var cacheKey = $"user_subscription_check:{transaction.UserSubscription.UserId}";
                 await _redisService.RemoveAsync(cacheKey);
 
+                // Clear pending purchase cache
+                var purchaseCacheKey = $"purchase_subscription_pending:{transaction.UserSubscription.UserId}";
+                await _redisService.RemoveAsync(purchaseCacheKey);
+
                 return new BaseResponseModel
                 {
                     StatusCode = StatusCodes.Status200OK,
@@ -359,6 +410,10 @@ namespace SOPServer.Service.Services.Implements
                 _unitOfWork.UserSubscriptionRepository.UpdateAsync(transaction.UserSubscription);
                 await _unitOfWork.SaveAsync();
 
+                // Clear pending purchase cache
+                var cancelledPurchaseCacheKey = $"purchase_subscription_pending:{transaction.UserSubscription.UserId}";
+                await _redisService.RemoveAsync(cancelledPurchaseCacheKey);
+
                 return new BaseResponseModel
                 {
                     StatusCode = StatusCodes.Status200OK,
@@ -386,6 +441,10 @@ namespace SOPServer.Service.Services.Implements
                 _unitOfWork.UserSubscriptionTransactionRepository.UpdateAsync(transaction);
                 _unitOfWork.UserSubscriptionRepository.UpdateAsync(transaction.UserSubscription);
                 await _unitOfWork.SaveAsync();
+
+                // Clear pending purchase cache
+                var failedPurchaseCacheKey = $"purchase_subscription_pending:{transaction.UserSubscription.UserId}";
+                await _redisService.RemoveAsync(failedPurchaseCacheKey);
 
                 return new BaseResponseModel
                 {
@@ -499,6 +558,10 @@ namespace SOPServer.Service.Services.Implements
             _unitOfWork.UserSubscriptionTransactionRepository.UpdateAsync(transaction);
             _unitOfWork.UserSubscriptionRepository.UpdateAsync(transaction.UserSubscription);
             await _unitOfWork.SaveAsync();
+
+            // Clear pending purchase cache
+            var purchaseCacheKey = $"purchase_subscription_pending:{userId}";
+            await _redisService.RemoveAsync(purchaseCacheKey);
 
             return new BaseResponseModel
             {

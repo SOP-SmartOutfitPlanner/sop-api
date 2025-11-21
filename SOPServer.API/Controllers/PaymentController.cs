@@ -45,9 +45,9 @@ namespace SOPServer.API.Controllers
                     success = true,
                     message = result.Message,
                     data = result.Data
-                });
+                }); 
             }
-            catch (Exception ex)
+            catch (Exception ex)    
             {
                 return Ok(new
                 {

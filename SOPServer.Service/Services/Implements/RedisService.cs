@@ -66,5 +66,26 @@ namespace SOPServer.Service.Services.Implements
 
             return value;
         }
+
+        public async Task<TimeSpan?> GetTtlAsync(string key)
+        {
+            var db = _redis.GetDatabase();
+            var fullKey = _settings.InstanceName + key;
+            var ttl = await db.KeyTimeToLiveAsync(fullKey);
+            return ttl;
+        }
+
+        public async Task<(T Value, TimeSpan? Ttl)> GetWithTtlAsync<T>(string key)
+        {
+            var db = _redis.GetDatabase();
+            var value = await _cache.GetStringAsync(key);
+            if (value == null)
+                return (default, null);
+
+            var fullKey = _settings.InstanceName + key;
+            var ttl = await db.KeyTimeToLiveAsync(fullKey);
+            var deserializedValue = JsonSerializer.Deserialize<T>(value, _jsonOptions);
+            return (deserializedValue, ttl);
+        }
     }
 }

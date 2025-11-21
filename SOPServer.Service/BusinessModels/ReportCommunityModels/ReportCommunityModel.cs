@@ -1,4 +1,5 @@
 using SOPServer.Repository.Enums;
+using SOPServer.Service.BusinessModels.UserModels;
 
 namespace SOPServer.Service.BusinessModels.ReportCommunityModels
 {
@@ -18,6 +19,16 @@ namespace SOPServer.Service.BusinessModels.ReportCommunityModels
         /// </summary>
         /// <example>1</example>
         public long UserId { get; set; }
+
+        /// <summary>
+        /// Basic information about the reporter
+        /// </summary>
+        public UserBasicModel? Reporter { get; set; }
+
+        /// <summary>
+        /// Basic information about the content author
+        /// </summary>
+        public UserBasicModel? Author { get; set; }
 
         /// <summary>
         /// ID of the reported post (if applicable)

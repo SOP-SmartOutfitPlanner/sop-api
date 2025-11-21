@@ -17,6 +17,7 @@ namespace SOPServer.Service.Constants
         public const string IMAGE_IS_VALID = "Image is valid";
         public const string IMAGE_VALIDATION_FAILED = "Image validation failed after multiple attempts";
         public const string IMAGE_ANALYSIS_FAILED = "Image analysis failed after multiple attempts";
+        public const string ITEM_URLS_NOT_VALID = "Item urls is not valid";
         public const string GET_SUMMARY_IMAGE_SUCCESS = "Get summary image successfully";
         public const string DELETE_FILE_SUCCESS = "Delete file successfully";
 
@@ -283,6 +284,10 @@ namespace SOPServer.Service.Constants
         public const string OUTFIT_SUGGESTION_FAILED = "Failed to generate outfit suggestion";
         public const string NO_MATCHING_ITEMS_FOUND = "No matching items found in your wardrobe for the suggested outfit";
 
+        // Virtual Try-On related messages
+        public const string VIRTUAL_TRY_ON_SUCCESS = "Virtual try-on generated successfully";
+        public const string VIRTUAL_TRY_ON_FAILED = "Failed to generate virtual try-on";
+
         public static string GET_USER_STATS_SUCCESS = "Get user stats successfully";
 
         // Collection related messages
@@ -303,6 +308,7 @@ namespace SOPServer.Service.Constants
         // Dashboard related messages
         public const string GET_STYLIST_DASHBOARD_STATISTICS_SUCCESS = "Stylist dashboard statistics retrieved successfully";
         public const string GET_COLLECTION_STATISTICS_SUCCESS = "Collection statistics retrieved successfully";
+        public const string GET_POST_STATISTICS_SUCCESS = "Post statistics retrieved successfully";
         public const string DASHBOARD_INVALID_MONTH = "Month must be between 1 and 12";
         public const string DASHBOARD_INVALID_TOP_COUNT = "Top collections count must be at least 1";
 

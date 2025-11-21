@@ -18,12 +18,17 @@ namespace SOPServer.Service.Mappers
 
             CreateMap<Post, ReportedContentModel>()
                 .ForMember(dest => dest.ContentId, opt => opt.MapFrom(src => src.Id))
-                .ForMember(dest => dest.ContentType, opt => opt.MapFrom(src => "POST"));
+                .ForMember(dest => dest.ContentType, opt => opt.MapFrom(src => "POST"))
+                .ForMember(dest => dest.Images, opt => opt.MapFrom(src => 
+                    src.PostImages != null 
+                        ? src.PostImages.Where(pi => !pi.IsDeleted).Select(pi => pi.ImgUrl).ToList() 
+                        : new List<string>()));
 
             CreateMap<CommentPost, ReportedContentModel>()
                 .ForMember(dest => dest.ContentId, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.ContentType, opt => opt.MapFrom(src => "COMMENT"))
-                .ForMember(dest => dest.Body, opt => opt.MapFrom(src => src.Comment));
+                .ForMember(dest => dest.Body, opt => opt.MapFrom(src => src.Comment))
+                .ForMember(dest => dest.Images, opt => opt.MapFrom(src => new List<string>())); // Comments don't have images
         }
     }
 }

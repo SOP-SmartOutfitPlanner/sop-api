@@ -1,4 +1,5 @@
 using GenerativeAI.Tools;
+using Microsoft.AspNetCore.Http;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.OutfitCalendarModels;
@@ -41,5 +42,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> UpdateOutfitCalendarAsync(long id, long userId, OutfitCalendarUpdateModel model);
         Task<BaseResponseModel> DeleteOutfitCalendarAsync(long id, long userId);
         Task<BaseResponseModel> OutfitSuggestion(long userId, long? occasionId);
+        Task<BaseResponseModel> VirtualTryOn(IFormFile human, List<string> itemURLs);
     }
 }

@@ -303,6 +303,7 @@ namespace SOPServer.Service.Constants
         // Dashboard related messages
         public const string GET_STYLIST_DASHBOARD_STATISTICS_SUCCESS = "Stylist dashboard statistics retrieved successfully";
         public const string GET_COLLECTION_STATISTICS_SUCCESS = "Collection statistics retrieved successfully";
+        public const string GET_POST_STATISTICS_SUCCESS = "Post statistics retrieved successfully";
         public const string DASHBOARD_INVALID_MONTH = "Month must be between 1 and 12";
         public const string DASHBOARD_INVALID_TOP_COUNT = "Top collections count must be at least 1";
 

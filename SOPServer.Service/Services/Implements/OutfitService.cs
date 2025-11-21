@@ -14,12 +14,14 @@ using SOPServer.Service.BusinessModels.QDrantModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.UserModels;
 using SOPServer.Service.BusinessModels.UserOccasionModels;
+using SOPServer.Service.BusinessModels.VirtualTryOnModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Net.Http.Headers;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -30,14 +32,16 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUserService _userService;
         private readonly IGeminiService _geminiService;
         private readonly IQdrantService _qdrantService;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService, IGeminiService geminiService, IQdrantService qdrantService)
+        public OutfitService(IUnitOfWork unitOfWork, IMapper mapper, IUserService userService, IGeminiService geminiService, IQdrantService qdrantService, IHttpClientFactory httpClientFactory)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _userService = userService;
             _geminiService = geminiService;
             _qdrantService = qdrantService;
+            _httpClientFactory = httpClientFactory;
         }
 
         public async Task<BaseResponseModel> GetOutfitByIdAsync(long id, long userId)
@@ -1146,6 +1150,68 @@ namespace SOPServer.Service.Services.Implements
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.OUTFIT_SUGGESTION_SUCCESS,
                 Data = response
+            };
+        }
+
+        public async Task<BaseResponseModel> VirtualTryOn(IFormFile human, List<string> itemURLs)
+        {
+            if(human == null || human.Length == 0)
+            {
+                throw new BadRequestException(MessageConstants.IMAGE_IS_NOT_VALID);
+            }
+
+            if(itemURLs == null || itemURLs.Count == 0 || itemURLs.Count > 3)
+            {
+                throw new BadRequestException(MessageConstants.ITEM_URLS_NOT_VALID);
+            }
+            
+            var client = _httpClientFactory.CreateClient("SplitItem");
+            var requestUrl = "be/api/v1/virtual-tryon/try-on";
+            
+            using var formData = new MultipartFormDataContent();
+            
+            // Add human image file
+            await using var fileStream = human.OpenReadStream();
+            var fileContent = new StreamContent(fileStream);
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(human.ContentType);
+            formData.Add(fileContent, "human_image", human.FileName);
+            
+            // Add clothing URLs as a single comma-separated string
+            var clothingUrlsString = string.Join(",", itemURLs);
+            formData.Add(new StringContent(clothingUrlsString), "clothing_urls");
+
+            var response = await client.PostAsync(requestUrl, formData);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                throw new BadRequestException($"Virtual try-on failed: {errorContent}");
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            var serializerOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true
+            };
+
+            var tryOnResult = JsonSerializer.Deserialize<VirtualTryOnResponse>(responseBody, serializerOptions);
+
+            if (tryOnResult == null || string.IsNullOrEmpty(tryOnResult.Url))
+            {
+                throw new BadRequestException("Virtual try-on service returned invalid response");
+            }
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.VIRTUAL_TRY_ON_SUCCESS,
+                Data = new
+                {
+                    Time = tryOnResult.Time,
+                    Url = tryOnResult.Url
+                }
             };
         }
     }

@@ -47,6 +47,7 @@ namespace SOPServer.Service.Hubs
             }
 
             await Groups.AddToGroupAsync(Context.ConnectionId, userSubTrans.TransactionCode.ToString());
+            Console.WriteLine("ADD USER: GROUP " + userSubTrans.TransactionCode.ToString());
         }
 
         public async Task RemoveGroup(long userSubTransId)

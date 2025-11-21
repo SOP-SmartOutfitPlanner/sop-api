@@ -108,6 +108,10 @@ namespace SOPServer.Service.Services.Implements
             {
                 Id = r.Id,
                 UserId = r.UserId,
+                Reporter = _mapper.Map<UserBasicModel>(r.User),
+                Author = r.Type == ReportType.POST
+                    ? _mapper.Map<UserBasicModel>(r.Post?.User)
+                    : _mapper.Map<UserBasicModel>(r.CommentPost?.User),
                 PostId = r.PostId,
                 CommentId = r.CommentId,
                 Type = r.Type,
@@ -140,6 +144,10 @@ namespace SOPServer.Service.Services.Implements
             {
                 Id = r.Id,
                 UserId = r.UserId,
+                Reporter = _mapper.Map<UserBasicModel>(r.User),
+                Author = r.Type == ReportType.POST
+                    ? _mapper.Map<UserBasicModel>(r.Post?.User)
+                    : _mapper.Map<UserBasicModel>(r.CommentPost?.User),
                 PostId = r.PostId,
                 CommentId = r.CommentId,
                 Type = r.Type,

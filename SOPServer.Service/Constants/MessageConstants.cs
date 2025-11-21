@@ -374,6 +374,8 @@ namespace SOPServer.Service.Constants
         public const string USER_SUBSCRIPTION_PAYMENT_CANCELLED = "Payment cancelled successfully";
         public const string USER_SUBSCRIPTION_TRANSACTION_NOT_PENDING = "Cannot cancel transaction. Transaction must be in pending status";
         public const string USER_SUBSCRIPTION_TRANSACTION_NOT_OWNED = "You do not have permission to cancel this transaction";
-
+        public const string USER_SUBSCRIPTION_NO_PENDING_PAYMENT = "No pending payment found";
+        public const string USER_SUBSCRIPTION_PENDING_PAYMENT_RETRIEVED = "Pending payment retrieved successfully. Please scan the QR code to complete payment.";
+        public const string USER_SUBSCRIPTION_PAYMENT_ALREADY_COMPLETED = "Payment has already been completed. Your subscription is now active.";
     }
 }

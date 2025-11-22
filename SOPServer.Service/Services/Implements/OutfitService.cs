@@ -48,7 +48,19 @@ namespace SOPServer.Service.Services.Implements
                     .Include(o => o.User)
                     .Include(o => o.OutfitItems)
                         .ThenInclude(oi => oi.Item)
-                            .ThenInclude(i => i.Category));
+                            .ThenInclude(i => i.Category)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemOccasions.Where(io => !io.IsDeleted))
+                                .ThenInclude(io => io.Occasion)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemSeasons.Where(iSeason => !iSeason.IsDeleted))
+                                .ThenInclude(iSeason => iSeason.Season)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemStyles.Where(iStyle => !iStyle.IsDeleted))
+                                .ThenInclude(iStyle => iStyle.Style));
 
             if (outfit == null)
             {
@@ -95,7 +107,19 @@ namespace SOPServer.Service.Services.Implements
                     .Include(o => o.User)
                     .Include(o => o.OutfitItems)
                         .ThenInclude(oi => oi.Item)
-                            .ThenInclude(i => i.Category));
+                            .ThenInclude(i => i.Category)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemOccasions.Where(io => !io.IsDeleted))
+                                .ThenInclude(io => io.Occasion)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemSeasons.Where(iSeason => !iSeason.IsDeleted))
+                                .ThenInclude(iSeason => iSeason.Season)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemStyles.Where(iStyle => !iStyle.IsDeleted))
+                                .ThenInclude(iStyle => iStyle.Style));
 
             return new BaseResponseModel
             {
@@ -109,10 +133,23 @@ namespace SOPServer.Service.Services.Implements
         {
             var outfits = await _unitOfWork.OutfitRepository.ToPaginationIncludeAsync(
                 paginationParameter,
-                include: query => query.Include(x => x.User)
+                include: query => query
+                    .Include(x => x.User)
                     .Include(x => x.OutfitItems)
                         .ThenInclude(oi => oi.Item)
-                            .ThenInclude(i => i.Category),
+                            .ThenInclude(i => i.Category)
+                    .Include(x => x.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemOccasions.Where(io => !io.IsDeleted))
+                                .ThenInclude(io => io.Occasion)
+                    .Include(x => x.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemSeasons.Where(iSeason => !iSeason.IsDeleted))
+                                .ThenInclude(iSeason => iSeason.Season)
+                    .Include(x => x.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemStyles.Where(iStyle => !iStyle.IsDeleted))
+                                .ThenInclude(iStyle => iStyle.Style),
                 filter: string.IsNullOrWhiteSpace(paginationParameter.Search)
                     ? null
                     : x => (x.Name != null && x.Name.Contains(paginationParameter.Search)) ||
@@ -157,10 +194,23 @@ namespace SOPServer.Service.Services.Implements
 
             var outfits = await _unitOfWork.OutfitRepository.ToPaginationIncludeAsync(
                 paginationParameter,
-                include: query => query.Include(x => x.User)
+                include: query => query
+                    .Include(x => x.User)
                     .Include(x => x.OutfitItems)
                         .ThenInclude(oi => oi.Item)
-                            .ThenInclude(i => i.Category),
+                            .ThenInclude(i => i.Category)
+                    .Include(x => x.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemOccasions.Where(io => !io.IsDeleted))
+                                .ThenInclude(io => io.Occasion)
+                    .Include(x => x.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemSeasons.Where(iSeason => !iSeason.IsDeleted))
+                                .ThenInclude(iSeason => iSeason.Season)
+                    .Include(x => x.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemStyles.Where(iStyle => !iStyle.IsDeleted))
+                                .ThenInclude(iStyle => iStyle.Style),
                 filter: x => x.UserId == userId &&
                            (string.IsNullOrWhiteSpace(paginationParameter.Search) ||
                             (x.Name != null && x.Name.Contains(paginationParameter.Search)) ||
@@ -275,7 +325,19 @@ namespace SOPServer.Service.Services.Implements
                     .Include(o => o.User)
                     .Include(o => o.OutfitItems)
                         .ThenInclude(oi => oi.Item)
-                            .ThenInclude(i => i.Category));
+                            .ThenInclude(i => i.Category)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemOccasions.Where(io => !io.IsDeleted))
+                                .ThenInclude(io => io.Occasion)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemSeasons.Where(iSeason => !iSeason.IsDeleted))
+                                .ThenInclude(iSeason => iSeason.Season)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemStyles.Where(iStyle => !iStyle.IsDeleted))
+                                .ThenInclude(iStyle => iStyle.Style));
 
             return new BaseResponseModel
             {
@@ -384,7 +446,19 @@ namespace SOPServer.Service.Services.Implements
                     .Include(o => o.User)
                     .Include(o => o.OutfitItems)
                         .ThenInclude(oi => oi.Item)
-                            .ThenInclude(i => i.Category));
+                            .ThenInclude(i => i.Category)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemOccasions.Where(io => !io.IsDeleted))
+                                .ThenInclude(io => io.Occasion)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemSeasons.Where(iSeason => !iSeason.IsDeleted))
+                                .ThenInclude(iSeason => iSeason.Season)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemStyles.Where(iStyle => !iStyle.IsDeleted))
+                                .ThenInclude(iStyle => iStyle.Style));
 
             return new BaseResponseModel
             {
@@ -444,7 +518,19 @@ namespace SOPServer.Service.Services.Implements
                     .Include(o => o.User)
                     .Include(o => o.OutfitItems)
                         .ThenInclude(oi => oi.Item)
-                            .ThenInclude(i => i.Category));
+                            .ThenInclude(i => i.Category)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemOccasions.Where(io => !io.IsDeleted))
+                                .ThenInclude(io => io.Occasion)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemSeasons.Where(iSeason => !iSeason.IsDeleted))
+                                .ThenInclude(iSeason => iSeason.Season)
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemStyles.Where(iStyle => !iStyle.IsDeleted))
+                                .ThenInclude(iStyle => iStyle.Style));
 
             return new BaseResponseModel
             {

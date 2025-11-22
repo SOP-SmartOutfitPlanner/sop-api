@@ -308,6 +308,7 @@ namespace SOPServer.Service.Constants
         // Dashboard related messages
         public const string GET_STYLIST_DASHBOARD_STATISTICS_SUCCESS = "Stylist dashboard statistics retrieved successfully";
         public const string GET_COLLECTION_STATISTICS_SUCCESS = "Collection statistics retrieved successfully";
+        public const string GET_POST_STATISTICS_SUCCESS = "Post statistics retrieved successfully";
         public const string DASHBOARD_INVALID_MONTH = "Month must be between 1 and 12";
         public const string DASHBOARD_INVALID_TOP_COUNT = "Top collections count must be at least 1";
 
@@ -336,7 +337,7 @@ namespace SOPServer.Service.Constants
         public const string NO_NOTIFICATIONS_TO_DELETE = "No valid notifications found to delete";
 
         // Subscription related messages
-        public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "SOP - Payment for Plan: ";
+        public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "SUBSCRIPTION PLAN ";
 
         // Weather related messages
         public const string GET_WEATHER_INFO_SUCCESS = "Get weather info success";
@@ -373,6 +374,8 @@ namespace SOPServer.Service.Constants
         public const string USER_SUBSCRIPTION_PAYMENT_CANCELLED = "Payment cancelled successfully";
         public const string USER_SUBSCRIPTION_TRANSACTION_NOT_PENDING = "Cannot cancel transaction. Transaction must be in pending status";
         public const string USER_SUBSCRIPTION_TRANSACTION_NOT_OWNED = "You do not have permission to cancel this transaction";
-
+        public const string USER_SUBSCRIPTION_NO_PENDING_PAYMENT = "No pending payment found";
+        public const string USER_SUBSCRIPTION_PENDING_PAYMENT_RETRIEVED = "Pending payment retrieved successfully. Please scan the QR code to complete payment.";
+        public const string USER_SUBSCRIPTION_PAYMENT_ALREADY_COMPLETED = "Payment has already been completed. Your subscription is now active.";
     }
 }

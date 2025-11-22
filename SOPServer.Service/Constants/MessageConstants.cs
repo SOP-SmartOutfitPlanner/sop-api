@@ -17,6 +17,7 @@ namespace SOPServer.Service.Constants
         public const string IMAGE_IS_VALID = "Image is valid";
         public const string IMAGE_VALIDATION_FAILED = "Image validation failed after multiple attempts";
         public const string IMAGE_ANALYSIS_FAILED = "Image analysis failed after multiple attempts";
+        public const string ITEM_URLS_NOT_VALID = "Item urls is not valid";
         public const string GET_SUMMARY_IMAGE_SUCCESS = "Get summary image successfully";
         public const string DELETE_FILE_SUCCESS = "Delete file successfully";
 
@@ -283,6 +284,10 @@ namespace SOPServer.Service.Constants
         public const string OUTFIT_SUGGESTION_FAILED = "Failed to generate outfit suggestion";
         public const string NO_MATCHING_ITEMS_FOUND = "No matching items found in your wardrobe for the suggested outfit";
 
+        // Virtual Try-On related messages
+        public const string VIRTUAL_TRY_ON_SUCCESS = "Virtual try-on generated successfully";
+        public const string VIRTUAL_TRY_ON_FAILED = "Failed to generate virtual try-on";
+
         public static string GET_USER_STATS_SUCCESS = "Get user stats successfully";
 
         // Collection related messages
@@ -332,7 +337,7 @@ namespace SOPServer.Service.Constants
         public const string NO_NOTIFICATIONS_TO_DELETE = "No valid notifications found to delete";
 
         // Subscription related messages
-        public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "SOP - Payment for Plan: ";
+        public const string SUBSCRIPTION_TRANSACTION_DESCRIPTION = "SUBSCRIPTION PLAN ";
 
         // Weather related messages
         public const string GET_WEATHER_INFO_SUCCESS = "Get weather info success";
@@ -369,5 +374,8 @@ namespace SOPServer.Service.Constants
         public const string USER_SUBSCRIPTION_PAYMENT_CANCELLED = "Payment cancelled successfully";
         public const string USER_SUBSCRIPTION_TRANSACTION_NOT_PENDING = "Cannot cancel transaction. Transaction must be in pending status";
         public const string USER_SUBSCRIPTION_TRANSACTION_NOT_OWNED = "You do not have permission to cancel this transaction";
+        public const string USER_SUBSCRIPTION_NO_PENDING_PAYMENT = "No pending payment found";
+        public const string USER_SUBSCRIPTION_PENDING_PAYMENT_RETRIEVED = "Pending payment retrieved successfully. Please scan the QR code to complete payment.";
+        public const string USER_SUBSCRIPTION_PAYMENT_ALREADY_COMPLETED = "Payment has already been completed. Your subscription is now active.";
     }
 }

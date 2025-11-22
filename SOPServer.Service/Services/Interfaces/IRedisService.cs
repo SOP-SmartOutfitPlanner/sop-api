@@ -13,5 +13,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task RemoveAsync(string key);
         Task<bool> ExistsAsync(string key);
         Task<long> IncrementAsync(string key, TimeSpan? expiry = null);
+        Task<TimeSpan?> GetTtlAsync(string key);
+        Task<(T Value, TimeSpan? Ttl)> GetWithTtlAsync<T>(string key);
     }
 }

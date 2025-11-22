@@ -37,7 +37,7 @@ namespace SOPServer.API.Controllers
                 var paymentStatus = webhookData.Code;
 
                 var result = await _userSubscriptionService.ProcessPaymentWebhookAsync(transactionCode, paymentStatus);
-
+                Console.WriteLine("transactionCode: " + webhookData.OrderCode);
                 await _hubContext.Clients.Group(webhookData.OrderCode.ToString()).SendAsync("PaymentStatusUpdated", result);
 
                 return Ok(new
@@ -45,9 +45,9 @@ namespace SOPServer.API.Controllers
                     success = true,
                     message = result.Message,
                     data = result.Data
-                });
+                }); 
             }
-            catch (Exception ex)
+            catch (Exception ex)    
             {
                 return Ok(new
                 {

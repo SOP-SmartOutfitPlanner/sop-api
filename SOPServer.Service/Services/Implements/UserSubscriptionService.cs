@@ -50,7 +50,7 @@ namespace SOPServer.Service.Services.Implements
                         cachedData.UserSubscriptionId,
                         cachedData.TransactionId,
                         cachedData.Description,
-                        ExpiredAt = (long)remainingTtl.Value.TotalSeconds,
+                        cachedData.ExpiredAt, // Unix timestamp from PayOS
                         cachedData.BankInfo
                     }
                 };
@@ -223,6 +223,7 @@ namespace SOPServer.Service.Services.Implements
                 UserSubscriptionId = userSubscription.Id,
                 TransactionId = transaction.Id,
                 Description = MessageConstants.SUBSCRIPTION_TRANSACTION_DESCRIPTION + plan.Name,
+                ExpiredAt = paymentLink.ExpiredAt,
                 BankInfo = new BankInfoModel
                 {
                     Bin = paymentLink.Bin,
@@ -250,7 +251,7 @@ namespace SOPServer.Service.Services.Implements
                     paymentData.UserSubscriptionId,
                     paymentData.TransactionId,
                     paymentData.Description,
-                    ExpiredAt = (long)(ttl?.TotalSeconds ?? 0),
+                    paymentData.ExpiredAt, // Unix timestamp from PayOS
                     paymentData.BankInfo
                 }
             };
@@ -265,6 +266,7 @@ namespace SOPServer.Service.Services.Implements
             public long UserSubscriptionId { get; set; }
             public long TransactionId { get; set; }
             public string Description { get; set; }
+            public long? ExpiredAt { get; set; }
             public BankInfoModel BankInfo { get; set; }
         }
 

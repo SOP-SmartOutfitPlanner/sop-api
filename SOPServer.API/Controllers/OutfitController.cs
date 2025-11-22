@@ -6,8 +6,10 @@ using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.OutfitCalendarModels;
 using SOPServer.Service.BusinessModels.OutfitModels;
+using SOPServer.Service.BusinessModels.VirtualTryOnModels;
 using SOPServer.Service.Services.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace SOPServer.API.Controllers
@@ -320,6 +322,25 @@ namespace SOPServer.API.Controllers
         public Task<IActionResult> OutfitSuggestion(long userId, long? occasionId)
         {
             return ValidateAndExecute(async () => await _outfitService.OutfitSuggestion(userId, occasionId));
+        }
+
+        /// <summary>
+        /// Virtual try-on feature - Apply clothing items to a human image using AI
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Form Data:**
+        /// - `human`: Image file of the person (required, supported formats: jpg, jpeg, png)
+        /// - `itemURLs`: List of clothing item image URLs to apply (required, at least 1 item)
+        ///
+        /// **Note:** This feature uses AI to generate a virtual try-on image showing how the clothing items would look on the person
+        /// </remarks>
+        [HttpPost("virtual-try-on")]
+        [Consumes("multipart/form-data")]
+        public Task<IActionResult> VirtualTryOn([FromForm] VirtualTryOnRequest model)
+        {
+            return ValidateAndExecute(async () => await _outfitService.VirtualTryOn(model.Human, model.ItemURLs));
         }
     }
 }

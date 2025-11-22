@@ -32,7 +32,7 @@ namespace SOPServer.Service.Services.Implements
         {
             "image/jpeg", "image/png", "image/webp", "image/gif"
         };
-
+        private readonly GenerativeModel _suggestionModel;
 
         public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IOptions<QDrantClientSettings> qdrantClientSettings, ILogger<GeminiService> logger, Lazy<IQdrantService> qdrantService)
         {
@@ -52,6 +52,11 @@ namespace SOPServer.Service.Services.Implements
             var modelIdEmbedding = GetAiSettingValue(AISettingType.MODEL_EMBEDDING);
             var embeddingAiClient = new GoogleAi(apiKeyEmbedding);
             _embeddingModel = embeddingAiClient.CreateEmbeddingModel(modelIdEmbedding);
+
+            var apiKeySuggestion = GetAiSettingValue(AISettingType.API_SUGGESTION);
+            var modelIdSuggestiong = GetAiSettingValue(AISettingType.MODEL_ANALYZING);
+            var generativeAiClientSuggestion = new GoogleAi(apiKeySuggestion);
+            _suggestionModel = generativeAiClientSuggestion.CreateGenerativeModel(modelIdSuggestiong);
         }
 
         private string GetAiSettingValue(AISettingType type)
@@ -394,7 +399,7 @@ namespace SOPServer.Service.Services.Implements
                         Role = "system"
                     };
 
-                    var result = await _generativeModel.GenerateObjectAsync<OutfitSelectionModel>(requestJsonMode);
+                    var result = await _suggestionModel.GenerateObjectAsync<OutfitSelectionModel>(requestJsonMode);
 
                     if (result == null || result.ItemIds == null || !result.ItemIds.Any())
                     {

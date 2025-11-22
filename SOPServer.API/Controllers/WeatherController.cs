@@ -5,7 +5,7 @@ using SOPServer.Service.Services.Interfaces;
 
 namespace SOPServer.API.Controllers
 {
-    [Route("api/weathers")]
+    [Route("api/v1/weathers")]
     [ApiController]
     public class WeatherController : BaseController
     {

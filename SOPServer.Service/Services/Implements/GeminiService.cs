@@ -222,7 +222,7 @@ namespace SOPServer.Service.Services.Implements
             return await _generativeModel.GenerateObjectAsync<CategoryItemAnalysisModel>(generateRequest);
         }
 
-        public async Task<List<string>> OutfitSuggestion(string occasion, string usercharacteristic)
+        public async Task<List<string>> OutfitSuggestion(string occasion, string usercharacteristic, string? weather = null)
         {
             var outfitPromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_GENERATION_PROMPT);
 
@@ -252,6 +252,11 @@ namespace SOPServer.Service.Services.Implements
             if (!string.IsNullOrEmpty(occasion))
             {
                 userParts.Add(new Part { Text = $"Occasion: {occasion}" });
+            }
+
+            if (!string.IsNullOrEmpty(weather))
+            {
+                userParts.Add(new Part { Text = $"Weather: {weather}" });
             }
 
             var userContent = new Content { Parts = userParts, Role = "user" };
@@ -303,7 +308,7 @@ namespace SOPServer.Service.Services.Implements
             throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
         }
 
-        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items)
+        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, string? weather = null)
         {
             var choosePromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_CHOOSE_PROMPT);
 
@@ -346,6 +351,11 @@ namespace SOPServer.Service.Services.Implements
             {
                 userParts.Add(new Part { Text = $"Occasion: {occasion}" });
             } else userParts.Add(new Part { Text = $"Occasion: null" });
+
+            if (!string.IsNullOrEmpty(weather))
+            {
+                userParts.Add(new Part { Text = $"Weather: {weather}" });
+            }
 
             const int maxRetryAttempts = 5;
 

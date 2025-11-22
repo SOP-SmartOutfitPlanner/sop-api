@@ -315,13 +315,18 @@ namespace SOPServer.API.Controllers
         /// <remarks>
         /// **Roles:** USER, STYLIST, ADMIN
         ///
+        /// **Query Parameters:**
+        /// - `userId`: User ID (required)
+        /// - `occasionId`: Occasion ID (optional)
+        /// - `weather`: Weather information for outfit suggestions (optional, e.g., "sunny, 25°C" or "rainy, 15°C")
+        ///
         /// **Note:** Subject to subscription limits based on user's plan (monthly reset)
         /// </remarks>
         [HttpGet("suggestion")]
         [CheckSubscriptionLimit(FeatureCode.OutfitSuggestion)]
-        public Task<IActionResult> OutfitSuggestion(long userId, long? occasionId)
+        public Task<IActionResult> OutfitSuggestion(long userId, long? occasionId, string? weather = null)
         {
-            return ValidateAndExecute(async () => await _outfitService.OutfitSuggestion(userId, occasionId));
+            return ValidateAndExecute(async () => await _outfitService.OutfitSuggestion(userId, occasionId, weather));
         }
 
         /// <summary>

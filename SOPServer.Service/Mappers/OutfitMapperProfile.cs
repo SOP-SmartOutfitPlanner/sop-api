@@ -46,7 +46,34 @@ namespace SOPServer.Service.Mappers
             CreateMap<Item, OutfitItemModel>()
                 .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.CategoryId, opt => opt.MapFrom(src => src.CategoryId ?? 0))
-                .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : null));
+                .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : null))
+                .ForMember(dest => dest.Occasions, opt => opt.MapFrom(src =>
+                    src.ItemOccasions != null && src.ItemOccasions.Any()
+                        ? src.ItemOccasions.Where(io => io.Occasion != null && !io.IsDeleted)
+                            .Select(io => new BusinessModels.OccasionModels.OccasionItemModel
+                            {
+                                Id = io.Occasion.Id,
+                                Name = io.Occasion.Name
+                            }).ToList()
+                        : new List<BusinessModels.OccasionModels.OccasionItemModel>()))
+                .ForMember(dest => dest.Seasons, opt => opt.MapFrom(src =>
+                    src.ItemSeasons != null && src.ItemSeasons.Any()
+                        ? src.ItemSeasons.Where(iSeason => iSeason.Season != null && !iSeason.IsDeleted)
+                            .Select(iSeason => new BusinessModels.SeasonModels.SeasonItemModel
+                            {
+                                Id = iSeason.Season.Id,
+                                Name = iSeason.Season.Name
+                            }).ToList()
+                        : new List<BusinessModels.SeasonModels.SeasonItemModel>()))
+                .ForMember(dest => dest.Styles, opt => opt.MapFrom(src =>
+                    src.ItemStyles != null && src.ItemStyles.Any()
+                        ? src.ItemStyles.Where(iStyle => iStyle.Style != null && !iStyle.IsDeleted)
+                            .Select(iStyle => new BusinessModels.StyleModels.StyleItemModel
+                            {
+                                Id = iStyle.Style.Id,
+                                Name = iStyle.Style.Name
+                            }).ToList()
+                        : new List<BusinessModels.StyleModels.StyleItemModel>()));
         }
     }
 }

@@ -1,4 +1,8 @@
 using SOPServer.Service.BusinessModels.ItemModels;
+using SOPServer.Service.BusinessModels.OccasionModels;
+using SOPServer.Service.BusinessModels.SeasonModels;
+using SOPServer.Service.BusinessModels.StyleModels;
+using SOPServer.Repository.Enums;
 using System;
 using System.Collections.Generic;
 
@@ -42,11 +46,14 @@ namespace SOPServer.Service.BusinessModels.OutfitModels
         public string AiDescription { get; set; }
         public string Brand { get; set; }
         public string FrequencyWorn { get; set; }
-        public DateTime LastWornAt { get; set; }
+        public DateTime? LastWornAt { get; set; }
         public string ImgUrl { get; set; }
         public string WeatherSuitable { get; set; }
         public string Condition { get; set; }
         public string Pattern { get; set; }
         public string Fabric { get; set; }
+        public List<OccasionItemModel> Occasions { get; set; } = new List<OccasionItemModel>();
+        public List<SeasonItemModel> Seasons { get; set; } = new List<SeasonItemModel>();
+        public List<StyleItemModel> Styles { get; set; } = new List<StyleItemModel>();
     }
 }

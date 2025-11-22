@@ -236,7 +236,7 @@ namespace SOPServer.Service.Services.Implements
             generateRequest.GenerationConfig = new GenerationConfig
             {
                 Temperature = 0.7f,
-                MaxOutputTokens = 800
+                MaxOutputTokens = 1000
             };
 
             generateRequest.SystemInstruction = new Content

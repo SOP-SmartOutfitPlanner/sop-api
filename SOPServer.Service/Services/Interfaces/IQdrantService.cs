@@ -17,12 +17,22 @@ namespace SOPServer.Service.Services.Interfaces
         Task<bool> DeleteItem(long id, CancellationToken cancellationToken = default);
         Task<List<QDrantSearchModels>> SearchSimilarityByUserId(string descriptionItem, long userId, CancellationToken cancellationToken = default);
 
-        [Description("Search for items in system wardrobe matching with list text descriptions")]
-        Task<List<QDrantSearchModels>> SearchSimilarityItemSystem([Description("List of item descriptions to find similarities")] List<string> descriptionItems, CancellationToken cancellationToken = default);
+        Task<List<QDrantSearchModels>> SearchSimilarityItemSystem(List<string> descriptionItems, CancellationToken cancellationToken = default);
         
-        /// <summary>
-        /// Search for items by similarity and return only item IDs and scores (no DB queries)
-        /// </summary>
-        Task<List<ItemSearchResult>> SearchItemIdsByUserId(string descriptionItem, long userId, CancellationToken cancellationToken = default);
+        Task<List<ItemSearchResult>> SearchItemIdsByUserId(
+            List<string> descriptionItems,
+            long userId,
+            CancellationToken cancellationToken = default);
+
+        [Description("Search for items in system wardrobe with compact AI-optimized string format for easy processing")]
+        Task<List<ItemForAISelection>> SearchSimilarityItemSystemCompact(
+            [Description("List of item descriptions to find similarities (multiple category)")] List<string> descriptionItems,
+            CancellationToken cancellationToken = default);
+
+        [Description("Search for items by user ID with compact AI-optimized string format for easy processing")]
+        Task<List<ItemForAISelection>> SearchItemsByUserIdCompact(
+            [Description("List of item descriptions to find similarities (multiple category)")] List<string> descriptionItems,
+            [Description("User ID to filter items")] long userId,
+            CancellationToken cancellationToken = default);
     }
 }

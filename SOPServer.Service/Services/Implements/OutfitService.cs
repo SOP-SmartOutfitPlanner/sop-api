@@ -1034,35 +1034,26 @@ namespace SOPServer.Service.Services.Implements
         {
             if (userCharacteristic == null) return string.Empty;
 
-            var characteristics = new List<string>();
-
-            if (!string.IsNullOrWhiteSpace(userCharacteristic.DisplayName))
-                characteristics.Add($"DisplayName: {userCharacteristic.DisplayName}");
+            var parts = new List<string>(6);
 
             if (userCharacteristic.Dob.HasValue)
-                characteristics.Add($"DateOfBirth: {userCharacteristic.Dob.Value:yyyy-MM-dd}");
+                parts.Add($"Age:{DateTime.Now.Year - userCharacteristic.Dob.Value.Year}");
 
-            characteristics.Add($"Gender: {userCharacteristic.Gender}");
-
-            if (!string.IsNullOrWhiteSpace(userCharacteristic.Location))
-                characteristics.Add($"Location: {userCharacteristic.Location}");
-
-            if (!string.IsNullOrWhiteSpace(userCharacteristic.Bio))
-                characteristics.Add($"Bio: {userCharacteristic.Bio}");
+            parts.Add($"Gender:{userCharacteristic.Gender}");
 
             if (!string.IsNullOrWhiteSpace(userCharacteristic.Job))
-                characteristics.Add($"Job: {userCharacteristic.Job}");
+                parts.Add($"Job:{userCharacteristic.Job}");
 
-            if (userCharacteristic.Styles != null && userCharacteristic.Styles.Any())
-                characteristics.Add($"PreferredStyles: {string.Join(", ", userCharacteristic.Styles)}");
+            if (userCharacteristic.Styles?.Any() == true)
+                parts.Add($"Styles:{string.Join(",", userCharacteristic.Styles)}");
 
-            if (userCharacteristic.PreferedColor != null && userCharacteristic.PreferedColor.Any())
-                characteristics.Add($"PreferredColors: {string.Join(", ", userCharacteristic.PreferedColor)}");
+            if (userCharacteristic.PreferedColor?.Any() == true)
+                parts.Add($"Likes:{string.Join(",", userCharacteristic.PreferedColor)}");
 
-            if (userCharacteristic.AvoidedColor != null && userCharacteristic.AvoidedColor.Any())
-                characteristics.Add($"AvoidedColors: {string.Join(", ", userCharacteristic.AvoidedColor)}");
+            if (userCharacteristic.AvoidedColor?.Any() == true)
+                parts.Add($"Avoids:{string.Join(",", userCharacteristic.AvoidedColor)}");
 
-            return string.Join("; ", characteristics);
+            return string.Join("|", parts);
         }
 
         public async Task<BaseResponseModel> OutfitSuggestion(long userId, long? occasionId, string? weather = null)
@@ -1098,65 +1089,14 @@ namespace SOPServer.Service.Services.Implements
             characteristicStopwatch.Stop();
             Console.WriteLine($"[TIMING] Get user characteristics: {characteristicStopwatch.ElapsedMilliseconds}ms");
 
-            // Get outfit suggestions from Gemini
-            var geminiStopwatch = Stopwatch.StartNew();
-            var listItem = await _geminiService.OutfitSuggestion(occasionString, characteristicString, weather);
-            listItem.ForEach(x => Console.WriteLine(x));
-            geminiStopwatch.Stop();
-            Console.WriteLine($"[TIMING] Gemini outfit suggestion: {geminiStopwatch.ElapsedMilliseconds}ms");
-
-            // Execute searches in parallel
-            var searchStopwatch = Stopwatch.StartNew();
-            var searchTasks = listItem.Select(item => _qdrantService.SearchItemIdsByUserId(item, userId)).ToList();
-            var searchResults = await Task.WhenAll(searchTasks);
-            var allItemIds = searchResults.SelectMany(result => result).ToList();
-            searchStopwatch.Stop();
-            Console.WriteLine($"[TIMING] Qdrant parallel search ({listItem.Count} queries): {searchStopwatch.ElapsedMilliseconds}ms");
-
-            // Get all items by IDs with full details including related data
-            var dbStopwatch = Stopwatch.StartNew();
-            var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(allItemIds.Select(x => x.ItemId).ToList());
-            dbStopwatch.Stop();
-            Console.WriteLine($"[TIMING] Database query for items ({allItemIds.Count} ids): {dbStopwatch.ElapsedMilliseconds}ms");
-
-            // Map items to QDrantSearchModels for Gemini selection
-            var mappingStopwatch = Stopwatch.StartNew();
-            var listPartItems = items.Select(item =>
-            {
-                var itemModel = _mapper.Map<ItemModel>(item);
-                var searchModel = new QDrantSearchModels
-                {
-                    Id = item.Id,
-                    ItemName = itemModel.Name,
-                    ImgURL = itemModel.ImgUrl,
-                    Colors = string.IsNullOrEmpty(itemModel.Color)
-                        ? new List<ColorModel>()
-                        : JsonSerializer.Deserialize<List<ColorModel>>(itemModel.Color),
-                    AiDescription = itemModel.AiDescription,
-                    WeatherSuitable = itemModel.WeatherSuitable,
-                    Condition = itemModel.Condition,
-                    Pattern = itemModel.Pattern,
-                    Fabric = itemModel.Fabric,
-                    Styles = itemModel.Styles,
-                    Occasions = itemModel.Occasions,
-                    Seasons = itemModel.Seasons,
-                    Confidence = itemModel.AIConfidence,
-                    Score = allItemIds.FirstOrDefault(x => x.ItemId == item.Id)?.Score ?? 0
-                };
-                return searchModel;
-            }).ToList();
-            mappingStopwatch.Stop();
-            Console.WriteLine($"[TIMING] Map items to search models ({items.Count} items): {mappingStopwatch.ElapsedMilliseconds}ms");
-
-            // Choose outfit from the search results
+            // Choose outfit directly using function calling (Gemini will call SearchItemIdsByUserId internally)
             var chooseOutfitStopwatch = Stopwatch.StartNew();
-            var outfitSelection = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems, weather);
+            var outfitSelection = await _geminiService.ChooseOutfit(userId, occasionString, characteristicString, new List<QDrantSearchModels>(), weather);
             chooseOutfitStopwatch.Stop();
-            Console.WriteLine($"[TIMING] Gemini choose outfit: {chooseOutfitStopwatch.ElapsedMilliseconds}ms");
+            Console.WriteLine($"[TIMING] Gemini choose outfit with function calling: {chooseOutfitStopwatch.ElapsedMilliseconds}ms");
             Console.WriteLine($"[DEBUG] Gemini selected {outfitSelection.ItemIds?.Count ?? 0} items: {string.Join(", ", outfitSelection.ItemIds ?? new List<long>())}");
 
             // Query database for the exact items Gemini selected
-            // This handles both user items AND system items that Gemini might choose
             var finalMappingStopwatch = Stopwatch.StartNew();
             
             var selectedItemModels = new List<ItemModel>();

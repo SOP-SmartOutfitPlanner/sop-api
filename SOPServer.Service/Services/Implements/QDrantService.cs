@@ -230,48 +230,259 @@ namespace SOPServer.Service.Services.Implements
             return result;
         }
 
-        public async Task<List<ItemSearchResult>> SearchItemIdsByUserId(string descriptionItem, long userId, CancellationToken cancellationToken = default)
+        public async Task<List<ItemSearchResult>> SearchItemIdsByUserId(List<string> descriptionItems, long userId, CancellationToken cancellationToken = default)
         {
-            Console.WriteLine("SearchItemIdsByUserId");
-            var sw = Stopwatch.StartNew();
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            Console.WriteLine($"SearchItemIdsByUserId - Processing {descriptionItems.Count} descriptions for userId: {userId}");
 
-            var embedding = await _geminiService.EmbeddingText(descriptionItem);
-            var searchResult = await _client.SearchAsync(
-                collectionName: _qdrantSettings.Collection,
-                vector: embedding.ToArray(),
-                filter: new Filter
-                {
-                    Must =
+            // Process embedding and search in parallel for each description
+            var searchTasks = descriptionItems.Select(async descriptionItem =>
+            {
+                var embeddingSw = Stopwatch.StartNew();
+                var embedding = await _geminiService.EmbeddingText(descriptionItem);
+                embeddingSw.Stop();
+                Console.WriteLine($"Embedding generated for '{descriptionItem}' in {embeddingSw.ElapsedMilliseconds}ms");
+
+                var searchSw = Stopwatch.StartNew();
+                var searchResult = await _client.SearchAsync(
+                    collectionName: _qdrantSettings.Collection,
+                    vector: embedding.ToArray(),
+                    filter: new Filter
                     {
-                        new Condition
+                        Must =
                         {
-                            Field = new FieldCondition
+                            new Condition
                             {
-                                Key = "UserId",
-                                Match = new Match
+                                Field = new FieldCondition
                                 {
-                                    Integer = userId
+                                    Key = "UserId",
+                                    Match = new Match
+                                    {
+                                        Integer = userId
+                                    }
                                 }
                             }
                         }
-                    }
-                },
-                limit: 2
-            );
+                    },
+                    limit: 2,
+                    scoreThreshold: 0.6f
+                );
+                searchSw.Stop();
+                Console.WriteLine($"Search completed for '{descriptionItem}' in {searchSw.ElapsedMilliseconds}ms - Found {searchResult.Count} items");
+                return searchResult;
+            }).ToList();
 
-            var result = searchResult != null && searchResult.Any()
-                ? searchResult
-                    .Where(x => x.Score > 0.6)
-                    .Select(x => new ItemSearchResult
+            var allSearchResults = await Task.WhenAll(searchTasks);
+
+            // Flatten results and remove duplicates (keep highest score)
+            var itemScoreDict = new Dictionary<long, float>();
+
+            foreach (var searchResult in allSearchResults)
+            {
+                foreach (var searchItem in searchResult)
+                {
+                    var itemId = long.Parse(searchItem.Id.Num.ToString());
+
+                    if (!itemScoreDict.ContainsKey(itemId) || itemScoreDict[itemId] < searchItem.Score)
                     {
-                        ItemId = long.Parse(x.Id.Num.ToString()),
-                        Score = x.Score
-                    })
-                    .ToList()
-                : new List<ItemSearchResult>();
+                        itemScoreDict[itemId] = searchItem.Score;
+                    }
+                }
+            }
 
-            sw.Stop();
-            Console.WriteLine($"SearchItemIdsByUserId {sw.ElapsedMilliseconds}ms - Found {result.Count} items");
+            // Map to ItemSearchResult
+            var result = itemScoreDict
+                .Select(kvp => new ItemSearchResult
+                {
+                    ItemId = kvp.Key,
+                    Score = kvp.Value
+                })
+                .OrderByDescending(x => x.Score)
+                .ToList();
+
+            stopwatch.Stop();
+            Console.WriteLine($"SearchItemIdsByUserId completed in {stopwatch.ElapsedMilliseconds}ms - Total unique items found: {result.Count}");
+
+            foreach (var res in result)
+            {
+                Console.WriteLine($"Found ItemId: {res.ItemId} with Score: {res.Score}");
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Search for items in system wardrobe with compact AI-optimized format
+        /// </summary>
+        public async Task<List<ItemForAISelection>> SearchSimilarityItemSystemCompact(List<string> descriptionItems, CancellationToken cancellationToken = default)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            Console.WriteLine($"SearchSimilarityItemSystemCompact - Processing {descriptionItems.Count} descriptions");
+
+            // Process embedding and search in pipeline
+            var searchTasks = descriptionItems.Select(async descriptionItem =>
+            {
+                var embedding = await _geminiService.EmbeddingText(descriptionItem);
+                var searchResult = await _client.SearchAsync(
+                    collectionName: _qdrantSettings.Collection,
+                    vector: embedding.ToArray(),
+                    filter: new Filter
+                    {
+                        Must =
+                        {
+                            new Condition
+                            {
+                                Field = new FieldCondition
+                                {
+                                    Key = "ItemType",
+                                    Match = new Match
+                                    {
+                                        Integer = 1
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    limit: 2,
+                    scoreThreshold: 0.6f
+                );
+                return searchResult;
+            }).ToList();
+
+            var allSearchResults = await Task.WhenAll(searchTasks);
+
+            // Flatten results and remove duplicates (keep highest score)
+            var itemScoreDict = new Dictionary<long, float>();
+            foreach (var searchResult in allSearchResults)
+            {
+                foreach (var searchItem in searchResult)
+                {
+                    var itemId = long.Parse(searchItem.Id.Num.ToString());
+                    if (!itemScoreDict.ContainsKey(itemId) || itemScoreDict[itemId] < searchItem.Score)
+                    {
+                        itemScoreDict[itemId] = searchItem.Score;
+                    }
+                }
+            }
+
+            // Fetch all items in ONE query
+            var itemIds = itemScoreDict.Keys.ToList();
+            var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(itemIds);
+
+            // Build compact results
+            var result = items
+                .Select(item =>
+                {
+                    var itemSummary = ItemForAISelection.BuildItemSummary(
+                        id: item.Id,
+                        categoryName: item.Category?.Name ?? string.Empty,
+                        aiDescription: item.AiDescription ?? string.Empty,
+                        weatherSuitable: item.WeatherSuitable ?? string.Empty,
+                        occasions: item.ItemOccasions?.Select(io => io.Occasion?.Name).Where(n => n != null).ToList() ?? new List<string>(),
+                        seasons: item.ItemSeasons?.Select(s => s.Season?.Name).Where(n => n != null).ToList() ?? new List<string>(),
+                        styles: item.ItemStyles?.Select(s => s.Style?.Name).Where(n => n != null).ToList() ?? new List<string>()
+                    );
+
+                    return new ItemForAISelection
+                    {
+                        Id = item.Id,
+                        Score = itemScoreDict[item.Id],
+                        ItemSummary = itemSummary
+                    };
+                })
+                .OrderByDescending(x => x.Score)
+                .ToList();
+
+            stopwatch.Stop();
+            Console.WriteLine($"SearchSimilarityItemSystemCompact completed in {stopwatch.ElapsedMilliseconds}ms - Total unique items: {result.Count}");
+
+            return result;
+        }
+
+        /// <summary>
+        /// Search for items by user ID with compact AI-optimized format
+        /// </summary>
+        public async Task<List<ItemForAISelection>> SearchItemsByUserIdCompact(List<string> descriptionItems, long userId, CancellationToken cancellationToken = default)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            Console.WriteLine($"SearchItemsByUserIdCompact - Processing {descriptionItems.Count} descriptions for userId: {userId}");
+
+            // Process embedding and search in parallel for each description
+            var searchTasks = descriptionItems.Select(async descriptionItem =>
+            {
+                var embedding = await _geminiService.EmbeddingText(descriptionItem);
+                var searchResult = await _client.SearchAsync(
+                    collectionName: _qdrantSettings.Collection,
+                    vector: embedding.ToArray(),
+                    filter: new Filter
+                    {
+                        Must =
+                        {
+                            new Condition
+                            {
+                                Field = new FieldCondition
+                                {
+                                    Key = "UserId",
+                                    Match = new Match
+                                    {
+                                        Integer = userId
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    limit: 2,
+                    scoreThreshold: 0.6f
+                );
+                return searchResult;
+            }).ToList();
+
+            var allSearchResults = await Task.WhenAll(searchTasks);
+
+            // Flatten results and remove duplicates (keep highest score)
+            var itemScoreDict = new Dictionary<long, float>();
+            foreach (var searchResult in allSearchResults)
+            {
+                foreach (var searchItem in searchResult)
+                {
+                    var itemId = long.Parse(searchItem.Id.Num.ToString());
+                    if (!itemScoreDict.ContainsKey(itemId) || itemScoreDict[itemId] < searchItem.Score)
+                    {
+                        itemScoreDict[itemId] = searchItem.Score;
+                    }
+                }
+            }
+
+            // Fetch all items in ONE query
+            var itemIds = itemScoreDict.Keys.ToList();
+            var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(itemIds);
+
+            // Build compact results
+            var result = items
+                .Select(item =>
+                {
+                    var itemSummary = ItemForAISelection.BuildItemSummary(
+                        id: item.Id,
+                        categoryName: item.Category?.Name ?? string.Empty,
+                        aiDescription: item.AiDescription ?? string.Empty,
+                        weatherSuitable: item.WeatherSuitable ?? string.Empty,
+                        occasions: item.ItemOccasions?.Select(io => io.Occasion?.Name).Where(n => n != null).ToList() ?? new List<string>(),
+                        seasons: item.ItemSeasons?.Select(s => s.Season?.Name).Where(n => n != null).ToList() ?? new List<string>(),
+                        styles: item.ItemStyles?.Select(s => s.Style?.Name).Where(n => n != null).ToList() ?? new List<string>()
+                    );
+
+                    return new ItemForAISelection
+                    {
+                        Id = item.Id,
+                        Score = itemScoreDict[item.Id],
+                        ItemSummary = itemSummary
+                    };
+                })
+                .OrderByDescending(x => x.Score)
+                .ToList();
+
+            stopwatch.Stop();
+            Console.WriteLine($"SearchItemsByUserIdCompact completed in {stopwatch.ElapsedMilliseconds}ms - Total unique items: {result.Count}");
 
             return result;
         }

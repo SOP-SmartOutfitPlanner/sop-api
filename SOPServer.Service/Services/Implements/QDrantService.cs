@@ -142,10 +142,14 @@ namespace SOPServer.Service.Services.Implements
             return result;
         }
 
-        public async Task<List<QDrantSearchModels>> SearchSimilarityItemSystem(List<string> descriptionItems, CancellationToken cancellationToken = default)
+        private async Task<List<QDrantSearchModels>> SearchSimilarityItemsWithFilter(
+            List<string> descriptionItems, 
+            Filter filter, 
+            string operationName,
+            CancellationToken cancellationToken = default)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
-            Console.WriteLine($"SearchSimilarityItemSystem - Processing {descriptionItems.Count} descriptions");
+            Console.WriteLine($"{operationName} - Processing {descriptionItems.Count} descriptions");
 
             // Process embedding and search in pipeline
             var searchTasks = descriptionItems.Select(async descriptionItem =>
@@ -159,10 +163,67 @@ namespace SOPServer.Service.Services.Implements
                 var searchResult = await _client.SearchAsync(
                     collectionName: _qdrantSettings.Collection,
                     vector: embedding.ToArray(),
-                    filter: new Filter
+                    filter: filter,
+                    limit: 2,
+                    scoreThreshold: 0.6f
+                );
+                searchSw.Stop();
+                Console.WriteLine($"Search completed for '{descriptionItem}' in {searchSw.ElapsedMilliseconds}ms - Found {searchResult.Count} items");
+                return searchResult;
+            }).ToList();
+
+            var allSearchResults = await Task.WhenAll(searchTasks);
+
+            // Flatten results and remove duplicates (keep highest score)
+            var itemScoreDict = new Dictionary<long, float>();
+
+            foreach (var searchResult in allSearchResults)
+            {
+                foreach (var searchItem in searchResult)
+                {
+                    var itemId = long.Parse(searchItem.Id.Num.ToString());
+
+                    if (!itemScoreDict.ContainsKey(itemId) || itemScoreDict[itemId] < searchItem.Score)
                     {
-                        Must =
-                        {
+                        itemScoreDict[itemId] = searchItem.Score;
+                    }
+                }
+            }
+
+            // Fetch all items in ONE query instead of parallel queries
+            var itemIds = itemScoreDict.Keys.ToList();
+
+            var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(itemIds);
+
+            // Map results
+            var result = items
+                .Select(item =>
+                {
+                    var itemModel = _mapper.Map<ItemModel>(item);
+                    var mappedItem = _mapper.Map<QDrantSearchModels>(itemModel);
+                    mappedItem.Score = itemScoreDict[item.Id];
+                    return mappedItem;
+                })
+                .OrderByDescending(x => x.Score)
+                .ToList();
+
+            stopwatch.Stop();
+            Console.WriteLine($"{operationName} completed in {stopwatch.ElapsedMilliseconds}ms - Total unique items found: {result.Count}");
+
+            foreach (var res in result)
+            {
+                Console.WriteLine($"Found ItemId: {res.Id} with Score: {res.Score}");
+            }
+
+            return result;
+        }
+
+        public async Task<List<QDrantSearchModels>> SearchSimilarityItemSystem(List<string> descriptionItems, CancellationToken cancellationToken = default)
+        {
+            var filter = new Filter
+            {
+                Must =
+                {
                     new Condition
                     {
                         Field = new FieldCondition
@@ -174,159 +235,44 @@ namespace SOPServer.Service.Services.Implements
                             }
                         }
                     }
-                        }
-                    },
-                    limit: 2,
-                    scoreThreshold: 0.6f
-                );
-                searchSw.Stop();
-                Console.WriteLine($"Search completed for '{descriptionItem}' in {searchSw.ElapsedMilliseconds}ms - Found {searchResult.Count} items");
-                return searchResult;
-            }).ToList();
-
-            var allSearchResults = await Task.WhenAll(searchTasks);
-
-            // Flatten results and remove duplicates (keep highest score)
-            var itemScoreDict = new Dictionary<long, float>();
-
-            foreach (var searchResult in allSearchResults)
-            {
-                foreach (var searchItem in searchResult)
-                {
-                    var itemId = long.Parse(searchItem.Id.Num.ToString());
-
-                    if (!itemScoreDict.ContainsKey(itemId) || itemScoreDict[itemId] < searchItem.Score)
-                    {
-                        itemScoreDict[itemId] = searchItem.Score;
-                    }
                 }
-            }
+            };
 
-            // Fetch all items in ONE query instead of parallel queries
-            var itemIds = itemScoreDict.Keys.ToList();
-
-            var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(itemIds);
-
-            // Map results
-            var result = items
-                .Select(item =>
-                {
-                    var itemModel = _mapper.Map<ItemModel>(item);
-                    var mappedItem = _mapper.Map<QDrantSearchModels>(itemModel);
-                    mappedItem.Score = itemScoreDict[item.Id];
-                    return mappedItem;
-                })
-                .OrderByDescending(x => x.Score)
-                .ToList();
-
-            stopwatch.Stop();
-            Console.WriteLine($"SearchSimilarityItemSystem completed in {stopwatch.ElapsedMilliseconds}ms - Total unique items found: {result.Count}");
-
-            foreach (var res in result)
-            {
-                Console.WriteLine($"Found ItemId: {res.Id} with Score: {res.Score}");
-            }
-
-            return result;
+            return await SearchSimilarityItemsWithFilter(descriptionItems, filter, "SearchSimilarityItemSystem", cancellationToken);
         }
 
         public async Task<List<QDrantSearchModels>> SearchSimilarityItemByUserId(List<string> descriptionItems, long userId, CancellationToken cancellationToken = default)
         {
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            Console.WriteLine($"SearchSimilarityItemByUserId - Processing {descriptionItems.Count} descriptions for userId {userId}");
-
-            // Process embedding and search in pipeline
-            var searchTasks = descriptionItems.Select(async descriptionItem =>
+            var filter = new Filter
             {
-                var embeddingSw = Stopwatch.StartNew();
-                var embedding = await _geminiService.EmbeddingText(descriptionItem);
-                embeddingSw.Stop();
-                Console.WriteLine($"Embedding generated for '{descriptionItem}' in {embeddingSw.ElapsedMilliseconds}ms");
-
-                var searchSw = Stopwatch.StartNew();
-                var searchResult = await _client.SearchAsync(
-                    collectionName: _qdrantSettings.Collection,
-                    vector: embedding.ToArray(),
-                    filter: new Filter
+                Must =
+                {
+                    new Condition
                     {
-                        Must =
+                        Field = new FieldCondition
                         {
-                            new Condition
+                            Key = "ItemType",
+                            Match = new Match
                             {
-                                Field = new FieldCondition
-                                {
-                                    Key = "ItemType",
-                                    Match = new Match
-                                    {
-                                        Integer = 0
-                                    }
-                                }
-                            },
-                            new Condition
-                            {
-                                Field = new FieldCondition
-                                {
-                                    Key = "UserId",
-                                    Match = new Match
-                                    {
-                                        Integer = userId
-                                    }
-                                }
+                                Integer = 0
                             }
                         }
                     },
-                    limit: 2,
-                    scoreThreshold: 0.6f
-                );
-                searchSw.Stop();
-                Console.WriteLine($"Search completed for '{descriptionItem}' in {searchSw.ElapsedMilliseconds}ms - Found {searchResult.Count} items");
-                return searchResult;
-            }).ToList();
-
-            var allSearchResults = await Task.WhenAll(searchTasks);
-
-            // Flatten results and remove duplicates (keep highest score)
-            var itemScoreDict = new Dictionary<long, float>();
-
-            foreach (var searchResult in allSearchResults)
-            {
-                foreach (var searchItem in searchResult)
-                {
-                    var itemId = long.Parse(searchItem.Id.Num.ToString());
-
-                    if (!itemScoreDict.ContainsKey(itemId) || itemScoreDict[itemId] < searchItem.Score)
+                    new Condition
                     {
-                        itemScoreDict[itemId] = searchItem.Score;
+                        Field = new FieldCondition
+                        {
+                            Key = "UserId",
+                            Match = new Match
+                            {
+                                Integer = userId
+                            }
+                        }
                     }
                 }
-            }
+            };
 
-            // Fetch all items in ONE query instead of parallel queries
-            var itemIds = itemScoreDict.Keys.ToList();
-
-            var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(itemIds);
-
-            // Map results
-            var result = items
-                .Select(item =>
-                {
-                    var itemModel = _mapper.Map<ItemModel>(item);
-                    var mappedItem = _mapper.Map<QDrantSearchModels>(itemModel);
-                    mappedItem.Score = itemScoreDict[item.Id];
-                    return mappedItem;
-                })
-                .OrderByDescending(x => x.Score)
-                .ToList();
-
-            stopwatch.Stop();
-            Console.WriteLine($"SearchSimilarityItemByUserId completed in {stopwatch.ElapsedMilliseconds}ms - Total unique items found: {result.Count}");
-
-            foreach (var res in result)
-            {
-                Console.WriteLine($"Found ItemId: {res.Id} with Score: {res.Score}");
-            }
-
-            return result;
+            return await SearchSimilarityItemsWithFilter(descriptionItems, filter, $"SearchSimilarityItemByUserId (userId: {userId})", cancellationToken);
         }
 
         public async Task<List<ItemSearchResult>> SearchItemIdsByUserId(string descriptionItem, long userId, CancellationToken cancellationToken = default)

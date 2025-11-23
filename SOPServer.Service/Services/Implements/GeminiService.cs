@@ -358,18 +358,19 @@ namespace SOPServer.Service.Services.Implements
                 userParts.Add(new Part { Text = $"Weather: {weather}" });
             }
 
+            // Create a wrapper function that captures userId for SearchSimilarityItemByUserId
+            Func<List<string>, CancellationToken, Task<List<QDrantSearchModels>>> searchUserItemsWrapper = 
+                (descriptionItems, cancellationToken) => _qdrantService.Value.SearchSimilarityItemByUserId(descriptionItems, userId, cancellationToken);
+            
+            QuickTools tools = new QuickTools([_qdrantService.Value.SearchSimilarityItemSystem, searchUserItemsWrapper]);
+            var model = CreateSuggestionModel(tools);
+            
             const int maxRetryAttempts = 5;
 
             for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
             {
                 try
                 {
-                    // Create a wrapper function that captures userId for SearchSimilarityItemByUserId
-                    Func<List<string>, CancellationToken, Task<List<QDrantSearchModels>>> searchUserItemsWrapper = 
-                        (descriptionItems, cancellationToken) => _qdrantService.Value.SearchSimilarityItemByUserId(descriptionItems, userId, cancellationToken);
-                    
-                    QuickTools tools = new QuickTools([_qdrantService.Value.SearchSimilarityItemSystem, searchUserItemsWrapper]);
-                    var model = CreateSuggestionModel(tools);
 
                     var generateRequest = new GenerateContentRequest();
                     generateRequest.GenerationConfig = new GenerationConfig

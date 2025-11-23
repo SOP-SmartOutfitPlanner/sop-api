@@ -25,7 +25,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<List<float>?> EmbeddingText(string textEmbeeding);
         Task<CategoryItemAnalysisModel?> AnalyzingCategory(string base64Image, string mimeType, string finalPrompt);
         Task<List<string>> OutfitSuggestion(string occasion, string usercharacteristic, string? weather = null);
-        Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, string? weather = null);
+        Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, long userId, string? weather = null);
         GenerativeModel CreateSuggestionModel(QuickTools? tools = null);
     }
 }

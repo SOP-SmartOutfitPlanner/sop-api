@@ -20,6 +20,9 @@ namespace SOPServer.Service.Services.Interfaces
         [Description("Search for items in system wardrobe matching with list text descriptions")]
         Task<List<QDrantSearchModels>> SearchSimilarityItemSystem([Description("List of item descriptions to find similarities")] List<string> descriptionItems, CancellationToken cancellationToken = default);
         
+        [Description("Search for items in user's wardrobe matching with list text descriptions")]
+        Task<List<QDrantSearchModels>> SearchSimilarityItemByUserId([Description("List of item descriptions to find similarities")] List<string> descriptionItems, [Description("The user ID whose wardrobe to search")] long userId, CancellationToken cancellationToken = default);
+        
         /// <summary>
         /// Search for items by similarity and return only item IDs and scores (no DB queries)
         /// </summary>

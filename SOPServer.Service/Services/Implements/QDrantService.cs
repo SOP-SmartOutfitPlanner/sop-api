@@ -142,10 +142,14 @@ namespace SOPServer.Service.Services.Implements
             return result;
         }
 
-        public async Task<List<QDrantSearchModels>> SearchSimilarityItemSystem(List<string> descriptionItems, CancellationToken cancellationToken = default)
+        private async Task<List<QDrantSearchModels>> SearchSimilarityItemsWithFilter(
+            List<string> descriptionItems, 
+            Filter filter, 
+            string operationName,
+            CancellationToken cancellationToken = default)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
-            Console.WriteLine($"SearchSimilarityItemSystem - Processing {descriptionItems.Count} descriptions");
+            Console.WriteLine($"{operationName} - Processing {descriptionItems.Count} descriptions");
 
             // Process embedding and search in pipeline
             var searchTasks = descriptionItems.Select(async descriptionItem =>
@@ -159,23 +163,7 @@ namespace SOPServer.Service.Services.Implements
                 var searchResult = await _client.SearchAsync(
                     collectionName: _qdrantSettings.Collection,
                     vector: embedding.ToArray(),
-                    filter: new Filter
-                    {
-                        Must =
-                        {
-                    new Condition
-                    {
-                        Field = new FieldCondition
-                        {
-                            Key = "ItemType",
-                            Match = new Match
-                            {
-                                Integer = 1
-                            }
-                        }
-                    }
-                        }
-                    },
+                    filter: filter,
                     limit: 2,
                     scoreThreshold: 0.6f
                 );
@@ -220,7 +208,7 @@ namespace SOPServer.Service.Services.Implements
                 .ToList();
 
             stopwatch.Stop();
-            Console.WriteLine($"SearchSimilarityItemSystem completed in {stopwatch.ElapsedMilliseconds}ms - Total unique items found: {result.Count}");
+            Console.WriteLine($"{operationName} completed in {stopwatch.ElapsedMilliseconds}ms - Total unique items found: {result.Count}");
 
             foreach (var res in result)
             {
@@ -228,6 +216,63 @@ namespace SOPServer.Service.Services.Implements
             }
 
             return result;
+        }
+
+        public async Task<List<QDrantSearchModels>> SearchSimilarityItemSystem(List<string> descriptionItems, CancellationToken cancellationToken = default)
+        {
+            var filter = new Filter
+            {
+                Must =
+                {
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "ItemType",
+                            Match = new Match
+                            {
+                                Integer = 1
+                            }
+                        }
+                    }
+                }
+            };
+
+            return await SearchSimilarityItemsWithFilter(descriptionItems, filter, "SearchSimilarityItemSystem", cancellationToken);
+        }
+
+        public async Task<List<QDrantSearchModels>> SearchSimilarityItemByUserId(List<string> descriptionItems, long userId, CancellationToken cancellationToken = default)
+        {
+            var filter = new Filter
+            {
+                Must =
+                {
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "ItemType",
+                            Match = new Match
+                            {
+                                Integer = 0
+                            }
+                        }
+                    },
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "UserId",
+                            Match = new Match
+                            {
+                                Integer = userId
+                            }
+                        }
+                    }
+                }
+            };
+
+            return await SearchSimilarityItemsWithFilter(descriptionItems, filter, $"SearchSimilarityItemByUserId (userId: {userId})", cancellationToken);
         }
 
         public async Task<List<ItemSearchResult>> SearchItemIdsByUserId(string descriptionItem, long userId, CancellationToken cancellationToken = default)

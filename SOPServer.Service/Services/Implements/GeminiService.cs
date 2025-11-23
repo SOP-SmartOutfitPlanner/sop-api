@@ -308,7 +308,7 @@ namespace SOPServer.Service.Services.Implements
             throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
         }
 
-        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, string? weather = null)
+        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, long userId, string? weather = null)
         {
             var choosePromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_CHOOSE_PROMPT);
 
@@ -343,6 +343,7 @@ namespace SOPServer.Service.Services.Implements
 
             var userParts = new List<Part>
             {
+                new Part { Text = $"User ID: {userId}" },
                 new Part { Text = $"User Characteristics: {usercharacteristic}" },
                 new Part { Text = $"Available Items: {itemsJson}" }
             };
@@ -357,14 +358,21 @@ namespace SOPServer.Service.Services.Implements
                 userParts.Add(new Part { Text = $"Weather: {weather}" });
             }
 
+            // Create a wrapper function that captures userId for SearchSimilarityItemByUserId
+            // The wrapper simplifies the function signature for AI by auto-providing userId from context
+            // Note: Description attributes from the underlying method are used by QuickTools via reflection
+            Func<List<string>, CancellationToken, Task<List<QDrantSearchModels>>> searchUserItemsWrapper = 
+                (descriptionItems, cancellationToken) => _qdrantService.Value.SearchSimilarityItemByUserId(descriptionItems, userId, cancellationToken);
+            
+            QuickTools tools = new QuickTools([_qdrantService.Value.SearchSimilarityItemSystem, searchUserItemsWrapper]);
+            var model = CreateSuggestionModel(tools);
+            
             const int maxRetryAttempts = 5;
 
             for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
             {
                 try
                 {
-                    QuickTools tools = new QuickTools([_qdrantService.Value.SearchSimilarityItemSystem]);
-                    var model = CreateSuggestionModel(tools);
 
                     var generateRequest = new GenerateContentRequest();
                     generateRequest.GenerationConfig = new GenerationConfig

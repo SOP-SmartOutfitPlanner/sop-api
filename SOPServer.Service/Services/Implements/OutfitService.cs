@@ -1065,33 +1065,6 @@ namespace SOPServer.Service.Services.Implements
             return string.Join("; ", characteristics);
         }
 
-        private string BuildOccasionString(UserOccasion userOccasion)
-        {
-            var occasionDetails = new List<string>();
-
-            if (!string.IsNullOrWhiteSpace(userOccasion.Name))
-                occasionDetails.Add($"EventName: {userOccasion.Name}");
-
-            if (userOccasion.Occasion != null && !string.IsNullOrWhiteSpace(userOccasion.Occasion.Name))
-                occasionDetails.Add($"OccasionType: {userOccasion.Occasion.Name}");
-
-            if (!string.IsNullOrWhiteSpace(userOccasion.Description))
-                occasionDetails.Add($"Description: {userOccasion.Description}");
-
-            occasionDetails.Add($"Date: {userOccasion.DateOccasion:yyyy-MM-dd}");
-
-            if (userOccasion.StartTime.HasValue)
-                occasionDetails.Add($"StartTime: {userOccasion.StartTime.Value:HH:mm}");
-
-            if (userOccasion.EndTime.HasValue)
-                occasionDetails.Add($"EndTime: {userOccasion.EndTime.Value:HH:mm}");
-
-            if (!string.IsNullOrWhiteSpace(userOccasion.WeatherSnapshot))
-                occasionDetails.Add($"Weather: {userOccasion.WeatherSnapshot}");
-
-            return string.Join("; ", occasionDetails);
-        }
-
         public async Task<BaseResponseModel> OutfitSuggestion(long userId, long? occasionId, string? weather = null)
         {
             var overallStopwatch = Stopwatch.StartNew();
@@ -1107,18 +1080,13 @@ namespace SOPServer.Service.Services.Implements
             string occasionString = string.Empty;
             if (occasionId.HasValue)
             {
-                var occasion = await _unitOfWork.UserOccasionRepository.GetByIdAsync(occasionId.Value);
+                var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(occasionId.Value);
                 if (occasion == null)
                 {
                     throw new NotFoundException(MessageConstants.USER_OCCASION_NOT_FOUND);
                 }
 
-                if (occasion.UserId != userId)
-                {
-                    throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
-                }
-
-                occasionString = BuildOccasionString(occasion);
+                occasionString = occasion.Name;
             }
             occasionStopwatch.Stop();
             Console.WriteLine($"[TIMING] Build occasion string: {occasionStopwatch.ElapsedMilliseconds}ms");

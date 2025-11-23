@@ -5,5 +5,6 @@ namespace SOPServer.Repository.Repositories.Interfaces
 {
     public interface IUserSubscriptionTransactionRepository : IGenericRepository<UserSubscriptionTransaction>
     {
+        Task<List<UserSubscriptionTransaction>> GetAllOrderPending();
     }
 }

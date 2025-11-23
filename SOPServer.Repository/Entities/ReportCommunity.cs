@@ -21,5 +21,6 @@ namespace SOPServer.Repository.Entities
         public virtual Post Post { get; set; }
         public virtual CommentPost CommentPost { get; set; }
         public virtual User ResolvedByAdmin { get; set; }
+        public virtual ICollection<ReportReporter> ReportReporters { get; set; } = new List<ReportReporter>();
     }
 }

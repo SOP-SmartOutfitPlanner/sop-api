@@ -99,8 +99,11 @@ namespace SOPServer.Service.Services.Implements
                 await _unitOfWork.SaveAsync();
             }
 
-            var pendingTransactions = await _unitOfWork.UserSubscriptionTransactionRepository.GetQueryable()
-                .Where(t => t.UserId == userId && t.Status == TransactionStatus.PENDING)
+            var pendingTransactions = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
+                .Include(us => us.UserSubscriptionTransactions)
+                .Where(us => us.UserId == userId)
+                .SelectMany(us => us.UserSubscriptionTransactions)
+                .Where(t => t.Status == TransactionStatus.PENDING)
                 .ToListAsync();
 
             foreach (var pt in pendingTransactions)
@@ -142,7 +145,6 @@ namespace SOPServer.Service.Services.Implements
                 var freeTransaction = new UserSubscriptionTransaction
                 {
                     UserSubscriptionId = freeSubscription.Id,
-                    UserId = userId,
                     TransactionCode = GenerateTransactionCode(),
                     Price = 0,
                     Status = TransactionStatus.COMPLETED,
@@ -192,7 +194,6 @@ namespace SOPServer.Service.Services.Implements
             var transaction = new UserSubscriptionTransaction
             {
                 UserSubscriptionId = userSubscription.Id,
-                UserId = userId,
                 TransactionCode = GenerateTransactionCode(),
                 Price = plan.Price,
                 Status = TransactionStatus.PENDING,
@@ -365,7 +366,7 @@ namespace SOPServer.Service.Services.Implements
                 transaction.UserSubscription.IsActive = true;
                 transaction.UserSubscription.UpdatedDate = DateTime.UtcNow;
 
-                var user = await _unitOfWork.UserRepository.GetByIdAsync(transaction.UserId);
+                var user = transaction.UserSubscription.User;
                 if (user != null && transaction.UserSubscription.SubscriptionPlan.Price > 0)
                 {
                     user.IsPremium = true;

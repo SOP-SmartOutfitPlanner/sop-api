@@ -359,6 +359,8 @@ namespace SOPServer.Service.Services.Implements
             }
 
             // Create a wrapper function that captures userId for SearchSimilarityItemByUserId
+            // The wrapper simplifies the function signature for AI by auto-providing userId from context
+            // Note: Description attributes from the underlying method are used by QuickTools via reflection
             Func<List<string>, CancellationToken, Task<List<QDrantSearchModels>>> searchUserItemsWrapper = 
                 (descriptionItems, cancellationToken) => _qdrantService.Value.SearchSimilarityItemByUserId(descriptionItems, userId, cancellationToken);
             

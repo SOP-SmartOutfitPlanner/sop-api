@@ -81,7 +81,7 @@ namespace SOPServer.Service.Services.Implements
             return cancelPayment;
         }
 
-        public async Task<ActionResult<PaymentLink>> GetPaymentLinkDetails(int transactionId)
+        public async Task<PaymentLink> GetPaymentLinkDetails(int transactionId)
         {
             var paymentLinkDetails = await _payos.PaymentRequests.GetAsync(transactionId);
             return paymentLinkDetails;

@@ -31,7 +31,11 @@ builder.Services.AddServiceConfiguration(builder.Configuration);
 // Database Configuration
 builder.Services.AddDatabaseConfiguration(builder.Configuration);
 
+// SignalR Configuration
 builder.Services.AddSignalRConfiguration();
+
+// HostedService Configuration
+builder.Services.AddHostedServiceConfiguration();
 
 // FirebaseApp Configuration
 FirebaseAppConfiguration.AddFirebaseAppConfiguration(env);

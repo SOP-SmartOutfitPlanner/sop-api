@@ -13,7 +13,7 @@ namespace SOPServer.Service.Services.Interfaces
     {
         Task<CreatePaymentLinkResponse> CreatePaymentUrl(int userSubscriptionId);
         Task<ActionResult<PaymentLink>> CancelPayment(int transactionId, string cancellationReason);
-        Task<ActionResult<PaymentLink>> GetPaymentLinkDetails(int transactionId);
+        Task<PaymentLink> GetPaymentLinkDetails(int transactionId);
         Task<ConfirmWebhookResponse> ConfirmWebhook(string webhookUrl);
         Task<WebhookData> VerifyPaymentWebhookAsync(Webhook webhook);
     }

@@ -1150,7 +1150,7 @@ namespace SOPServer.Service.Services.Implements
 
             // Choose outfit from the search results
             var chooseOutfitStopwatch = Stopwatch.StartNew();
-            var outfitSelection = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems, weather);
+            var outfitSelection = await _geminiService.ChooseOutfit(occasionString, characteristicString, listPartItems, userId, weather);
             chooseOutfitStopwatch.Stop();
             Console.WriteLine($"[TIMING] Gemini choose outfit: {chooseOutfitStopwatch.ElapsedMilliseconds}ms");
             Console.WriteLine($"[DEBUG] Gemini selected {outfitSelection.ItemIds?.Count ?? 0} items: {string.Join(", ", outfitSelection.ItemIds ?? new List<long>())}");

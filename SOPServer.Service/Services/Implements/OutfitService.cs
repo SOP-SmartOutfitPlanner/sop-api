@@ -256,7 +256,6 @@ namespace SOPServer.Service.Services.Implements
 
             if (model.ItemIds != null && model.ItemIds.Any())
             {
-                // Validate that all items exist and belong to the user
                 foreach (var itemId in model.ItemIds)
                 {
                     var item = await _unitOfWork.ItemRepository.GetByIdAsync(itemId);
@@ -265,8 +264,7 @@ namespace SOPServer.Service.Services.Implements
                         throw new NotFoundException($"Item with ID {itemId} not found");
                     }
 
-                    // Validate that the item belongs to the user
-                    if (item.UserId != userId)
+                    if (item.ItemType != ItemType.SYSTEM && item.UserId != userId)
                     {
                         throw new ForbiddenException($"Item with ID {itemId} does not belong to you. You can only create outfits with your own items.");
                     }

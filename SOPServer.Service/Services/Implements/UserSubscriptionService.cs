@@ -50,7 +50,7 @@ namespace SOPServer.Service.Services.Implements
                         cachedData.UserSubscriptionId,
                         cachedData.TransactionId,
                         cachedData.Description,
-                        cachedData.ExpiredAt, // Unix timestamp from PayOS
+                        cachedData.ExpiredAt,
                         cachedData.BankInfo
                     }
                 };
@@ -251,7 +251,7 @@ namespace SOPServer.Service.Services.Implements
                     paymentData.UserSubscriptionId,
                     paymentData.TransactionId,
                     paymentData.Description,
-                    paymentData.ExpiredAt, // Unix timestamp from PayOS
+                    paymentData.ExpiredAt,
                     paymentData.BankInfo
                 }
             };

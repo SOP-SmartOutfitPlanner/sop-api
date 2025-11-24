@@ -15,5 +15,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<long> IncrementAsync(string key, TimeSpan? expiry = null);
         Task<TimeSpan?> GetTtlAsync(string key);
         Task<(T Value, TimeSpan? Ttl)> GetWithTtlAsync<T>(string key);
+        Task<bool> AcquireLockAsync(string key, TimeSpan expiry);
+        Task ReleaseLockAsync(string key);
     }
 }

@@ -87,5 +87,21 @@ namespace SOPServer.Service.Services.Implements
             var deserializedValue = JsonSerializer.Deserialize<T>(value, _jsonOptions);
             return (deserializedValue, ttl);
         }
+
+        public async Task<bool> AcquireLockAsync(string key, TimeSpan expiry)
+        {
+            var db = _redis.GetDatabase();
+            var lockKey = $"lock:{key}";
+            var fullKey = _settings.InstanceName + lockKey;
+            return await db.StringSetAsync(fullKey, "locked", expiry, When.NotExists);
+        }
+
+        public async Task ReleaseLockAsync(string key)
+        {
+            var db = _redis.GetDatabase();
+            var lockKey = $"lock:{key}";
+            var fullKey = _settings.InstanceName + lockKey;
+            await db.KeyDeleteAsync(fullKey);
+        }
     }
 }

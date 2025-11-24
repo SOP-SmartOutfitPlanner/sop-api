@@ -11,6 +11,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> GetPendingReportsAsync(ReportFilterModel filter, PaginationParameter pagination);
         Task<BaseResponseModel> GetAllReportsAsync(ReportFilterModel filter, PaginationParameter pagination);
         Task<BaseResponseModel> GetReportDetailsAsync(long reportId);
+        Task<BaseResponseModel> GetReportersByReportIdAsync(long reportId, PaginationParameter pagination);
         Task<BaseResponseModel> ResolveNoViolationAsync(long reportId, long adminId, ResolveNoViolationModel model);
         Task<BaseResponseModel> ResolveWithActionAsync(long reportId, long adminId, ResolveWithActionModel model);
     }

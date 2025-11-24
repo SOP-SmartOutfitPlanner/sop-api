@@ -1,9 +1,11 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
+using SOPServer.Service.BusinessModels.NotificationModels;
 using SOPServer.Service.BusinessModels.ReportCommunityModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.UserModels;
@@ -66,33 +68,71 @@ namespace SOPServer.Service.Services.Implements
                 }
             }
 
-            // Check for duplicate report
-            var existingReport = await _unitOfWork.ReportCommunityRepository.GetExistingReportAsync(
-                model.UserId,
+            // Check for existing report on the same content
+            var existingReport = await _unitOfWork.ReportCommunityRepository.GetExistingReportByContentAsync(
                 model.PostId,
                 model.CommentId,
                 model.Type);
 
             if (existingReport != null)
             {
-                throw new BadRequestException(MessageConstants.REPORT_ALREADY_EXISTS);
+                // Check if this user has already reported this content
+                var existingReporter = await _unitOfWork.ReportReporterRepository
+                    .GetByReportAndUserAsync(existingReport.Id, model.UserId);
+
+                if (existingReporter != null)
+                {
+                    throw new BadRequestException(MessageConstants.REPORT_ALREADY_EXISTS);
+                }
+
+                // Merge this user as an additional reporter
+                var reportReporter = new ReportReporter
+                {
+                    ReportId = existingReport.Id,
+                    UserId = model.UserId,
+                    Description = model.Description ?? string.Empty
+                };
+
+                await _unitOfWork.ReportReporterRepository.AddAsync(reportReporter);
+                await _unitOfWork.SaveAsync();
+
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status201Created,
+                    Message = MessageConstants.REPORT_COMMUNITY_MERGED_SUCCESS,
+                    Data = new { ReportId = existingReport.Id, Merged = true }
+                };
             }
 
-            // Create report entity
-            var report = _mapper.Map<ReportCommunity>(model);
-            report.Status = ReportStatus.PENDING;
-            report.Action = ReportAction.NONE;
+            // Create new report entity
+            var report = new ReportCommunity
+            {
+                PostId = model.PostId,
+                CommentId = model.CommentId,
+                Type = model.Type,
+                Status = ReportStatus.PENDING,
+                Action = ReportAction.NONE
+            };
 
             await _unitOfWork.ReportCommunityRepository.AddAsync(report);
             await _unitOfWork.SaveAsync();
 
-            var reportModel = _mapper.Map<ReportCommunityModel>(report);
+            // Add the first reporter
+            var firstReporter = new ReportReporter
+            {
+                ReportId = report.Id,
+                UserId = model.UserId,
+                Description = model.Description ?? string.Empty
+            };
+
+            await _unitOfWork.ReportReporterRepository.AddAsync(firstReporter);
+            await _unitOfWork.SaveAsync();
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status201Created,
                 Message = MessageConstants.REPORT_COMMUNITY_CREATE_SUCCESS,
-                Data = reportModel
+                Data = new { ReportId = report.Id, Merged = false }
             };
         }
 
@@ -104,21 +144,24 @@ namespace SOPServer.Service.Services.Implements
                 filter.ToDate,
                 pagination);
 
-            var reportModels = reports.Select(r => new ReportCommunityModel
+            var reportModels = reports.Select(r =>
             {
-                Id = r.Id,
-                UserId = r.UserId,
-                Reporter = _mapper.Map<UserBasicModel>(r.User),
-                Author = r.Type == ReportType.POST
-                    ? _mapper.Map<UserBasicModel>(r.Post?.User)
-                    : _mapper.Map<UserBasicModel>(r.CommentPost?.User),
-                PostId = r.PostId,
-                CommentId = r.CommentId,
-                Type = r.Type,
-                Action = r.Action,
-                Status = r.Status,
-                Description = r.Description,
-                CreatedDate = r.CreatedDate
+                var firstReporter = r.ReportReporters?.FirstOrDefault(rr => !rr.IsDeleted);
+                return new ReportCommunityModel
+                {
+                    Id = r.Id,
+                    OriginalReporter = firstReporter != null ? _mapper.Map<UserBasicModel>(firstReporter.User) : null,
+                    Author = r.Type == ReportType.POST
+                        ? _mapper.Map<UserBasicModel>(r.Post?.User)
+                        : _mapper.Map<UserBasicModel>(r.CommentPost?.User),
+                    PostId = r.PostId,
+                    CommentId = r.CommentId,
+                    Type = r.Type,
+                    Action = r.Action,
+                    Status = r.Status,
+                    ReporterCount = r.ReportReporters?.Count(rr => !rr.IsDeleted) ?? 0,
+                    CreatedDate = r.CreatedDate
+                };
             }).ToList();
 
             var paginatedResult = new Pagination<ReportCommunityModel>(reportModels, totalCount, pagination.PageIndex, pagination.PageSize);
@@ -127,7 +170,19 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.GET_PENDING_REPORTS_SUCCESS,
-                Data = paginatedResult
+                Data = new ModelPaging
+                {
+                    Data = paginatedResult,
+                    MetaData = new
+                    {
+                        paginatedResult.TotalCount,
+                        paginatedResult.PageSize,
+                        paginatedResult.CurrentPage,
+                        paginatedResult.TotalPages,
+                        paginatedResult.HasNext,
+                        paginatedResult.HasPrevious
+                    }
+                }
             };
         }
 
@@ -140,21 +195,24 @@ namespace SOPServer.Service.Services.Implements
                 filter.ToDate,
                 pagination);
 
-            var reportModels = reports.Select(r => new ReportCommunityModel
+            var reportModels = reports.Select(r =>
             {
-                Id = r.Id,
-                UserId = r.UserId,
-                Reporter = _mapper.Map<UserBasicModel>(r.User),
-                Author = r.Type == ReportType.POST
-                    ? _mapper.Map<UserBasicModel>(r.Post?.User)
-                    : _mapper.Map<UserBasicModel>(r.CommentPost?.User),
-                PostId = r.PostId,
-                CommentId = r.CommentId,
-                Type = r.Type,
-                Action = r.Action,
-                Status = r.Status,
-                Description = r.Description,
-                CreatedDate = r.CreatedDate
+                var firstReporter = r.ReportReporters?.FirstOrDefault(rr => !rr.IsDeleted);
+                return new ReportCommunityModel
+                {
+                    Id = r.Id,
+                    OriginalReporter = firstReporter != null ? _mapper.Map<UserBasicModel>(firstReporter.User) : null,
+                    Author = r.Type == ReportType.POST
+                        ? _mapper.Map<UserBasicModel>(r.Post?.User)
+                        : _mapper.Map<UserBasicModel>(r.CommentPost?.User),
+                    PostId = r.PostId,
+                    CommentId = r.CommentId,
+                    Type = r.Type,
+                    Action = r.Action,
+                    Status = r.Status,
+                    ReporterCount = r.ReportReporters?.Count(rr => !rr.IsDeleted) ?? 0,
+                    CreatedDate = r.CreatedDate
+                };
             }).ToList();
 
             var paginatedResult = new Pagination<ReportCommunityModel>(reportModels, totalCount, pagination.PageIndex, pagination.PageSize);
@@ -163,7 +221,19 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.GET_ALL_REPORTS_SUCCESS,
-                Data = paginatedResult
+                Data = new ModelPaging
+                {
+                    Data = paginatedResult,
+                    MetaData = new
+                    {
+                        paginatedResult.TotalCount,
+                        paginatedResult.PageSize,
+                        paginatedResult.CurrentPage,
+                        paginatedResult.TotalPages,
+                        paginatedResult.HasNext,
+                        paginatedResult.HasPrevious
+                    }
+                }
             };
         }
 
@@ -207,15 +277,18 @@ namespace SOPServer.Service.Services.Implements
                 hiddenStatus = $"Hidden by moderation on {report.CommentPost.UpdatedDate?.ToString("yyyy-MM-dd") ?? report.ResolvedAt?.ToString("yyyy-MM-dd") ?? "N/A"}";
             }
 
+            // Get original reporter (first reporter)
+            var firstReporter = report.ReportReporters?.FirstOrDefault(rr => !rr.IsDeleted);
+
             var detailModel = new ReportDetailModel
             {
                 Id = report.Id,
                 Type = report.Type,
                 Status = report.Status,
                 Action = report.Action,
-                Description = report.Description,
                 CreatedDate = report.CreatedDate,
-                Reporter = _mapper.Map<UserBasicModel>(report.User),
+                OriginalReporter = firstReporter != null ? _mapper.Map<UserBasicModel>(firstReporter.User) : new UserBasicModel(),
+                ReporterCount = report.ReportReporters?.Count(rr => !rr.IsDeleted) ?? 0,
                 Content = report.Type == ReportType.POST
                     ? _mapper.Map<ReportedContentModel>(report.Post)
                     : _mapper.Map<ReportedContentModel>(report.CommentPost),
@@ -238,9 +311,59 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<BaseResponseModel> GetReportersByReportIdAsync(long reportId, PaginationParameter pagination)
+        {
+            // Validate report exists
+            var report = await _unitOfWork.ReportCommunityRepository.GetByIdAsync(reportId);
+            if (report == null)
+            {
+                throw new NotFoundException(MessageConstants.REPORT_NOT_FOUND);
+            }
+
+            var reporters = await _unitOfWork.ReportReporterRepository.ToPaginationIncludeAsync(
+                pagination,
+                include: query => query.Include(rr => rr.User),
+                filter: rr => rr.ReportId == reportId,
+                orderBy: q => q.OrderByDescending(rr => rr.CreatedDate));
+
+            var reporterModels = reporters.Select(rr => new ReporterModel
+            {
+                Id = rr.Id,
+                UserId = rr.UserId,
+                Reporter = _mapper.Map<UserBasicModel>(rr.User),
+                Description = rr.Description,
+                CreatedDate = rr.CreatedDate
+            }).ToList();
+
+            var paginatedResult = new Pagination<ReporterModel>(
+                reporterModels,
+                reporters.TotalCount,
+                reporters.CurrentPage,
+                reporters.PageSize);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_REPORTERS_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = paginatedResult,
+                    MetaData = new
+                    {
+                        paginatedResult.TotalCount,
+                        paginatedResult.PageSize,
+                        paginatedResult.CurrentPage,
+                        paginatedResult.TotalPages,
+                        paginatedResult.HasNext,
+                        paginatedResult.HasPrevious
+                    }
+                }
+            };
+        }
+
         public async Task<BaseResponseModel> ResolveNoViolationAsync(long reportId, long adminId, ResolveNoViolationModel model)
         {
-            var report = await _unitOfWork.ReportCommunityRepository.GetByIdAsync(reportId);
+            var report = await _unitOfWork.ReportCommunityRepository.GetReportDetailsAsync(reportId);
             if (report == null)
             {
                 throw new NotFoundException(MessageConstants.REPORT_NOT_FOUND);
@@ -261,14 +384,23 @@ namespace SOPServer.Service.Services.Implements
             _unitOfWork.ReportCommunityRepository.UpdateAsync(report);
             await _unitOfWork.SaveAsync();
 
-            // Notify reporter
-            await NotifyReporterAsync(report.UserId, report.Type.ToString(), "No violation found");
+            // Notify all reporters
+            var reporterIds = report.ReportReporters?
+                .Where(rr => !rr.IsDeleted)
+                .Select(rr => rr.UserId)
+                .Distinct()
+                .ToList() ?? new List<long>();
+
+            foreach (var reporterId in reporterIds)
+            {
+                await NotifyReporterAsync(reporterId, report, "No violation found");
+            }
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.RESOLVE_REPORT_NO_VIOLATION_SUCCESS,
-                Data = _mapper.Map<ReportCommunityModel>(report)
+                Data = new { ReportId = reportId }
             };
         }
 
@@ -342,15 +474,26 @@ namespace SOPServer.Service.Services.Implements
             _unitOfWork.ReportCommunityRepository.UpdateAsync(report);
             await _unitOfWork.SaveAsync();
 
-            // Notify both reporter and author
-            await NotifyReporterAsync(report.UserId, report.Type.ToString(), $"Action taken: {model.Action}");
+            // Notify all reporters
+            var reporterIds = report.ReportReporters?
+                .Where(rr => !rr.IsDeleted)
+                .Select(rr => rr.UserId)
+                .Distinct()
+                .ToList() ?? new List<long>();
+
+            foreach (var reporterId in reporterIds)
+            {
+                await NotifyReporterAsync(reporterId, report, $"Action taken: {model.Action}");
+            }
+
+            // Notify author
             await NotifyAuthorAsync(authorId, model.Action, model.Notes);
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.RESOLVE_REPORT_WITH_ACTION_SUCCESS,
-                Data = _mapper.Map<ReportCommunityModel>(report)
+                Data = new { ReportId = reportId }
             };
         }
 
@@ -438,27 +581,36 @@ namespace SOPServer.Service.Services.Implements
             await _unitOfWork.UserViolationRepository.AddAsync(violation);
         }
 
-        private async Task NotifyReporterAsync(long reporterId, string contentType, string outcome)
+        private async Task NotifyReporterAsync(long reporterId, ReportCommunity report, string outcome)
         {
-            // For now, we'll skip creating formal notifications and just send push notifications
-            // Future: Can integrate with NotificationService to create persisted notifications
-            var devices = await _unitOfWork.UserDeviceRepository.GetUserDeviceByUserId(reporterId);
-            if (devices != null && devices.Any())
+            // Get author display name
+            var authorName = "Unknown";
+            if (report.Type == ReportType.POST && report.Post?.User != null)
             {
-                var title = "Report Update";
-                var body = $"Your report about {contentType} has been reviewed. Outcome: {outcome}";
+                authorName = report.Post.User.DisplayName;
+            }
+            else if (report.Type == ReportType.COMMENT && report.CommentPost?.User != null)
+            {
+                authorName = report.CommentPost.User.DisplayName;
+            }
 
-                foreach (var device in devices)
-                {
-                    try
-                    {
-                        await FirebaseLibrary.SendMessageFireBase(title, body, device.DeviceToken);
-                    }
-                    catch
-                    {
-                        // Continue to next device if one fails
-                    }
-                }
+            // Format content type to Pascal case (Post/Comment)
+            var contentType = report.Type == ReportType.POST ? "Post" : "Comment";
+
+            var notificationModel = new NotificationRequestModel
+            {
+                Title = "Report Update",
+                Message = $"Your report about {authorName}'s {contentType} has been reviewed. Outcome: {outcome}",
+                ActorUserId = reporterId
+            };
+
+            try
+            {
+                await _notificationService.PushNotificationByUserId(reporterId, notificationModel);
+            }
+            catch
+            {
+                // Log error but continue processing
             }
         }
 
@@ -472,23 +624,20 @@ namespace SOPServer.Service.Services.Implements
                 { ReportAction.SUSPEND, "Your account has been temporarily suspended for violating community guidelines." }
             };
 
-            var devices = await _unitOfWork.UserDeviceRepository.GetUserDeviceByUserId(authorId);
-            if (devices != null && devices.Any())
+            var notificationModel = new NotificationRequestModel
             {
-                var title = "Content Moderation Notice";
-                var body = $"{actionMessages[action]} Reason: {reason}";
+                Title = "Content Moderation Notice",
+                Message = $"{actionMessages[action]} Reason: {reason}",
+                ActorUserId = authorId
+            };
 
-                foreach (var device in devices)
-                {
-                    try
-                    {
-                        await FirebaseLibrary.SendMessageFireBase(title, body, device.DeviceToken);
-                    }
-                    catch
-                    {
-                        // Continue to next device if one fails
-                    }
-                }
+            try
+            {
+                await _notificationService.PushNotificationByUserId(authorId, notificationModel);
+            }
+            catch
+            {
+                // Log error but continue processing
             }
         }
     }

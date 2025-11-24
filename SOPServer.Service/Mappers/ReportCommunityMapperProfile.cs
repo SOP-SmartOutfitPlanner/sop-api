@@ -3,6 +3,7 @@ using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.ReportCommunityModels;
 using SOPServer.Service.BusinessModels.UserModels;
+using System.Linq;
 
 namespace SOPServer.Service.Mappers
 {
@@ -10,8 +11,8 @@ namespace SOPServer.Service.Mappers
     {
         public ReportCommunityMapperProfile()
         {
-            CreateMap<ReportCommunityCreateModel, ReportCommunity>();
-            CreateMap<ReportCommunity, ReportCommunityModel>();
+            CreateMap<ReportReporter, ReporterModel>()
+                .ForMember(dest => dest.Reporter, opt => opt.MapFrom(src => src.User));
 
             CreateMap<User, UserBasicModel>()
                 .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.AvtUrl));

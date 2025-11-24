@@ -62,7 +62,6 @@ public partial class User : BaseEntity
 
     public virtual ICollection<Follower> Following { get; set; } = new List<Follower>();
     public virtual ICollection<UserSubscription> UserSubscriptions { get; set; } = new List<UserSubscription>();
-    public virtual ICollection<UserSubscriptionTransaction> UserSubscriptionTransactions { get; set; } = new List<UserSubscriptionTransaction>();
     public virtual ICollection<CommentCollection> CommentCollections { get; set; } = new List<CommentCollection>();
     public virtual ICollection<LikeCollection> LikeCollections { get; set; } = new List<LikeCollection>();
     public virtual ICollection<SaveCollection> SaveCollections { get; set; } = new List<SaveCollection>();
@@ -70,4 +69,5 @@ public partial class User : BaseEntity
     public virtual ICollection<ReportCommunity> ReportCommunities { get; set; } = new List<ReportCommunity>();
     public virtual ICollection<UserNotification> UserNotifications { get; set; } = new List<UserNotification>();
     public virtual ICollection<UserDevice> UserDevices { get; set; } = new List<UserDevice>();
+    public virtual ICollection<ReportReporter> ReportReporters { get; set; } = new List<ReportReporter>();
 }

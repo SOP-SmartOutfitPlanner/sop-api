@@ -120,7 +120,7 @@ namespace SOPServer.API.Controllers
         /// [ADMIN] Get detailed information about a specific report
         /// </summary>
         /// <param name="id">Report ID</param>
-        /// <returns>Full report details including author violation history</returns>
+        /// <returns>Full report details including author violation history and reporter count</returns>
         /// <response code="200">Report details retrieved successfully</response>
         /// <response code="401">Unauthorized - Admin role required</response>
         /// <response code="404">Report not found</response>
@@ -130,7 +130,8 @@ namespace SOPServer.API.Controllers
         ///     GET /api/v1/reports/123/details
         ///     
         /// Response includes:
-        /// - Reporter information
+        /// - Original reporter information (first reporter)
+        /// - Total reporter count
         /// - Reported content (post or comment)
         /// - Author information
         /// - Author's warning count (last 90 days)
@@ -145,6 +146,36 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () =>
                 await _reportCommunityService.GetReportDetailsAsync(id));
+        }
+
+        /// <summary>
+        /// [ADMIN] Get paginated list of all reporters for a specific report
+        /// </summary>
+        /// <param name="id">Report ID</param>
+        /// <param name="paginationParameter">Pagination parameters (PageIndex, PageSize)</param>
+        /// <returns>Paginated list of all users who reported this content</returns>
+        /// <response code="200">Reporters retrieved successfully</response>
+        /// <response code="401">Unauthorized - Admin role required</response>
+        /// <response code="404">Report not found</response>
+        /// <remarks>
+        /// Sample request:
+        ///
+        ///     GET /api/v1/reports/123/reporters?PageIndex=1&amp;PageSize=20
+        ///     
+        /// Response includes:
+        /// - List of users who reported the content
+        /// - Each reporter's description of the issue
+        /// - Date when each user reported
+        /// </remarks>
+        [HttpGet("{id}/reporters")]
+        [Authorize(Roles = "ADMIN")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public Task<IActionResult> GetReporters(long id, [FromQuery] PaginationParameter paginationParameter)
+        {
+            return ValidateAndExecute(async () =>
+                await _reportCommunityService.GetReportersByReportIdAsync(id, paginationParameter));
         }
 
         /// <summary>

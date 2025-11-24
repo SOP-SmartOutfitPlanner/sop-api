@@ -668,11 +668,6 @@ public partial class SOPServerContext : DbContext
 
         modelBuilder.Entity<ReportCommunity>(entity =>
         {
-            entity.HasOne(d => d.User).WithMany(p => p.ReportCommunities)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK_ReportCommunity_User")
-                .OnDelete(DeleteBehavior.NoAction);
-
             entity.HasOne(d => d.ResolvedByAdmin).WithMany()
                 .HasForeignKey(d => d.ResolvedByAdminId)
                 .HasConstraintName("FK_ReportCommunity_ResolvedByAdmin")
@@ -687,6 +682,31 @@ public partial class SOPServerContext : DbContext
                 .HasForeignKey(d => d.CommentId)
                 .HasConstraintName("FK_ReportCommunity_CommentPost")
                 .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<ReportReporter>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__ReportReporter__3214EC07");
+
+            entity.ToTable("ReportReporter");
+
+            entity.Property(e => e.Description)
+                .HasMaxLength(1000)
+                .IsUnicode(true);
+
+            entity.HasOne(d => d.Report).WithMany(p => p.ReportReporters)
+                .HasForeignKey(d => d.ReportId)
+                .HasConstraintName("FK_ReportReporter_ReportCommunity")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.User).WithMany()
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_ReportReporter_User")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(e => new { e.ReportId, e.UserId })
+                .IsUnique()
+                .HasDatabaseName("IX_ReportReporter_ReportId_UserId");
         });
 
         modelBuilder.Entity<UserSuspension>(entity =>

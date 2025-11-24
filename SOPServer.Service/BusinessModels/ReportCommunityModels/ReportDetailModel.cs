@@ -9,10 +9,10 @@ namespace SOPServer.Service.BusinessModels.ReportCommunityModels
         public ReportType Type { get; set; }
         public ReportStatus Status { get; set; }
         public ReportAction Action { get; set; }
-        public string? Description { get; set; }
         public DateTime CreatedDate { get; set; }
 
-        public UserBasicModel Reporter { get; set; } = null!;
+        public UserBasicModel OriginalReporter { get; set; } = null!;
+        public int ReporterCount { get; set; }
         public ReportedContentModel Content { get; set; } = null!;
         public UserBasicModel Author { get; set; } = null!;
 

@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿#nullable disable
+using System;
 
 namespace SOPServer.Repository.Entities
 {
@@ -12,11 +9,11 @@ namespace SOPServer.Repository.Entities
     /// </summary>
     public partial class ReportReporter : BaseEntity
     {
-        public long ReportCommunityId { get; set; }
+        public long ReportId { get; set; }
         public long UserId { get; set; }
         public string Description { get; set; }
 
-        public virtual ReportCommunity ReportCommunity { get; set; }
+        public virtual ReportCommunity Report { get; set; }
         public virtual User User { get; set; }
     }
 }

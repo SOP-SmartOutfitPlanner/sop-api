@@ -43,6 +43,7 @@ namespace SOPServer.Repository.UnitOfWork
         private ILikeCollectionRepository _likeCollectionRepository;
         private ISaveCollectionRepository _saveCollectionRepository;
         private IReportCommunityRepository _reportCommunityRepository;
+        private IReportReporterRepository _reportReporterRepository;
         private IUserSuspensionRepository _userSuspensionRepository;
         private IUserViolationRepository _userViolationRepository;
         private IUserSubscriptionRepository _userSubscriptionRepository;
@@ -278,6 +279,14 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _reportCommunityRepository ??= new ReportCommunityRepository(_context);
+            }
+        }
+
+        public IReportReporterRepository ReportReporterRepository
+        {
+            get
+            {
+                return _reportReporterRepository ??= new ReportReporterRepository(_context);
             }
         }
 

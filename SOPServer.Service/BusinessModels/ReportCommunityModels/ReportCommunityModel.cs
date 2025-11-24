@@ -15,15 +15,9 @@ namespace SOPServer.Service.BusinessModels.ReportCommunityModels
         public long Id { get; set; }
 
         /// <summary>
-        /// ID of the user who submitted the report
+        /// Basic information about the original reporter (first reporter)
         /// </summary>
-        /// <example>1</example>
-        public long UserId { get; set; }
-
-        /// <summary>
-        /// Basic information about the reporter
-        /// </summary>
-        public UserBasicModel? Reporter { get; set; }
+        public UserBasicModel? OriginalReporter { get; set; }
 
         /// <summary>
         /// Basic information about the content author
@@ -61,10 +55,10 @@ namespace SOPServer.Service.BusinessModels.ReportCommunityModels
         public ReportStatus Status { get; set; }
 
         /// <summary>
-        /// Description of the report
+        /// Total number of users who reported this content
         /// </summary>
-        /// <example>This post contains inappropriate content</example>
-        public string? Description { get; set; }
+        /// <example>5</example>
+        public int ReporterCount { get; set; }
 
         /// <summary>
         /// Date when the report was created

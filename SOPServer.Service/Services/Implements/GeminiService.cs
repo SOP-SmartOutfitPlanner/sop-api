@@ -308,33 +308,12 @@ namespace SOPServer.Service.Services.Implements
             throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
         }
 
-        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, string? weather = null)
+        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<string> searchResults, string? weather = null)
         {
             var choosePromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_CHOOSE_PROMPT);
 
-            // Convert items to JSON for the AI to understand
-            var serializerOptions = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            };
-
-            var itemsJson = JsonSerializer.Serialize(items.Select(item => new
-            {
-                item.Id,
-                item.ItemName,
-                item.ImgURL,
-                Colors = item.Colors,
-                AiDescription = item.AiDescription,
-                WeatherSuitable = item.WeatherSuitable,
-                Condition = item.Condition,
-                Pattern = item.Pattern,
-                Fabric = item.Fabric,
-                Styles = item.Styles,
-                Occasions = item.Occasions,
-                Seasons = item.Seasons,
-                Score = item.Score
-            }), serializerOptions);
+            // Use search results directly as formatted strings
+            var itemsText = string.Join("\n", searchResults);
 
             var systemParts = new List<Part>
             {
@@ -344,7 +323,7 @@ namespace SOPServer.Service.Services.Implements
             var userParts = new List<Part>
             {
                 new Part { Text = $"User Characteristics: {usercharacteristic}" },
-                new Part { Text = $"Available Items: {itemsJson}" }
+                new Part { Text = $"Available Items:\n{itemsText}" }
             };
 
             if (!string.IsNullOrEmpty(occasion))

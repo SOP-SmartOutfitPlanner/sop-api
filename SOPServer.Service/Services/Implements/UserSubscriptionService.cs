@@ -271,25 +271,6 @@ namespace SOPServer.Service.Services.Implements
             }
         }
 
-        private class PendingPaymentCacheModel
-        {
-            public string QrCode { get; set; }
-            public string PaymentUrl { get; set; }
-            public decimal Amount { get; set; }
-            public string SubscriptionPlanName { get; set; }
-            public long UserSubscriptionId { get; set; }
-            public long TransactionId { get; set; }
-            public string Description { get; set; }
-            public long? ExpiredAt { get; set; }
-            public BankInfoModel BankInfo { get; set; }
-        }
-
-        private class BankInfoModel
-        {
-            public string Bin { get; set; }
-            public string AccountNumber { get; set; }
-            public string AccountName { get; set; }
-        }
 
         public async Task<BaseResponseModel> GetMySubscriptionAsync(long userId)
         {

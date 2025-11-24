@@ -318,7 +318,7 @@ namespace SOPServer.Service.Services.Implements
             var subscriptions = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
                 .Include(s => s.SubscriptionPlan)
                 .Include(s => s.UserSubscriptionTransactions)
-                .Where(s => s.UserId == userId)
+                .Where(s => s.UserId == userId && s.SubscriptionPlan.Price > 0)
                 .OrderByDescending(s => s.CreatedDate)
                 .ToListAsync();
 

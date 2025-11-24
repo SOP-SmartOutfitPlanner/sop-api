@@ -290,11 +290,53 @@ namespace SOPServer.Service.Services.Implements
                 };
             }
 
+            var planBenefits = DeserializeBenefitLimit(subscription.SubscriptionPlan.BenefitLimit);
+            var usedBenefits = DeserializeBenefitLimit(subscription.BenefitUsed);
+
+            int itemCount = await _unitOfWork.ItemRepository.GetQueryable()
+                .Where(i => i.UserId == userId && !i.IsDeleted)
+                .CountAsync();
+
+            var benefitUsages = new List<BenefitUsageResponseModel>();
+
+            foreach (var planBenefit in planBenefits)
+            {
+                var usedBenefit = usedBenefits.FirstOrDefault(b => b.FeatureCode == planBenefit.FeatureCode);
+                int remaining = usedBenefit?.Usage ?? planBenefit.Usage;
+
+                if (planBenefit.BenefitType == BenefitType.Persistent)
+                {
+                    if (planBenefit.FeatureCode == FeatureCode.ItemWardrobe)
+                    {
+                        remaining = planBenefit.Usage - itemCount;
+                    }
+                }
+
+                benefitUsages.Add(new BenefitUsageResponseModel
+                {
+                    FeatureCode = planBenefit.FeatureCode,
+                    Usage = remaining, // This is the remaining/available credits (always decreases)
+                    Limit = planBenefit.Usage,
+                    BenefitType = planBenefit.BenefitType
+                });
+            }
+
+            var subscriptionModel = _mapper.Map<UserSubscriptionModel>(subscription);
+
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.USER_SUBSCRIPTION_GET_ACTIVE_SUCCESS,
-                Data = _mapper.Map<UserSubscriptionModel>(subscription)
+                Data = new
+                {
+                    subscriptionModel.Id,
+                    subscriptionModel.UserId,
+                    subscriptionModel.SubscriptionPlanId,
+                    SubscriptionPlanName = subscription.SubscriptionPlan.Name,
+                    subscriptionModel.DateExp,
+                    subscriptionModel.IsActive,
+                    BenefitUsage = benefitUsages
+                }
             };
         }
 

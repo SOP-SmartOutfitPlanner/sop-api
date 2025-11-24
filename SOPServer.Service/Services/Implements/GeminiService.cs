@@ -312,12 +312,16 @@ namespace SOPServer.Service.Services.Implements
         {
             var choosePromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_CHOOSE_PROMPT);
 
-            // Use search results directly as formatted strings
+            // Format: ID|Category|Color|Style|Occasion|Season
+            // Example: 123|Hoodie|Gray,Blue|Casual,Sporty|Home,Casual|Fall,Spring
             var itemsText = string.Join("\n", searchResults);
 
             var systemParts = new List<Part>
             {
-                new Part { Text = choosePromptSetting.Value }
+                new Part { Text = choosePromptSetting.Value },
+                new Part { Text = @"Item format is: ID|Category|Color|Style|Occasion|Season
+Example: 123|Hoodie|Gray,Blue|Casual,Sporty|Home,Casual|Fall,Spring
+Parse this compact format to make outfit decisions." }
             };
 
             var userParts = new List<Part>
@@ -366,7 +370,7 @@ namespace SOPServer.Service.Services.Implements
                     generateRequest.GenerationConfig = new GenerationConfig
                     {
                         Temperature = 0.5f,
-                        MaxOutputTokens = 2000
+                        MaxOutputTokens = 1000 // Giảm từ 2000 để response nhanh hơn
                     };
                     generateRequest.SystemInstruction = new Content
                     {
@@ -432,7 +436,7 @@ namespace SOPServer.Service.Services.Implements
 
                     var systemFormatParts = new List<Part>
                     {
-                        new Part { Text = @"Format a response to json mode for me { ""itemIds"": [12, 34], ""reason"": ""≤50 words about color harmony, style match, occasion fit."" }" }
+                        new Part { Text = @"Format a response to json mode for me { ""itemIds"": [12, 34], ""reason"": ""≤50 words about color harmony, style match, occasion fit. (not include id item)"" }" }
                     };
 
                     var aiResponsePart = new List<Part>

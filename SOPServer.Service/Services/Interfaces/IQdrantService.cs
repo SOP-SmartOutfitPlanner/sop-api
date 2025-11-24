@@ -25,8 +25,9 @@ namespace SOPServer.Service.Services.Interfaces
         Task<List<string>> SearchSimilarityItemSystem([Description("List of item descriptions to find similarities")] List<string> descriptionItems, CancellationToken cancellationToken = default);
         
         /// <summary>
-        /// Search for items by similarity and return concise item information
-        /// Returns string format: ID:x|Desc:x|Color:x|Style:x|Occasion:x|Season:x|Score:x
+        /// Search for items by similarity and return ultra concise item information
+        /// Returns compact format: ID|Category|Color|Style|Occasion|Season
+        /// Example: 123|Hoodie|Gray,Blue|Casual,Sporty|Home,Casual|Fall,Spring
         /// </summary>
         Task<List<string>> SearchItemIdsByUserId(List<string> descriptionItems, long userId, CancellationToken cancellationToken = default);
     }

@@ -211,22 +211,33 @@ namespace SOPServer.Service.Services.Implements
                 .Select(item =>
                 {
                     var itemModel = _mapper.Map<ItemModel>(item);
-                    var colors = string.IsNullOrEmpty(itemModel.Color) 
-                        ? "none" 
-                        : string.Join(", ", System.Text.Json.JsonSerializer.Deserialize<List<ColorModel>>(itemModel.Color)?.Select(c => c.Name) ?? new List<string>());
-                    var styles = itemModel.Styles?.Any() == true 
-                        ? string.Join(", ", itemModel.Styles.Select(s => s.Name)) 
+
+                    // Simplified color extraction (just first 2 colors)
+                    var colors = "none";
+                    if (!string.IsNullOrEmpty(itemModel.Color))
+                    {
+                        var colorList = System.Text.Json.JsonSerializer.Deserialize<List<ColorModel>>(itemModel.Color);
+                        if (colorList?.Any() == true)
+                        {
+                            colors = string.Join(",", colorList.Take(2).Select(c => c.Name));
+                        }
+                    }
+
+                    // Just first 2 of each attribute
+                    var styles = itemModel.Styles?.Any() == true
+                        ? string.Join(",", itemModel.Styles.Take(2).Select(s => s.Name))
                         : "none";
-                    var occasions = itemModel.Occasions?.Any() == true 
-                        ? string.Join(", ", itemModel.Occasions.Select(o => o.Name)) 
+                    var occasions = itemModel.Occasions?.Any() == true
+                        ? string.Join(",", itemModel.Occasions.Take(2).Select(o => o.Name))
                         : "none";
-                    var seasons = itemModel.Seasons?.Any() == true 
-                        ? string.Join(", ", itemModel.Seasons.Select(s => s.Name)) 
+                    var seasons = itemModel.Seasons?.Any() == true
+                        ? string.Join(",", itemModel.Seasons.Take(2).Select(s => s.Name))
                         : "none";
-                    
-                    var score = itemScoreDict[item.Id];
-                    
-                    return $"ID:{item.Id}|Desc:{itemModel.AiDescription ?? "none"}|Color:{colors}|Style:{styles}|Occasion:{occasions}|Season:{seasons}";
+
+                    var category = itemModel.CategoryName ?? "none";
+
+                    // Ultra compact format: ID|Cat|Color|Style|Occ|Season
+                    return $"{item.Id}|{category}|{colors}|{styles}|{occasions}|{seasons}";
                 })
                 .ToList();
 
@@ -270,7 +281,7 @@ namespace SOPServer.Service.Services.Implements
                             }
                         }
                     },
-                    limit: 2
+                    limit: 2 // Tăng từ 2 lên 3 để có nhiều lựa chọn hơn
                 );
                 return searchResult;
             }).ToList();
@@ -286,14 +297,11 @@ namespace SOPServer.Service.Services.Implements
                 {
                     foreach (var searchItem in searchResult)
                     {
-                        if (searchItem.Score > 0.6)
-                        {
-                            var itemId = long.Parse(searchItem.Id.Num.ToString());
+                        var itemId = long.Parse(searchItem.Id.Num.ToString());
 
-                            if (!itemScoreDict.ContainsKey(itemId) || itemScoreDict[itemId] < searchItem.Score)
-                            {
-                                itemScoreDict[itemId] = searchItem.Score;
-                            }
+                        if (!itemScoreDict.ContainsKey(itemId) || itemScoreDict[itemId] < searchItem.Score)
+                        {
+                            itemScoreDict[itemId] = searchItem.Score;
                         }
                     }
                 }
@@ -303,27 +311,38 @@ namespace SOPServer.Service.Services.Implements
             var itemIds = itemScoreDict.Keys.ToList();
             var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(itemIds);
 
-            // Map results to concise string format for AI
+            // Map results to ULTRA CONCISE format for AI (remove verbose description)
             var result = items
                 .Select(item =>
                 {
                     var itemModel = _mapper.Map<ItemModel>(item);
-                    var colors = string.IsNullOrEmpty(itemModel.Color) 
-                        ? "none" 
-                        : string.Join(", ", System.Text.Json.JsonSerializer.Deserialize<List<ColorModel>>(itemModel.Color)?.Select(c => c.Name) ?? new List<string>());
+                    
+                    // Simplified color extraction (just first 2 colors)
+                    var colors = "none";
+                    if (!string.IsNullOrEmpty(itemModel.Color))
+                    {
+                        var colorList = System.Text.Json.JsonSerializer.Deserialize<List<ColorModel>>(itemModel.Color);
+                        if (colorList?.Any() == true)
+                        {
+                            colors = string.Join(",", colorList.Take(2).Select(c => c.Name));
+                        }
+                    }
+                    
+                    // Just first 2 of each attribute
                     var styles = itemModel.Styles?.Any() == true 
-                        ? string.Join(", ", itemModel.Styles.Select(s => s.Name)) 
+                        ? string.Join(",", itemModel.Styles.Take(2).Select(s => s.Name)) 
                         : "none";
                     var occasions = itemModel.Occasions?.Any() == true 
-                        ? string.Join(", ", itemModel.Occasions.Select(o => o.Name)) 
+                        ? string.Join(",", itemModel.Occasions.Take(2).Select(o => o.Name)) 
                         : "none";
                     var seasons = itemModel.Seasons?.Any() == true 
-                        ? string.Join(", ", itemModel.Seasons.Select(s => s.Name)) 
+                        ? string.Join(",", itemModel.Seasons.Take(2).Select(s => s.Name)) 
                         : "none";
                     
-                    var score = itemScoreDict[item.Id];
+                    var category = itemModel.CategoryName ?? "none";
                     
-                    return $"ID:{item.Id}|Desc:{itemModel.AiDescription ?? "none"}|Color:{colors}|Style:{styles}|Occasion:{occasions}|Season:{seasons}";
+                    // Ultra compact format: ID|Cat|Color|Style|Occ|Season
+                    return $"{item.Id}|{category}|{colors}|{styles}|{occasions}|{seasons}";
                 })
                 .ToList();
 

@@ -233,12 +233,6 @@ namespace SOPServer.Service.Services.Implements
 
             var generateRequest = new GenerateContentRequest();
 
-            generateRequest.GenerationConfig = new GenerationConfig
-            {
-                Temperature = 0.7f,
-                MaxOutputTokens = 1000
-            };
-
             generateRequest.SystemInstruction = new Content
             {
                 Parts = systemParts
@@ -367,11 +361,6 @@ Parse this compact format to make outfit decisions." }
                     var model = CreateSuggestionModel(tools);
 
                     var generateRequest = new GenerateContentRequest();
-                    generateRequest.GenerationConfig = new GenerationConfig
-                    {
-                        Temperature = 0.5f,
-                        MaxOutputTokens = 1000 // Giảm từ 2000 để response nhanh hơn
-                    };
                     generateRequest.SystemInstruction = new Content
                     {
                         Parts = systemParts,

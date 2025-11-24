@@ -308,61 +308,61 @@ namespace SOPServer.Service.Services.Implements
             throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
         }
 
-        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<QDrantSearchModels> items, string? weather = null)
+        public async Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<string> searchResults, string? weather = null)
         {
             var choosePromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.OUTFIT_CHOOSE_PROMPT);
 
-            // Convert items to JSON for the AI to understand
-            var serializerOptions = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            };
-
-            var itemsJson = JsonSerializer.Serialize(items.Select(item => new
-            {
-                item.Id,
-                item.ItemName,
-                item.ImgURL,
-                Colors = item.Colors,
-                AiDescription = item.AiDescription,
-                WeatherSuitable = item.WeatherSuitable,
-                Condition = item.Condition,
-                Pattern = item.Pattern,
-                Fabric = item.Fabric,
-                Styles = item.Styles,
-                Occasions = item.Occasions,
-                Seasons = item.Seasons,
-                Score = item.Score
-            }), serializerOptions);
+            // Format: ID|Category|Color|Style|Occasion|Season
+            // Example: 123|Hoodie|Gray,Blue|Casual,Sporty|Home,Casual|Fall,Spring
+            var itemsText = string.Join("\n", searchResults);
 
             var systemParts = new List<Part>
             {
-                new Part { Text = choosePromptSetting.Value }
+                new Part { Text = choosePromptSetting.Value },
+                new Part { Text = @"Item format is: ID|Category|Color|Style|Occasion|Season
+Example: 123|Hoodie|Gray,Blue|Casual,Sporty|Home,Casual|Fall,Spring
+Parse this compact format to make outfit decisions." }
             };
 
             var userParts = new List<Part>
             {
                 new Part { Text = $"User Characteristics: {usercharacteristic}" },
-                new Part { Text = $"Available Items: {itemsJson}" }
+                new Part { Text = $"Available Items:\n{itemsText}" }
             };
 
             if (!string.IsNullOrEmpty(occasion))
             {
                 userParts.Add(new Part { Text = $"Occasion: {occasion}" });
-            } else userParts.Add(new Part { Text = $"Occasion: null" });
+            }
+            else
+            {
+                userParts.Add(new Part { Text = $"Occasion: null" });
+            }
 
             if (!string.IsNullOrEmpty(weather))
             {
                 userParts.Add(new Part { Text = $"Weather: {weather}" });
             }
 
+            // Step 1: Generate outfit selection response with tool calling
+            var aiResponse = await GenerateOutfitSelectionResponseAsync(systemParts, userParts);
+
+            // Step 2: Format response to JSON
+            var result = await FormatOutfitSelectionToJsonAsync(aiResponse);
+
+            return result;
+        }
+
+        private async Task<string> GenerateOutfitSelectionResponseAsync(List<Part> systemParts, List<Part> userParts)
+        {
             const int maxRetryAttempts = 5;
 
             for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
             {
                 try
                 {
+                    _logger.LogInformation("GenerateOutfitSelectionResponse: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
                     QuickTools tools = new QuickTools([_qdrantService.Value.SearchSimilarityItemSystem]);
                     var model = CreateSuggestionModel(tools);
 
@@ -370,7 +370,7 @@ namespace SOPServer.Service.Services.Implements
                     generateRequest.GenerationConfig = new GenerationConfig
                     {
                         Temperature = 0.5f,
-                        MaxOutputTokens = 2000
+                        MaxOutputTokens = 1000 // Giảm từ 2000 để response nhanh hơn
                     };
                     generateRequest.SystemInstruction = new Content
                     {
@@ -382,19 +382,66 @@ namespace SOPServer.Service.Services.Implements
                     generateRequest.AddContent(userContent);
 
                     var response = await model.GenerateContentAsync(generateRequest);
+                    
+                    if (string.IsNullOrWhiteSpace(response.Text))
+                    {
+                        _logger.LogWarning("GenerateOutfitSelectionResponse: Attempt {Attempt} returned empty response", attempt);
+
+                        if (attempt == maxRetryAttempts)
+                        {
+                            throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: AI model returned empty response");
+                        }
+
+                        await Task.Delay(500);
+                        continue;
+                    }
+
+                    _logger.LogInformation("GenerateOutfitSelectionResponse: Successfully generated response on attempt {Attempt}", attempt);
                     Console.WriteLine("OUTFIT RESPONSE: " + response.Text);
+                    
+                    return response.Text;
+                }
+                catch (BadRequestException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "GenerateOutfitSelectionResponse: Error on attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    if (attempt == maxRetryAttempts)
+                    {
+                        throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: {ex.Message}");
+                    }
+
+                    await Task.Delay(1000);
+                }
+            }
+
+            throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
+        }
+
+        private async Task<OutfitSelectionModel> FormatOutfitSelectionToJsonAsync(string aiResponse)
+        {
+            const int maxRetryAttempts = 3;
+
+            for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
+            {
+                try
+                {
+                    _logger.LogInformation("FormatOutfitSelectionToJson: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
 
                     var requestJsonMode = new GenerateContentRequest();
                     requestJsonMode.UseJsonMode<OutfitSelectionModel>();
 
                     var systemFormatParts = new List<Part>
                     {
-                        new Part { Text = @"Format a response to json mode for me { ""itemIds"": [12, 34], ""reason"": ""≤50 words about color harmony, style match, occasion fit."" }" }
+                        new Part { Text = @"Format a response to json mode for me { ""itemIds"": [12, 34], ""reason"": ""≤50 words about color harmony, style match, occasion fit. (not include id item)"" }" }
                     };
 
                     var aiResponsePart = new List<Part>
                     {
-                        new Part { Text = response.Text },
+                        new Part { Text = aiResponse },
                     };
 
                     requestJsonMode.AddContent(new Content
@@ -413,19 +460,18 @@ namespace SOPServer.Service.Services.Implements
 
                     if (result == null || result.ItemIds == null || !result.ItemIds.Any())
                     {
-                        _logger.LogWarning("ChooseOutfit: Attempt {Attempt} returned empty result", attempt);
+                        _logger.LogWarning("FormatOutfitSelectionToJson: Attempt {Attempt} returned empty result", attempt);
 
                         if (attempt == maxRetryAttempts)
                         {
                             throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: AI model returned empty outfit selection");
                         }
 
-                        await Task.Delay(500); // 500ms delay before retry
-
+                        await Task.Delay(500);
                         continue;
                     }
 
-                    _logger.LogInformation("ChooseOutfit: Successfully selected {Count} items on attempt {Attempt}", 
+                    _logger.LogInformation("FormatOutfitSelectionToJson: Successfully formatted {Count} items on attempt {Attempt}",
                         result.ItemIds.Count, attempt);
 
                     return result;
@@ -436,14 +482,14 @@ namespace SOPServer.Service.Services.Implements
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "ChooseOutfit: Error on attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+                    _logger.LogError(ex, "FormatOutfitSelectionToJson: Error on attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
 
                     if (attempt == maxRetryAttempts)
                     {
-                        throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: {ex.Message}");
+                        throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: Failed to format response - {ex.Message}");
                     }
 
-                    await Task.Delay(1000); // ví dụ 1.5s
+                    await Task.Delay(500);
                 }
             }
 

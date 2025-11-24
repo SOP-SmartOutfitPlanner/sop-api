@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SOPServer.Repository.DBContext;
 
@@ -11,9 +12,11 @@ using SOPServer.Repository.DBContext;
 namespace SOPServer.Repository.Migrations
 {
     [DbContext(typeof(SOPServerContext))]
-    partial class SOPServerContextModelSnapshot : ModelSnapshot
+    [Migration("20251123190113_ReportReporter")]
+    partial class ReportReporter
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -944,6 +947,9 @@ namespace SOPServer.Repository.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -968,7 +974,7 @@ namespace SOPServer.Repository.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<long?>("UserId")
+                    b.Property<long>("UserId")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -996,14 +1002,13 @@ namespace SOPServer.Repository.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .IsUnicode(true)
-                        .HasColumnType("nvarchar(1000)");
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<long>("ReportId")
+                    b.Property<long>("ReportCommunityId")
                         .HasColumnType("bigint");
 
                     b.Property<DateTime?>("UpdatedDate")
@@ -1012,21 +1017,13 @@ namespace SOPServer.Repository.Migrations
                     b.Property<long>("UserId")
                         .HasColumnType("bigint");
 
-                    b.Property<long?>("UserId1")
-                        .HasColumnType("bigint");
+                    b.HasKey("Id");
 
-                    b.HasKey("Id")
-                        .HasName("PK__ReportReporter__3214EC07");
+                    b.HasIndex("ReportCommunityId");
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserId1");
-
-                    b.HasIndex("ReportId", "UserId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_ReportReporter_ReportId_UserId");
-
-                    b.ToTable("ReportReporter", (string)null);
+                    b.ToTable("ReportReporters");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.SaveCollection", b =>
@@ -1956,38 +1953,37 @@ namespace SOPServer.Repository.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .HasConstraintName("FK_ReportCommunity_ResolvedByAdmin");
 
-                    b.HasOne("SOPServer.Repository.Entities.User", null)
+                    b.HasOne("SOPServer.Repository.Entities.User", "User")
                         .WithMany("ReportCommunities")
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_ReportCommunity_User");
 
                     b.Navigation("CommentPost");
 
                     b.Navigation("Post");
 
                     b.Navigation("ResolvedByAdmin");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.ReportReporter", b =>
                 {
-                    b.HasOne("SOPServer.Repository.Entities.ReportCommunity", "Report")
+                    b.HasOne("SOPServer.Repository.Entities.ReportCommunity", "ReportCommunity")
                         .WithMany("ReportReporters")
-                        .HasForeignKey("ReportId")
+                        .HasForeignKey("ReportCommunityId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_ReportReporter_ReportCommunity");
+                        .IsRequired();
 
                     b.HasOne("SOPServer.Repository.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_ReportReporter_User");
-
-                    b.HasOne("SOPServer.Repository.Entities.User", null)
                         .WithMany("ReportReporters")
-                        .HasForeignKey("UserId1");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.Navigation("Report");
+                    b.Navigation("ReportCommunity");
 
                     b.Navigation("User");
                 });

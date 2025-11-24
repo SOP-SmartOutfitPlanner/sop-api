@@ -76,6 +76,8 @@ public partial class SOPServerContext : DbContext
     public virtual DbSet<ReportCommunity> ReportCommunities { get; set; }
     public virtual DbSet<UserSuspension> UserSuspensions { get; set; }
     public virtual DbSet<UserViolation> UserViolations { get; set; }
+    public virtual DbSet<ReportReporter> ReportReporters { get; set; }
+
 
     // protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     //#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -666,11 +668,6 @@ public partial class SOPServerContext : DbContext
 
         modelBuilder.Entity<ReportCommunity>(entity =>
         {
-            entity.HasOne(d => d.User).WithMany(p => p.ReportCommunities)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK_ReportCommunity_User")
-                .OnDelete(DeleteBehavior.NoAction);
-
             entity.HasOne(d => d.ResolvedByAdmin).WithMany()
                 .HasForeignKey(d => d.ResolvedByAdminId)
                 .HasConstraintName("FK_ReportCommunity_ResolvedByAdmin")
@@ -685,6 +682,31 @@ public partial class SOPServerContext : DbContext
                 .HasForeignKey(d => d.CommentId)
                 .HasConstraintName("FK_ReportCommunity_CommentPost")
                 .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<ReportReporter>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__ReportReporter__3214EC07");
+
+            entity.ToTable("ReportReporter");
+
+            entity.Property(e => e.Description)
+                .HasMaxLength(1000)
+                .IsUnicode(true);
+
+            entity.HasOne(d => d.Report).WithMany(p => p.ReportReporters)
+                .HasForeignKey(d => d.ReportId)
+                .HasConstraintName("FK_ReportReporter_ReportCommunity")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.User).WithMany()
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_ReportReporter_User")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(e => new { e.ReportId, e.UserId })
+                .IsUnique()
+                .HasDatabaseName("IX_ReportReporter_ReportId_UserId");
         });
 
         modelBuilder.Entity<UserSuspension>(entity =>

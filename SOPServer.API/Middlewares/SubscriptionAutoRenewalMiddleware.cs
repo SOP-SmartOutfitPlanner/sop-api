@@ -17,6 +17,17 @@ namespace SOPServer.API.Middlewares
 
         public async Task InvokeAsync(HttpContext context, IUserSubscriptionService subscriptionService)
         {
+            // Skip middleware for subscription purchase/management endpoints to avoid creating duplicate subscriptions
+            var path = context.Request.Path.Value?.ToLower() ?? "";
+            var isSubscriptionEndpoint = path.Contains("/api/v1/subscriptions/purchase")
+                                      || path.Contains("/api/v1/subscriptions/cancel");
+
+            if (isSubscriptionEndpoint)
+            {
+                await _next(context);
+                return;
+            }
+
             if (context.User?.Identity?.IsAuthenticated == true)
             {
                 var roleClaim = context.User.FindFirst("role")?.Value;

@@ -371,7 +371,7 @@ Parse this compact format to make outfit decisions." }
                     generateRequest.AddContent(userContent);
 
                     var response = await model.GenerateContentAsync(generateRequest);
-                    
+
                     if (string.IsNullOrWhiteSpace(response.Text))
                     {
                         _logger.LogWarning("GenerateOutfitSelectionResponse: Attempt {Attempt} returned empty response", attempt);
@@ -387,7 +387,7 @@ Parse this compact format to make outfit decisions." }
 
                     _logger.LogInformation("GenerateOutfitSelectionResponse: Successfully generated response on attempt {Attempt}", attempt);
                     Console.WriteLine("OUTFIT RESPONSE: " + response.Text);
-                    
+
                     return response.Text;
                 }
                 catch (BadRequestException)
@@ -425,7 +425,18 @@ Parse this compact format to make outfit decisions." }
 
                     var systemFormatParts = new List<Part>
                     {
-                        new Part { Text = @"Format a response to json mode for me { ""itemIds"": [12, 34], ""reason"": ""≤50 words about color harmony, style match, occasion fit. (not include id item)"" }" }
+                        new Part { Text = @"You must return only valid JSON in English. 
+                                            Do not include any Vietnamese text even if the input contains Vietnamese.
+                                            Do not output explanations outside the JSON object.
+
+                                            Extract the item IDs from the previous AI outfit suggestion response.
+                                            Do not modify, translate, or infer IDs — use them exactly as given.
+
+                                            Return JSON in this structure:
+                                            {
+                                                ""itemIds"": [10012,32511],
+                                                ""reason"": ""<≤50 words in English about color harmony, style match, and occasion fit. Do not mention item IDs.>""
+                                            }" }
                     };
 
                     var aiResponsePart = new List<Part>

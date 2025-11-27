@@ -71,15 +71,18 @@ namespace SOPServer.Repository.Repositories.Implements
             if (userId.HasValue)
                 query = query.Where(x => x.UserId == userId || x.ItemType == ItemType.SYSTEM);
 
-            return await query
-                .OrderBy(x => EF.Functions.Random())
-                .Take(5)
+            var items = await query
                 .Include(x => x.Category)
                 .Include(x => x.User)
                 .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
                 .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
                 .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
                 .ToListAsync();
+
+            if (items.Count <= 5)
+                return items;
+
+            return items.OrderBy(x => Guid.NewGuid()).Take(5).ToList();
         }
 
         public async Task<List<Item>> GetItemsByOccasionIdsAsync(List<long> occasionIds, long? userId = null)
@@ -94,15 +97,18 @@ namespace SOPServer.Repository.Repositories.Implements
             if (userId.HasValue)
                 query = query.Where(x => x.UserId == userId || x.ItemType == ItemType.SYSTEM);
 
-            return await query
-                .OrderBy(x => EF.Functions.Random())
-                .Take(5)
+            var items = await query
                 .Include(x => x.Category)
                 .Include(x => x.User)
                 .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
                 .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
                 .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
                 .ToListAsync();
+
+            if (items.Count <= 5)
+                return items;
+
+            return items.OrderBy(x => Guid.NewGuid()).Take(5).ToList();
         }
 
         public async Task<List<Item>> GetItemsByStyleIdsAsync(List<long> styleIds, long? userId = null)
@@ -117,15 +123,18 @@ namespace SOPServer.Repository.Repositories.Implements
             if (userId.HasValue)
                 query = query.Where(x => x.UserId == userId || x.ItemType == ItemType.SYSTEM);
 
-            return await query
-                .OrderBy(x => EF.Functions.Random())
-                .Take(5)
+            var items = await query
                 .Include(x => x.Category)
                 .Include(x => x.User)
                 .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
                 .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
                 .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
                 .ToListAsync();
+
+            if (items.Count <= 5)
+                return items;
+
+            return items.OrderBy(x => Guid.NewGuid()).Take(5).ToList();
         }
     }
 }

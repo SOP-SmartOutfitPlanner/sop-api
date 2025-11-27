@@ -17,6 +17,7 @@ using SOPServer.Service.SettingModels;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -536,6 +537,81 @@ Parse this compact format to make outfit decisions." }
                 suggestClient.AddFunctionTool(tools);
             }
             return suggestClient;
+        }
+
+        public async Task<List<long>> ItemCharacteristicSuggestion(string json, string occasion, string usercharacteristic)
+        {
+            var requestJsonMode = new GenerateContentRequest();
+            requestJsonMode.UseJsonMode<List<int>>();
+
+            var systemFormatParts = new List<Part>
+            {
+                new Part { Text = @"Based on user characteristic and/or occasion, determine what we expected item should have based on provide data. Not creative, **MUST USE PROVIDE DATA** (min 1 id, max 3 ids)" }
+            };
+
+            requestJsonMode.SystemInstruction = new Content
+            {
+                Parts = systemFormatParts,
+                Role = "system"
+            };
+
+            var userParts = new List<Part>
+            {
+                new Part { Text = $"User Characteristics: {usercharacteristic}" },
+                new Part { Text = $"Occasion: {occasion}" },
+                new Part { Text = $"Provide data: {json}" }
+            };
+
+            requestJsonMode.AddContent(new Content
+            {
+                Parts = userParts,
+                Role = "user"
+            });
+
+            const int maxRetryAttempts = 5;
+
+            for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
+            {
+                try
+                {
+                    _logger.LogInformation("ItemCharacteristicSuggestion: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    var result = await _generativeModel.GenerateObjectAsync<List<long>>(requestJsonMode);
+
+                    if (result == null || !result.Any())
+                    {
+                        _logger.LogWarning("ItemCharacteristicSuggestion: Attempt {Attempt} returned empty result", attempt);
+
+                        if (attempt == maxRetryAttempts)
+                        {
+                            throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: AI model returned empty item list");
+                        }
+
+                        await Task.Delay(500);
+                        continue;
+                    }
+
+                    _logger.LogInformation("ItemCharacteristicSuggestion: Successfully returned {Count} ids on attempt {Attempt}", result.Count, attempt);
+                    return result;
+                }
+                catch (BadRequestException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "ItemCharacteristicSuggestion: Error on attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    if (attempt == maxRetryAttempts)
+                    {
+                        throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: {ex.Message}");
+                    }
+
+                    await Task.Delay(500);
+                }
+            }
+
+            throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
         }
     }
 }

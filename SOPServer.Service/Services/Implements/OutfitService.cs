@@ -1080,7 +1080,7 @@ namespace SOPServer.Service.Services.Implements
         private QDrantSearchModels MapItemToSearchModel(Item item, List<string> searchResults)
         {
             var itemModel = _mapper.Map<ItemModel>(item);
-            
+
             return new QDrantSearchModels
             {
                 Id = item.Id,
@@ -1105,7 +1105,7 @@ namespace SOPServer.Service.Services.Implements
         public async Task<BaseResponseModel> OutfitSuggestion(long userId, long? occasionId, string? weather = null)
         {
             var overallStopwatch = Stopwatch.StartNew();
-            
+
             // Validate user exists
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
             if (user == null)
@@ -1142,7 +1142,7 @@ namespace SOPServer.Service.Services.Implements
 
             overallStopwatch.Stop();
             Console.WriteLine($"[TIMING] *** TOTAL: {overallStopwatch.ElapsedMilliseconds}ms ***");
-            
+
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
@@ -1157,27 +1157,27 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> VirtualTryOn(IFormFile human, List<string> itemURLs)
         {
-            if(human == null || human.Length == 0)
+            if (human == null || human.Length == 0)
             {
                 throw new BadRequestException(MessageConstants.IMAGE_IS_NOT_VALID);
             }
 
-            if(itemURLs == null || itemURLs.Count == 0 || itemURLs.Count > 3)
+            if (itemURLs == null || itemURLs.Count == 0 || itemURLs.Count > 3)
             {
                 throw new BadRequestException(MessageConstants.ITEM_URLS_NOT_VALID);
             }
-            
+
             var client = _httpClientFactory.CreateClient("SplitItem");
             var requestUrl = "be/api/v1/virtual-tryon/try-on";
-            
+
             using var formData = new MultipartFormDataContent();
-            
+
             // Add human image file
             await using var fileStream = human.OpenReadStream();
             var fileContent = new StreamContent(fileStream);
             fileContent.Headers.ContentType = new MediaTypeHeaderValue(human.ContentType);
             formData.Add(fileContent, "human_image", human.FileName);
-            
+
             // Add clothing URLs as a single comma-separated string
             var clothingUrlsString = string.Join(",", itemURLs);
             formData.Add(new StringContent(clothingUrlsString), "clothing_urls");
@@ -1215,6 +1215,141 @@ namespace SOPServer.Service.Services.Implements
                     Url = tryOnResult.Url
                 }
             };
+        }
+
+        public async Task<BaseResponseModel> OutfitSuggestionV2(OutfitSuggestionRequestModel model)
+        {
+            var overallStopwatch = Stopwatch.StartNew();
+
+            // Step 1: Validate user exists
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(model.UserId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            // Step 2: Fetch all required data in PARALLEL
+            var dataFetchStopwatch = Stopwatch.StartNew();
+            var occasionString = await GetOccasionStringAsync(model.OccasionId);
+            var userCharacteristic = await _userService.GetUserCharacteristic(model.UserId);
+            var listSeason = await _unitOfWork.SeasonRepository.GetAllAsync();
+            var listOccasion = await _unitOfWork.OccasionRepository.GetAllAsync();
+            var listStyle = await _unitOfWork.StyleRepository.getAllStyleSystem();
+
+            dataFetchStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Data fetch (parallel): {dataFetchStopwatch.ElapsedMilliseconds}ms");
+
+            // Step 3: Build JSON data structures for AI
+            var characteristicString = BuildUserCharacteristicString(userCharacteristic);
+
+            var serializerOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true
+            };
+
+            var listSeasonModel = listSeason.Select(x => new { Id = x.Id, Name = x.Name }).ToList();
+            var listOccasionModel = listOccasion.Select(x => new { Id = x.Id, Name = x.Name }).ToList();
+            var listStyleModel = listStyle.Select(x => new { Id = x.Id, Name = x.Name }).ToList();
+
+            var seasonJson = JsonSerializer.Serialize(listSeasonModel, serializerOptions);
+            var occasionJson = JsonSerializer.Serialize(listOccasionModel, serializerOptions);
+            var styleJson = JsonSerializer.Serialize(listStyleModel, serializerOptions);
+
+            // Step 4: Call Gemini AI for all categories in PARALLEL
+            var geminiStopwatch = Stopwatch.StartNew();
+            var selectedSeasonIdsTask = _geminiService.ItemCharacteristicSuggestion(
+                seasonJson,
+                occasionString,
+                characteristicString
+            );
+
+            var selectedOccasionIdsTask = _geminiService.ItemCharacteristicSuggestion(
+                occasionJson,
+                occasionString,
+                characteristicString
+            );
+
+            var selectedStyleIdsTask = _geminiService.ItemCharacteristicSuggestion(
+                styleJson,
+                occasionString,
+                characteristicString
+            );
+
+            await Task.WhenAll(selectedSeasonIdsTask, selectedOccasionIdsTask, selectedStyleIdsTask);
+
+            var selectedSeasonIds = await selectedSeasonIdsTask;
+            var selectedOccasionIds = await selectedOccasionIdsTask;
+            var selectedStyleIds = await selectedStyleIdsTask;
+
+            geminiStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Gemini AI suggestions (parallel): {geminiStopwatch.ElapsedMilliseconds}ms");
+
+            // Step 5: Fetch items matching the selected Season/Occasion/Style IDs from user's wardrobe
+            var itemFetchStopwatch = Stopwatch.StartNew();
+            
+            var seasonItems = await _unitOfWork.ItemRepository.GetItemsBySeasonIdsAsync(selectedSeasonIds ?? new List<long>(), model.UserId);
+
+            var occasionItems = await _unitOfWork.ItemRepository.GetItemsByOccasionIdsAsync(selectedOccasionIds ?? new List<long>(), model.UserId);
+
+            var styleItems = await _unitOfWork.ItemRepository.GetItemsByStyleIdsAsync(selectedStyleIds ?? new List<long>(), model.UserId);
+
+            itemFetchStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Item fetch and filtering: {itemFetchStopwatch.ElapsedMilliseconds}ms");
+
+            // Step 6: Map items to ItemModel
+            var seasonItemsModel = seasonItems.Select(i => _mapper.Map<ItemModel>(i)).ToList();
+            var occasionItemsModel = occasionItems.Select(i => _mapper.Map<ItemModel>(i)).ToList();
+            var styleItemsModel = styleItems.Select(i => _mapper.Map<ItemModel>(i)).ToList();
+
+            // Step 7: Structure results with category names and actual items
+            var suggestionResults = new List<CharacteristicSuggestionResult>
+            {
+                new CharacteristicSuggestionResult
+                {
+                    Category = "Season",
+                    Items = seasonItemsModel
+                },
+                new CharacteristicSuggestionResult
+                {
+                    Category = "Occasion",
+                    Items = occasionItemsModel
+                },
+                new CharacteristicSuggestionResult
+                {
+                    Category = "Style",
+                    Items = styleItemsModel
+                }
+            };
+
+            overallStopwatch.Stop();
+            Console.WriteLine($"[TIMING] *** OutfitSuggestionV2 TOTAL: {overallStopwatch.ElapsedMilliseconds}ms ***");
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.OUTFIT_SUGGESTION_SUCCESS,
+                Data = suggestionResults
+            };
+        }
+
+        private async Task<List<ItemModel>> FetchAndMapItemsAsync(List<long> itemIds, long userId)
+        {
+            if (!itemIds.Any())
+            {
+                return new List<ItemModel>();
+            }
+
+            // Query items from database using OR condition for all provided IDs
+            var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(itemIds);
+
+            // Map to ItemModel and filter by user (user items or system items)
+            var itemModels = items
+                .Where(i => i.ItemType == ItemType.SYSTEM || i.UserId == userId)
+                .Select(i => _mapper.Map<ItemModel>(i))
+                .ToList();
+
+            return itemModels;
         }
     }
 }

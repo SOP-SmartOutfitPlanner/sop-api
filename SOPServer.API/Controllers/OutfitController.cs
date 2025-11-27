@@ -329,6 +329,17 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _outfitService.OutfitSuggestion(userId, occasionId, weather));
         }
 
+        [HttpGet("suggestionV2")]
+        public Task<IActionResult> OutfitSuggestionV2(long userId, long? occasionId, string? weather = null)
+        {
+            return ValidateAndExecute(async () => await _outfitService.OutfitSuggestionV2(new OutfitSuggestionRequestModel()
+            {
+                OccasionId = occasionId,
+                UserId = userId,
+                Weather = weather
+            }));
+        }
+
         /// <summary>
         /// Virtual try-on feature - Apply clothing items to a human image using AI
         /// </summary>

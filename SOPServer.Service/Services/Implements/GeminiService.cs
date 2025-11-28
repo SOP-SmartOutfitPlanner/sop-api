@@ -17,6 +17,7 @@ using SOPServer.Service.SettingModels;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SOPServer.Service.Services.Implements
 {
@@ -536,6 +537,184 @@ Parse this compact format to make outfit decisions." }
                 suggestClient.AddFunctionTool(tools);
             }
             return suggestClient;
+        }
+
+        public async Task<List<long>> ItemCharacteristicSuggestion(string json, string occasion, string usercharacteristic)
+        {
+            var requestJsonMode = new GenerateContentRequest();
+            requestJsonMode.UseJsonMode<List<int>>();
+
+            var systemFormatParts = new List<Part>
+            {
+                new Part { Text = @"Based on user characteristic and/or occasion, determine what we expected item should have based on provide data. Not creative, **MUST USE PROVIDE DATA** (min 1 id, max 3 ids)" }
+            };
+
+            requestJsonMode.SystemInstruction = new Content
+            {
+                Parts = systemFormatParts,
+                Role = "system"
+            };
+
+            var userParts = new List<Part>
+            {
+                new Part { Text = $"User Characteristics: {usercharacteristic}" },
+                new Part { Text = $"Occasion: {occasion}" },
+                new Part { Text = $"Provide data: {json}" }
+            };
+
+            requestJsonMode.AddContent(new Content
+            {
+                Parts = userParts,
+                Role = "user"
+            });
+
+            const int maxRetryAttempts = 5;
+
+            for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
+            {
+                try
+                {
+                    _logger.LogInformation("ItemCharacteristicSuggestion: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    var result = await _generativeModel.GenerateObjectAsync<List<long>>(requestJsonMode);
+
+                    if (result == null || !result.Any())
+                    {
+                        _logger.LogWarning("ItemCharacteristicSuggestion: Attempt {Attempt} returned empty result", attempt);
+
+                        if (attempt == maxRetryAttempts)
+                        {
+                            throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: AI model returned empty item list");
+                        }
+
+                        await Task.Delay(500);
+                        continue;
+                    }
+
+                    _logger.LogInformation("ItemCharacteristicSuggestion: Successfully returned {Count} ids on attempt {Attempt}", result.Count, attempt);
+                    return result;
+                }
+                catch (BadRequestException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "ItemCharacteristicSuggestion: Error on attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    if (attempt == maxRetryAttempts)
+                    {
+                        throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: {ex.Message}");
+                    }
+
+                    await Task.Delay(500);
+                }
+            }
+
+            throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
+        }
+
+        public async Task<OutfitSelectionModel> ChooseOutfitV2(string json, string occasion, string usercharacteristic, string? weather = null)
+        {
+            const int maxRetryAttempts = 5;
+
+            for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
+            {
+                try
+                {
+                    _logger.LogInformation("ChooseOutfitV2: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    var requestJsonMode = new GenerateContentRequest();
+                    requestJsonMode.UseJsonMode<OutfitSelectionModel>();
+                    requestJsonMode.GenerationConfig = new GenerationConfig
+                    {
+                        MaxOutputTokens = 2000,
+                        Temperature = 1.2f,
+                        TopP = 0.9f,
+                        TopK = 50
+                    };
+                    var systemParts = new List<Part>
+{
+    new Part { Text = $@"[Random Seed: {Guid.NewGuid()}]
+You are an expert fashion stylist AI. Your task is to select a complete outfit from the provided list of items based on user characteristics and occasion.
+
+IMPORTANT RULES:
+1. Return ONLY valid JSON in English. Do not include Vietnamese text.
+2. Do not output any explanations outside the JSON object.
+3. Select items that form a COMPLETE outfit (typically **3-5 items** covering: top, bottom, shoes, and optional accessories)
+4. **MAXIMIZE DIVERSITY**: Each time you generate an outfit, try to use DIFFERENT items. Avoid repeating the same items across multiple generations.
+5. Ensure selected items complement each other in color, style, and occasion fit
+6. Do not modify or translate item IDs - use them exactly as provided
+7. Return the response in this exact JSON structure:
+{{
+    ""itemIds"": [1001, 2005, 3012],
+    ""reason"": ""<≤50 words in English explaining the outfit combination highlighting color harmony, style match, weather appropriateness, and occasion fit. Do not mention item IDs.>""
+}}" }
+};
+
+                    var userParts = new List<Part>
+                    {
+                        new Part { Text = $"User Characteristics: {usercharacteristic}" },
+                        new Part { Text = $"Occasion: {occasion}" }
+                    };
+
+                    if (!string.IsNullOrEmpty(weather))
+                    {
+                        userParts.Add(new Part { Text = $"Weather: {weather}" });
+                    }
+
+                    userParts.Add(new Part { Text = $"List of Item:\n{json}" });
+
+                    requestJsonMode.SystemInstruction = new Content
+                    {
+                        Parts = systemParts,
+                        Role = "system"
+                    };
+
+                    requestJsonMode.AddContent(new Content
+                    {
+                        Parts = userParts,
+                        Role = "user"
+                    });
+
+                    var result = await _suggestionModel.GenerateObjectAsync<OutfitSelectionModel>(requestJsonMode);
+
+                    if (result == null || result.ItemIds == null || !result.ItemIds.Any())
+                    {
+                        _logger.LogWarning("ChooseOutfitV2: Attempt {Attempt} returned empty result", attempt);
+
+                        if (attempt == maxRetryAttempts)
+                        {
+                            throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: AI model returned empty outfit selection");
+                        }
+
+                        await Task.Delay(500);
+                        continue;
+                    }
+
+                    _logger.LogInformation("ChooseOutfitV2: Successfully selected {Count} items on attempt {Attempt}",
+                        result.ItemIds.Count, attempt);
+
+                    return result;
+                }
+                catch (BadRequestException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "ChooseOutfitV2: Error on attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    if (attempt == maxRetryAttempts)
+                    {
+                        throw new BadRequestException($"{MessageConstants.OUTFIT_SUGGESTION_FAILED}: {ex.Message}");
+                    }
+
+                    await Task.Delay(500);
+                }
+            }
+
+            throw new BadRequestException(MessageConstants.OUTFIT_SUGGESTION_FAILED);
         }
     }
 }

@@ -163,7 +163,7 @@ namespace SOPServer.Repository.Repositories.Implements
                     .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
                     .ToListAsync();
 
-                var userItemsToTake = Math.Min(6, userItems.Count);
+                var userItemsToTake = Math.Min(8, userItems.Count);
                 if (userItems.Count > 0)
                 {
                     items.AddRange(userItems.OrderBy(x => Guid.NewGuid()).Take(userItemsToTake));
@@ -231,7 +231,7 @@ namespace SOPServer.Repository.Repositories.Implements
                     .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
                     .ToListAsync();
 
-                var userItemsToTake = Math.Min(6, userItems.Count);
+                var userItemsToTake = Math.Min(8, userItems.Count);
                 if (userItems.Count > 0)
                 {
                     items.AddRange(userItems.OrderBy(x => Guid.NewGuid()).Take(userItemsToTake));
@@ -299,7 +299,7 @@ namespace SOPServer.Repository.Repositories.Implements
                     .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
                     .ToListAsync();
 
-                var userItemsToTake = Math.Min(6, userItems.Count);
+                var userItemsToTake = Math.Min(8, userItems.Count);
                 if (userItems.Count > 0)
                 {
                     items.AddRange(userItems.OrderBy(x => Guid.NewGuid()).Take(userItemsToTake));

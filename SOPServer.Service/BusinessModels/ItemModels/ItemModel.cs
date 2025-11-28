@@ -126,4 +126,10 @@ namespace SOPServer.Service.BusinessModels.ItemModels
         public int ItemId { get; set; }
         public float Confidence { get; set; }
     }
+
+    public class ItemChooseModel
+    {
+        public int Id { get; set; }
+        public string AiDescription { get; set; }
+    }
 }

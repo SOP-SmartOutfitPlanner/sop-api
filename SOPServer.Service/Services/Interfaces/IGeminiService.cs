@@ -27,5 +27,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<List<string>> OutfitSuggestion(string occasion, string usercharacteristic, string? weather = null);
         Task<OutfitSelectionModel> ChooseOutfit(string occasion, string usercharacteristic, List<string> searchResults, string? weather = null);
         GenerativeModel CreateSuggestionModel(QuickTools? tools = null);
+        Task<List<long>> ItemCharacteristicSuggestion(string json, string occasion, string usercharacteristic);
+        Task<OutfitSelectionModel> ChooseOutfitV2(string json, string occasion, string usercharacteristic, string? weather = null);
     }
 }

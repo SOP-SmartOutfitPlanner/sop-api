@@ -67,6 +67,7 @@ namespace SOPServer.Service.Mappers
                 .ConvertUsing<PaginationConverter<Item, ItemModel>>();
 
             CreateMap<ItemModelAI, ItemSummaryModel>();
+            CreateMap<ItemChooseModel, Item>().ReverseMap();
         }
     }
 }

@@ -42,6 +42,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> UpdateOutfitCalendarAsync(long id, long userId, OutfitCalendarUpdateModel model);
         Task<BaseResponseModel> DeleteOutfitCalendarAsync(long id, long userId);
         Task<BaseResponseModel> OutfitSuggestion(long userId, long? occasionId, string? weather = null);
+        Task<BaseResponseModel> OutfitSuggestionV2(OutfitSuggestionRequestModel model);
         Task<BaseResponseModel> VirtualTryOn(IFormFile human, List<string> itemURLs);
     }
 }

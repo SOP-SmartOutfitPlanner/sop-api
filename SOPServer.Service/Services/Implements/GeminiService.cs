@@ -629,7 +629,7 @@ Parse this compact format to make outfit decisions." }
                     requestJsonMode.GenerationConfig = new GenerationConfig
                     {
                         MaxOutputTokens = 2000,
-                        Temperature = 1.2f,
+                        Temperature = 0.8f,
                         TopP = 0.9f,
                         TopK = 50
                     };

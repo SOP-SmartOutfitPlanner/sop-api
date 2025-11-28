@@ -131,5 +131,6 @@ namespace SOPServer.Service.BusinessModels.ItemModels
     {
         public int Id { get; set; }
         public string AiDescription { get; set; }
+        public ItemType? ItemType { get; set; }
     }
 }

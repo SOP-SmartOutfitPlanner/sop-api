@@ -330,13 +330,14 @@ namespace SOPServer.API.Controllers
         }
 
         [HttpGet("suggestionV2")]
-        public Task<IActionResult> OutfitSuggestionV2(long userId, long? occasionId, string? weather = null)
+        public Task<IActionResult> OutfitSuggestionV2(long userId, int totalOutfit, long? occasionId, string? weather = null)
         {
             return ValidateAndExecute(async () => await _outfitService.OutfitSuggestionV2(new OutfitSuggestionRequestModel()
             {
                 OccasionId = occasionId,
                 UserId = userId,
-                Weather = weather
+                Weather = weather,
+                TotalOutfit = totalOutfit
             }));
         }
 

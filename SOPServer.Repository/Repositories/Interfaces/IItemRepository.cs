@@ -33,5 +33,20 @@ namespace SOPServer.Repository.Repositories.Interfaces
         /// Get items that have any of the specified Style IDs
         /// </summary>
         Task<List<Item>> GetItemsByStyleIdsAsync(List<long> styleIds, long? userId = null);
+
+        /// <summary>
+        /// Get items that have any of the specified Season IDs, excluding specified item IDs
+        /// </summary>
+        Task<List<Item>> GetItemsBySeasonIdsAsync(List<long> seasonIds, List<long> excludeIds, long? userId = null);
+
+        /// <summary>
+        /// Get items that have any of the specified Occasion IDs, excluding specified item IDs
+        /// </summary>
+        Task<List<Item>> GetItemsByOccasionIdsAsync(List<long> occasionIds, List<long> excludeIds, long? userId = null);
+
+        /// <summary>
+        /// Get items that have any of the specified Style IDs, excluding specified item IDs
+        /// </summary>
+        Task<List<Item>> GetItemsByStyleIdsAsync(List<long> styleIds, List<long> excludeIds, long? userId = null);
     }
 }

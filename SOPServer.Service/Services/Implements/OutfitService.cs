@@ -1035,7 +1035,12 @@ namespace SOPServer.Service.Services.Implements
             var characteristics = new List<string>();
 
             if (userCharacteristic.Dob.HasValue)
-                characteristics.Add($"Age: {userCharacteristic.Dob.Value:yyyy-MM-dd}");
+            {
+                var today = DateTime.Today;
+                var age = today.Year - userCharacteristic.Dob.Value.Year;
+
+                characteristics.Add($"Age: {age}");
+            }
 
             characteristics.Add($"Gender: {userCharacteristic.Gender}");
 
@@ -1286,50 +1291,81 @@ namespace SOPServer.Service.Services.Implements
             Console.WriteLine($"[TIMING] Gemini AI suggestions (parallel): {geminiStopwatch.ElapsedMilliseconds}ms");
 
             // Step 5: Fetch items matching the selected Season/Occasion/Style IDs from user's wardrobe
+            // Exclude duplicate items across categories to get unique items per category
             var itemFetchStopwatch = Stopwatch.StartNew();
             
             var seasonItems = await _unitOfWork.ItemRepository.GetItemsBySeasonIdsAsync(selectedSeasonIds ?? new List<long>(), model.UserId);
+            var seasonItemIds = seasonItems.Select(i => i.Id).ToList();
 
-            var occasionItems = await _unitOfWork.ItemRepository.GetItemsByOccasionIdsAsync(selectedOccasionIds ?? new List<long>(), model.UserId);
+            var occasionItems = await _unitOfWork.ItemRepository.GetItemsByOccasionIdsAsync(
+                selectedOccasionIds ?? new List<long>(), 
+                seasonItemIds, 
+                model.UserId);
+            var occasionItemIds = occasionItems.Select(i => i.Id).ToList();
 
-            var styleItems = await _unitOfWork.ItemRepository.GetItemsByStyleIdsAsync(selectedStyleIds ?? new List<long>(), model.UserId);
+            var excludedIds = seasonItemIds.Concat(occasionItemIds).ToList();
+            var styleItems = await _unitOfWork.ItemRepository.GetItemsByStyleIdsAsync(
+                selectedStyleIds ?? new List<long>(), 
+                excludedIds, 
+                model.UserId);
 
             itemFetchStopwatch.Stop();
             Console.WriteLine($"[TIMING] Item fetch and filtering: {itemFetchStopwatch.ElapsedMilliseconds}ms");
 
             // Step 6: Map items to ItemModel
-            var seasonItemsModel = seasonItems.Select(i => _mapper.Map<ItemModel>(i)).ToList();
-            var occasionItemsModel = occasionItems.Select(i => _mapper.Map<ItemModel>(i)).ToList();
-            var styleItemsModel = styleItems.Select(i => _mapper.Map<ItemModel>(i)).ToList();
+            var seasonItemsModel = seasonItems.Select(i => _mapper.Map<ItemChooseModel>(i)).ToList();
+            var occasionItemsModel = occasionItems.Select(i => _mapper.Map<ItemChooseModel>(i)).ToList();
+            var styleItemsModel = styleItems.Select(i => _mapper.Map<ItemChooseModel>(i)).ToList();
+            var combinedItems = seasonItemsModel.Concat(occasionItemsModel)
+                .Concat(styleItemsModel)
+                .ToList();
 
-            // Step 7: Structure results with category names and actual items
-            var suggestionResults = new List<CharacteristicSuggestionResult>
+            // Step 7: Generate multiple outfit suggestions concurrently
+            var outfitGenerationStopwatch = Stopwatch.StartNew();
+            var totalOutfits = model.TotalOutfit > 0 ? model.TotalOutfit : 1;
+            
+            var outfitTasks = new List<Task<OutfitSelectionModel>>();
+            for (int i = 0; i < totalOutfits; i++)
             {
-                new CharacteristicSuggestionResult
+                var task = _geminiService.ChooseOutfitV2(
+                    JsonSerializer.Serialize(combinedItems.OrderBy(x => Random.Shared.Next()).ToList()),
+                    occasionString,
+                    characteristicString,
+                    model.Weather
+                );
+                outfitTasks.Add(task);
+            }
+
+            var outfitSelections = await Task.WhenAll(outfitTasks);
+            outfitGenerationStopwatch.Stop();
+            Console.WriteLine($"[TIMING] Outfit generation (concurrent {totalOutfits} calls): {outfitGenerationStopwatch.ElapsedMilliseconds}ms");
+
+            // Step 8: Map selected items from all outfit selections
+            var allSuggestedOutfits = new List<OutfitSuggestionModel>();
+            
+            foreach (var selection in outfitSelections)
+            {
+                var selectedItems = selection.ItemIds?.Any() == true
+                    ? await _unitOfWork.ItemRepository.GetItemsByIdsAsync(selection.ItemIds)
+                    : new List<Item>();
+
+                var selectedItemModels = selectedItems.Select(item => _mapper.Map<ItemModel>(item)).ToList();
+                
+                allSuggestedOutfits.Add(new OutfitSuggestionModel
                 {
-                    Category = "Season",
-                    Items = seasonItemsModel
-                },
-                new CharacteristicSuggestionResult
-                {
-                    Category = "Occasion",
-                    Items = occasionItemsModel
-                },
-                new CharacteristicSuggestionResult
-                {
-                    Category = "Style",
-                    Items = styleItemsModel
-                }
-            };
+                    SuggestedItems = selectedItemModels,
+                    Reason = selection.Reason
+                });
+            }
 
             overallStopwatch.Stop();
-            Console.WriteLine($"[TIMING] *** OutfitSuggestionV2 TOTAL: {overallStopwatch.ElapsedMilliseconds}ms ***");
+            Console.WriteLine($"[TIMING] *** TOTAL: {overallStopwatch.ElapsedMilliseconds}ms ***");
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.OUTFIT_SUGGESTION_SUCCESS,
-                Data = suggestionResults
+                Data = allSuggestedOutfits
             };
         }
 

@@ -11,5 +11,6 @@ namespace SOPServer.Service.BusinessModels.OutfitModels
         public long UserId { get; set; }
         public string? Weather { get; set; }
         public long? OccasionId { get; set; }
+        public int TotalOutfit { get; set; }
     }
 }

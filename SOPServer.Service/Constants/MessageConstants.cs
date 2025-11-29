@@ -99,6 +99,12 @@ namespace SOPServer.Service.Constants
         public const string GET_POST_LIKERS_SUCCESS = "Get list of post likers successfully";
         public const string GET_LIST_POST_BY_HASHTAG_SUCCESS = "Get list posts by hashtag successfully";
         public const string HASHTAG_NOT_FOUND = "Hashtag not found";
+        public const string POST_ITEMS_OUTFIT_MUTUALLY_EXCLUSIVE = "Cannot add both items and outfit to a post. Please choose one.";
+        public const string POST_ITEMS_MAX_LIMIT = "Cannot add more than 4 items to a post.";
+        public const string POST_ITEM_NOT_FOUND = "Item not found.";
+        public const string POST_OUTFIT_NOT_FOUND = "Outfit not found.";
+        public const string POST_ITEM_NOT_BELONG_TO_USER = "Item does not belong to you.";
+        public const string POST_OUTFIT_NOT_BELONG_TO_USER = "Outfit does not belong to you.";
 
         public const string OTP_SENT_SUCCESS = "OTP sent successfully to your gmail";
         public const string OTP_VERIFY_SUCCESS = "Verify OTP successfully";

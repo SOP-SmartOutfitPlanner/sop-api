@@ -147,6 +147,9 @@ namespace SOPServer.Service.Constants
         public const string OUTFIT_TOGGLE_SAVE_SUCCESS = "Outfit save status toggled successfully";
         public const string OUTFIT_DUPLICATE_ITEMS = "An outfit with the same combination of items already exists";
         public const string OUTFIT_ACCESS_DENIED = "You don't have permission to access this outfit";
+        public const string OUTFIT_MASS_CREATE_SUCCESS = "All outfits created successfully";
+        public const string OUTFIT_MASS_CREATE_PARTIAL = "Some outfits created with failures";
+        public const string OUTFIT_MASS_CREATE_FAILED = "All outfit creations failed";
 
         // Reset Password related messages
         public const string RESET_PASSWORD_REQUEST_SENT = "If the email exists, a password reset OTP has been sent";

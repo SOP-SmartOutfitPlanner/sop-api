@@ -52,6 +52,7 @@ namespace SOPServer.Service.BusinessModels.OutfitModels
         public string Condition { get; set; }
         public string Pattern { get; set; }
         public string Fabric { get; set; }
+        public ItemType ItemType { get; set; }
         public List<OccasionItemModel> Occasions { get; set; } = new List<OccasionItemModel>();
         public List<SeasonItemModel> Seasons { get; set; } = new List<SeasonItemModel>();
         public List<StyleItemModel> Styles { get; set; } = new List<StyleItemModel>();

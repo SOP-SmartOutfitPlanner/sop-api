@@ -114,6 +114,40 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
+        /// Create multiple outfits at once
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Request Body:**
+        /// - `outfits`: Array of outfit objects, each containing:
+        ///   - `name`: Outfit name (optional)
+        ///   - `description`: Outfit description (optional)
+        ///   - `itemIds`: Array of item IDs (optional, prevents duplicates)
+        ///
+        /// **Response:**
+        /// - `totalRequested`: Number of outfits requested to create
+        /// - `totalCreated`: Number of outfits successfully created
+        /// - `totalFailed`: Number of outfits that failed to create
+        /// - `createdOutfits`: List of successfully created outfits with their IDs
+        /// - `failedOutfits`: List of failed outfits with error messages
+        ///
+        /// **Status Codes:**
+        /// - 201: All outfits created successfully
+        /// - 207: Some outfits created, some failed (partial success)
+        /// - 400: All outfit creations failed
+        ///
+        /// **Note:** UserId is extracted from JWT token automatically
+        /// </remarks>
+        [HttpPost("mass")]
+        public Task<IActionResult> CreateMassOutfit([FromBody] MassOutfitCreateModel model)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+            return ValidateAndExecute(async () => await _outfitService.CreateMassOutfitAsync(userId, model));
+        }
+
+        /// <summary>
         /// Update outfit name and description
         /// </summary>
         /// <remarks>
@@ -318,7 +352,7 @@ namespace SOPServer.API.Controllers
         /// **Query Parameters:**
         /// - `userId`: User ID (required)
         /// - `occasionId`: Occasion ID (optional)
-        /// - `weather`: Weather information for outfit suggestions (optional, e.g., "sunny, 25°C" or "rainy, 15°C")
+        /// - `weather`: Weather information for outfit suggestions (optional, e.g., "sunny, 25ï¿½C" or "rainy, 15ï¿½C")
         ///
         /// **Note:** Subject to subscription limits based on user's plan (monthly reset)
         /// </remarks>

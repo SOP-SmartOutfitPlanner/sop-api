@@ -54,6 +54,18 @@ namespace SOPServer.Service.Services.Implements
                     $"Reason: {suspension.Reason}. You cannot create posts during this period.");
             }
 
+            // Validate mutually exclusive constraint: Items OR Outfit
+            if (model.ItemIds?.Any() == true && model.OutfitId.HasValue)
+            {
+                throw new BadRequestException(MessageConstants.POST_ITEMS_OUTFIT_MUTUALLY_EXCLUSIVE);
+            }
+
+            // Validate max 4 items
+            if (model.ItemIds?.Count > 4)
+            {
+                throw new BadRequestException(MessageConstants.POST_ITEMS_MAX_LIMIT);
+            }
+
             var newPost = await CreatePostEntityAsync(model);
 
             // Upload images to MinIO and get URLs
@@ -61,6 +73,8 @@ namespace SOPServer.Service.Services.Implements
 
             await AddPostImagesAsync(newPost.Id, imageUrls);
             await HandlePostHashtagsAsync(newPost.Id, model.Hashtags);
+            await ValidateAndAddPostItemsAsync(newPost.Id, model.ItemIds, model.UserId);
+            await ValidateAndAddPostOutfitAsync(newPost.Id, model.OutfitId, model.UserId);
 
             var createdPost = await GetPostWithRelationsAsync(newPost.Id);
             var postModel = _mapper.Map<PostModel>(createdPost);
@@ -81,6 +95,8 @@ namespace SOPServer.Service.Services.Implements
                     .Include(p => p.PostImages)
                     .Include(p => p.PostHashtags)
                         .ThenInclude(ph => ph.Hashtag)
+                    .Include(p => p.PostItems)
+                    .Include(p => p.PostOutfits)
             );
 
             if (post == null)
@@ -88,14 +104,30 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.POST_NOT_FOUND);
             }
 
+            // Validate mutually exclusive constraint: Items OR Outfit
+            if (model.ItemIds?.Any() == true && model.OutfitId.HasValue)
+            {
+                throw new BadRequestException(MessageConstants.POST_ITEMS_OUTFIT_MUTUALLY_EXCLUSIVE);
+            }
+
+            // Validate max 4 items
+            if (model.ItemIds?.Count > 4)
+            {
+                throw new BadRequestException(MessageConstants.POST_ITEMS_MAX_LIMIT);
+            }
+
             post.Body = model.Body;
 
             // Filter only non-deleted records before passing to update methods
             var activeImages = post.PostImages.Where(img => !img.IsDeleted).ToList();
             var activeHashtags = post.PostHashtags.Where(ph => !ph.IsDeleted).ToList();
+            var activeItems = post.PostItems.Where(pi => !pi.IsDeleted).ToList();
+            var activeOutfits = post.PostOutfits.Where(po => !po.IsDeleted).ToList();
 
             await UpdatePostImagesAsync(post.Id, activeImages, model.Images);
             await UpdatePostHashtagsAsync(post.Id, activeHashtags, model.Hashtags);
+            await UpdatePostItemsAsync(post.Id, activeItems, model.ItemIds, post.UserId ?? 0);
+            await UpdatePostOutfitAsync(post.Id, activeOutfits, model.OutfitId, post.UserId ?? 0);
 
             // Update the post entity
             _unitOfWork.PostRepository.UpdateAsync(post);
@@ -142,6 +174,14 @@ namespace SOPServer.Service.Services.Implements
                         .ThenInclude(ph => ph.Hashtag)
                     .Include(p => p.LikePosts)
                     .Include(p => p.CommentPosts)
+                    .Include(p => p.PostItems)
+                        .ThenInclude(pi => pi.Item)
+                            .ThenInclude(i => i.Category)
+                    .Include(p => p.PostOutfits)
+                        .ThenInclude(po => po.Outfit)
+                            .ThenInclude(o => o.OutfitItems)
+                                .ThenInclude(oi => oi.Item)
+                                    .ThenInclude(i => i.Category)
             );
 
             if (post == null)
@@ -187,7 +227,15 @@ namespace SOPServer.Service.Services.Implements
                     .Include(p => p.PostHashtags)
                         .ThenInclude(ph => ph.Hashtag)
                     .Include(p => p.LikePosts)
-                    .Include(p => p.CommentPosts),
+                    .Include(p => p.CommentPosts)
+                    .Include(p => p.PostItems)
+                        .ThenInclude(pi => pi.Item)
+                            .ThenInclude(i => i.Category)
+                    .Include(p => p.PostOutfits)
+                        .ThenInclude(po => po.Outfit)
+                            .ThenInclude(o => o.OutfitItems)
+                                .ThenInclude(oi => oi.Item)
+                                    .ThenInclude(i => i.Category),
                 filter: string.IsNullOrWhiteSpace(paginationParameter.Search)
                     ? p => p.UserId == userId && (!p.IsHidden || isOwner || isAdmin)
                     : p => p.UserId == userId && (!p.IsHidden || isOwner || isAdmin) && p.Body != null && EF.Functions.Collate(p.Body, "Latin1_General_CI_AI").Contains(EF.Functions.Collate(paginationParameter.Search, "Latin1_General_CI_AI")),
@@ -246,7 +294,15 @@ namespace SOPServer.Service.Services.Implements
                     .Include(p => p.PostHashtags)
                         .ThenInclude(ph => ph.Hashtag)
                     .Include(p => p.LikePosts)
-                    .Include(p => p.CommentPosts),
+                    .Include(p => p.CommentPosts)
+                    .Include(p => p.PostItems)
+                        .ThenInclude(pi => pi.Item)
+                            .ThenInclude(i => i.Category)
+                    .Include(p => p.PostOutfits)
+                        .ThenInclude(po => po.Outfit)
+                            .ThenInclude(o => o.OutfitItems)
+                                .ThenInclude(oi => oi.Item)
+                                    .ThenInclude(i => i.Category),
                 filter: string.IsNullOrWhiteSpace(paginationParameter.Search)
                     ? p => !p.IsHidden || p.UserId == callerUserId || isAdmin
                     : p => (!p.IsHidden || p.UserId == callerUserId || isAdmin) && p.Body != null && EF.Functions.Collate(p.Body, "Latin1_General_CI_AI").Contains(EF.Functions.Collate(paginationParameter.Search, "Latin1_General_CI_AI")),
@@ -325,7 +381,15 @@ namespace SOPServer.Service.Services.Implements
                     .Include(p => p.PostHashtags)
                         .ThenInclude(ph => ph.Hashtag)
                     .Include(p => p.LikePosts)
-                    .Include(p => p.CommentPosts),
+                    .Include(p => p.CommentPosts)
+                    .Include(p => p.PostItems)
+                        .ThenInclude(pi => pi.Item)
+                            .ThenInclude(i => i.Category)
+                    .Include(p => p.PostOutfits)
+                        .ThenInclude(po => po.Outfit)
+                            .ThenInclude(o => o.OutfitItems)
+                                .ThenInclude(oi => oi.Item)
+                                    .ThenInclude(i => i.Category),
                 filter: p => p.PostHashtags.Any(ph => ph.HashtagId == hashtagId && !ph.IsDeleted) && (!p.IsHidden || p.UserId == requesterId || isAdmin),
                 orderBy: q => q.OrderByDescending(p => p.CreatedDate)
             );
@@ -385,7 +449,15 @@ namespace SOPServer.Service.Services.Implements
                     .Include(p => p.PostHashtags)
                         .ThenInclude(ph => ph.Hashtag)
                     .Include(p => p.LikePosts)
-                    .Include(p => p.CommentPosts),
+                    .Include(p => p.CommentPosts)
+                    .Include(p => p.PostItems)
+                        .ThenInclude(pi => pi.Item)
+                            .ThenInclude(i => i.Category)
+                    .Include(p => p.PostOutfits)
+                        .ThenInclude(po => po.Outfit)
+                            .ThenInclude(o => o.OutfitItems)
+                                .ThenInclude(oi => oi.Item)
+                                    .ThenInclude(i => i.Category),
                 filter: p => p.PostHashtags.Any(ph => ph.HashtagId == hashtag.Id && !ph.IsDeleted) && (!p.IsHidden || p.UserId == callerUserId || isAdmin),
                 orderBy: q => q.OrderByDescending(p => p.CreatedDate)
             );
@@ -847,6 +919,14 @@ namespace SOPServer.Service.Services.Implements
                     .Include(p => p.PostHashtags)
                         .ThenInclude(ph => ph.Hashtag)
                     .Include(p => p.LikePosts)
+                    .Include(p => p.PostItems)
+                        .ThenInclude(pi => pi.Item)
+                            .ThenInclude(i => i.Category)
+                    .Include(p => p.PostOutfits)
+                        .ThenInclude(po => po.Outfit)
+                            .ThenInclude(o => o.OutfitItems)
+                                .ThenInclude(oi => oi.Item)
+                                    .ThenInclude(i => i.Category)
             );
         }
 
@@ -871,6 +951,137 @@ namespace SOPServer.Service.Services.Implements
                 }
             };
         }
+
+        private async Task ValidateAndAddPostItemsAsync(long postId, List<long>? itemIds, long userId)
+        {
+            if (itemIds == null || !itemIds.Any())
+            {
+                return;
+            }
+
+            var postItemsList = new List<PostItem>();
+
+            foreach (var itemId in itemIds)
+            {
+                var item = await _unitOfWork.ItemRepository.GetByIdAsync(itemId);
+
+                if (item == null)
+                {
+                    throw new NotFoundException($"{MessageConstants.POST_ITEM_NOT_FOUND} (ID: {itemId})");
+                }
+
+                if (item.UserId != userId)
+                {
+                    throw new ForbiddenException($"{MessageConstants.POST_ITEM_NOT_BELONG_TO_USER} (ID: {itemId})");
+                }
+
+                var postItem = new PostItem
+                {
+                    PostId = postId,
+                    ItemId = itemId
+                };
+                postItemsList.Add(postItem);
+            }
+
+            if (postItemsList.Any())
+            {
+                await _unitOfWork.PostItemRepository.AddRangeAsync(postItemsList);
+                await _unitOfWork.SaveAsync();
+            }
+        }
+
+        private async Task ValidateAndAddPostOutfitAsync(long postId, long? outfitId, long userId)
+        {
+            if (!outfitId.HasValue)
+            {
+                return;
+            }
+
+            var outfit = await _unitOfWork.OutfitRepository.GetByIdAsync(outfitId.Value);
+
+            if (outfit == null)
+            {
+                throw new NotFoundException(MessageConstants.POST_OUTFIT_NOT_FOUND);
+            }
+
+            if (outfit.UserId != userId)
+            {
+                throw new ForbiddenException(MessageConstants.POST_OUTFIT_NOT_BELONG_TO_USER);
+            }
+
+            var postOutfit = new PostOutfit
+            {
+                PostId = postId,
+                OutfitId = outfitId.Value
+            };
+
+            await _unitOfWork.PostOutfitRepository.AddAsync(postOutfit);
+            await _unitOfWork.SaveAsync();
+        }
+
+        private async Task UpdatePostItemsAsync(long postId, List<PostItem> existingItems, List<long>? newItemIds, long userId)
+        {
+            // Treat null as clear all - soft delete existing items
+            if (newItemIds == null)
+            {
+                if (existingItems != null && existingItems.Any())
+                {
+                    foreach (var existingItem in existingItems)
+                    {
+                        _unitOfWork.PostItemRepository.SoftDeleteAsync(existingItem);
+                    }
+                    await _unitOfWork.SaveAsync();
+                }
+                return;
+            }
+
+            // Soft delete all existing items
+            if (existingItems != null && existingItems.Any())
+            {
+                foreach (var existingItem in existingItems)
+                {
+                    _unitOfWork.PostItemRepository.SoftDeleteAsync(existingItem);
+                }
+                await _unitOfWork.SaveAsync();
+            }
+
+            // Add new items if provided
+            if (newItemIds.Any())
+            {
+                await ValidateAndAddPostItemsAsync(postId, newItemIds, userId);
+            }
+        }
+
+        private async Task UpdatePostOutfitAsync(long postId, List<PostOutfit> existingOutfits, long? newOutfitId, long userId)
+        {
+            // Treat null as clear all - soft delete existing outfit
+            if (newOutfitId == null)
+            {
+                if (existingOutfits != null && existingOutfits.Any())
+                {
+                    foreach (var existingOutfit in existingOutfits)
+                    {
+                        _unitOfWork.PostOutfitRepository.SoftDeleteAsync(existingOutfit);
+                    }
+                    await _unitOfWork.SaveAsync();
+                }
+                return;
+            }
+
+            // Soft delete all existing outfits
+            if (existingOutfits != null && existingOutfits.Any())
+            {
+                foreach (var existingOutfit in existingOutfits)
+                {
+                    _unitOfWork.PostOutfitRepository.SoftDeleteAsync(existingOutfit);
+                }
+                await _unitOfWork.SaveAsync();
+            }
+
+            // Add new outfit
+            await ValidateAndAddPostOutfitAsync(postId, newOutfitId, userId);
+        }
+
         #endregion
     }
 }

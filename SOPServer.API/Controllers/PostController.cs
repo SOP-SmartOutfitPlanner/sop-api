@@ -30,12 +30,36 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _postService.GetPostByIdAsync(id, requesterId));
         }
 
+        /// <summary>
+        /// Creates a new post
+        /// </summary>
+        /// <param name="model">The post creation model</param>
+        /// <returns>The created post</returns>
+        /// <remarks>
+        /// ItemIds (0-4 items) and OutfitId (0-1 outfit) are mutually exclusive. Cannot provide both.
+        /// - To add items: provide ItemIds only (max 4 items)
+        /// - To add outfit: provide OutfitId only
+        /// - Both fields are optional
+        /// </remarks>
         [HttpPost]
         public Task<IActionResult> CreatePost([FromForm] PostCreateModel model)
         {
             return ValidateAndExecute(async () => await _postService.CreatePostAsync(model));
         }
 
+        /// <summary>
+        /// Updates an existing post
+        /// </summary>
+        /// <param name="id">The post ID</param>
+        /// <param name="model">The post update model</param>
+        /// <returns>The updated post</returns>
+        /// <remarks>
+        /// ItemIds (0-4 items) and OutfitId (0-1 outfit) are mutually exclusive. Cannot provide both.
+        /// - To add items: provide ItemIds only (max 4 items)
+        /// - To add outfit: provide OutfitId only
+        /// - Both fields are optional
+        /// - Null value means clear all associations (items or outfit)
+        /// </remarks>
         [HttpPut("{id}")]
         public Task<IActionResult> UpdatePost(long id, [FromForm] PostUpdateModel model)
         {

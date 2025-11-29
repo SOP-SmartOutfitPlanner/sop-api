@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
+using SOPServer.Repository.Utils;
 using SOPServer.Service.BusinessModels.SubscriptionLimitModels;
 using SOPServer.Service.Services.Interfaces;
 using System.Text.Json;
@@ -101,7 +102,7 @@ namespace SOPServer.Service.Services.Implements
         {
             return await _unitOfWork.UserSubscriptionRepository.GetQueryable()
                 .Include(s => s.SubscriptionPlan)
-                .Where(s => s.UserId == userId && s.IsActive && s.DateExp > DateTime.UtcNow)
+                .Where(s => s.UserId == userId && s.IsActive && s.DateExp > CommonUtils.GetCurrentTime())
                 .OrderByDescending(s => s.CreatedDate)
                 .FirstOrDefaultAsync();
         }

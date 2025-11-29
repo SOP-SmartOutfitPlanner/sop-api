@@ -362,6 +362,7 @@ namespace SOPServer.Service.Constants
         public const string SUBSCRIPTION_PLAN_DRAFT = "This subscription plan is not available for purchase yet.";
         public const string SUBSCRIPTION_PLAN_ARCHIVED = "This subscription plan is no longer available for purchase.";
         public const string SUBSCRIPTION_PLAN_INACTIVE_CUSTOMERS_ONLY = "This subscription plan is only available for existing customers.";
+        public const string SUBSCRIPTION_PLAN_FREE_NOT_PURCHASABLE = "Free plan cannot be purchased manually. It is automatically assigned when needed.";
 
         // UserSubscription related messages
         public const string USER_SUBSCRIPTION_ALREADY_HAS_PAID = "You already have an active paid subscription ({0}). Please wait until it expires on {1} before purchasing a new one.";

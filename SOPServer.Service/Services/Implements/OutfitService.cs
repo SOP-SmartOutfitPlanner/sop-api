@@ -349,6 +349,149 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<BaseResponseModel> CreateMassOutfitAsync(long userId, MassOutfitCreateModel model)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            if (model.Outfits == null || !model.Outfits.Any())
+            {
+                throw new BadRequestException("At least one outfit is required");
+            }
+
+            var result = new MassOutfitCreateResultModel
+            {
+                TotalRequested = model.Outfits.Count
+            };
+
+            // Get all existing outfits for duplicate check
+            var existingOutfits = await _unitOfWork.OutfitRepository.ToPaginationIncludeAsync(
+                new PaginationParameter { TakeAll = true },
+                include: query => query.Include(o => o.OutfitItems),
+                filter: o => o.UserId == userId);
+
+            for (int i = 0; i < model.Outfits.Count; i++)
+            {
+                var outfitModel = model.Outfits[i];
+
+                try
+                {
+                    // Validate items exist and belong to user
+                    if (outfitModel.ItemIds != null && outfitModel.ItemIds.Any())
+                    {
+                        foreach (var itemId in outfitModel.ItemIds)
+                        {
+                            var item = await _unitOfWork.ItemRepository.GetByIdAsync(itemId);
+                            if (item == null)
+                            {
+                                throw new NotFoundException($"Item with ID {itemId} not found");
+                            }
+
+                            if (item.ItemType != ItemType.SYSTEM && item.UserId != userId)
+                            {
+                                throw new ForbiddenException($"Item with ID {itemId} does not belong to you");
+                            }
+                        }
+
+                        // Check for duplicates
+                        var sortedItemIds = outfitModel.ItemIds.OrderBy(id => id).ToList();
+
+                        foreach (var existingOutfit in existingOutfits)
+                        {
+                            var existingItemIds = existingOutfit.OutfitItems
+                                .Where(oi => oi.ItemId.HasValue && !oi.IsDeleted)
+                                .Select(oi => oi.ItemId.Value)
+                                .OrderBy(id => id)
+                                .ToList();
+
+                            if (existingItemIds.Count == sortedItemIds.Count &&
+                                existingItemIds.SequenceEqual(sortedItemIds))
+                            {
+                                throw new BadRequestException(MessageConstants.OUTFIT_DUPLICATE_ITEMS);
+                            }
+                        }
+                    }
+
+                    // Create outfit
+                    var outfit = new Outfit
+                    {
+                        UserId = userId,
+                        Name = outfitModel.Name,
+                        Description = outfitModel.Description,
+                        IsFavorite = false,
+                        CreatedBy = OutfitCreatedBy.USER,
+                        IsSaved = false
+                    };
+
+                    await _unitOfWork.OutfitRepository.AddAsync(outfit);
+                    await _unitOfWork.SaveAsync();
+
+                    // Add items to OutfitItems
+                    if (outfitModel.ItemIds != null && outfitModel.ItemIds.Any())
+                    {
+                        foreach (var itemId in outfitModel.ItemIds)
+                        {
+                            var outfitItem = new OutfitItem
+                            {
+                                OutfitId = outfit.Id,
+                                ItemId = itemId
+                            };
+                            await _unitOfWork.OutfitItemRepository.AddAsync(outfitItem);
+                        }
+                        await _unitOfWork.SaveAsync();
+                    }
+
+                    // Add to existing outfits for next iteration duplicate check
+                    outfit.OutfitItems = outfitModel.ItemIds?.Select(itemId => new OutfitItem
+                    {
+                        OutfitId = outfit.Id,
+                        ItemId = itemId
+                    }).ToList() ?? new List<OutfitItem>();
+                    existingOutfits.Add(outfit);
+
+                    result.CreatedOutfits.Add(new OutfitCreateSuccessModel
+                    {
+                        Index = i,
+                        OutfitId = outfit.Id,
+                        Name = outfit.Name
+                    });
+                    result.TotalCreated++;
+                }
+                catch (Exception ex)
+                {
+                    result.FailedOutfits.Add(new OutfitCreateFailureModel
+                    {
+                        Index = i,
+                        Name = outfitModel.Name,
+                        Error = ex.Message
+                    });
+                    result.TotalFailed++;
+                }
+            }
+
+            var statusCode = result.TotalFailed == 0
+                ? StatusCodes.Status201Created
+                : result.TotalCreated > 0
+                    ? StatusCodes.Status207MultiStatus
+                    : StatusCodes.Status400BadRequest;
+
+            var message = result.TotalFailed == 0
+                ? MessageConstants.OUTFIT_MASS_CREATE_SUCCESS
+                : result.TotalCreated > 0
+                    ? MessageConstants.OUTFIT_MASS_CREATE_PARTIAL
+                    : MessageConstants.OUTFIT_MASS_CREATE_FAILED;
+
+            return new BaseResponseModel
+            {
+                StatusCode = statusCode,
+                Message = message,
+                Data = result
+            };
+        }
+
         public async Task<BaseResponseModel> UpdateOutfitAsync(long id, long userId, OutfitUpdateModel model)
         {
             var outfit = await _unitOfWork.OutfitRepository.GetByIdAsync(id);

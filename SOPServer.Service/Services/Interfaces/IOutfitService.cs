@@ -22,6 +22,7 @@ namespace SOPServer.Service.Services.Interfaces
                                                                DateTime? startDate,
                                                                DateTime? endDate);
         Task<BaseResponseModel> CreateOutfitAsync(long userId, OutfitCreateModel model);
+        Task<BaseResponseModel> CreateMassOutfitAsync(long userId, MassOutfitCreateModel model);
         Task<BaseResponseModel> UpdateOutfitAsync(long id, long userId, OutfitUpdateModel model);
         Task<BaseResponseModel> DeleteOutfitAsync(long id, long userId);
         Task<BaseResponseModel> ToggleOutfitFavoriteAsync(long id, long userId);

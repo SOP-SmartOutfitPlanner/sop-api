@@ -55,6 +55,9 @@ jobs:
         run: |
           docker pull lion3993vn/sop-server:latest
           docker run -d --name sop-server --restart=unless-stopped -p 8386:8386 -e PATH_SOP="${{ secrets.PATH_SOP }}" -e PATH_FIREBASE_ADMIN="${{ secrets.PATH_FIREBASE_ADMIN }}" -v ${{ secrets.PATH_SOP_COPY }} -v ${{ secrets.PATH_FIREBASE_COPY }} lion3993vn/sop-server:latest
+          
+      - name: Remove dangling images of sop-server
+        run: docker images lion3993vn/sop-server --format '{{.Repository}} {{.Tag}} {{.ID}}' | grep "<none>" | awk '{print $3}' | xargs -r docker rmi -f
 
       - name: Verify running containers
         run: docker ps -a

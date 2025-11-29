@@ -25,4 +25,35 @@ namespace SOPServer.Service.BusinessModels.OutfitModels
 
         public List<long>? ItemIds { get; set; }
     }
+
+    public class MassOutfitCreateModel
+    {
+        /// <summary>
+        /// List of outfits to create
+        /// </summary>
+        public List<OutfitCreateModel> Outfits { get; set; } = new List<OutfitCreateModel>();
+    }
+
+    public class MassOutfitCreateResultModel
+    {
+        public int TotalRequested { get; set; }
+        public int TotalCreated { get; set; }
+        public int TotalFailed { get; set; }
+        public List<OutfitCreateSuccessModel> CreatedOutfits { get; set; } = new List<OutfitCreateSuccessModel>();
+        public List<OutfitCreateFailureModel> FailedOutfits { get; set; } = new List<OutfitCreateFailureModel>();
+    }
+
+    public class OutfitCreateSuccessModel
+    {
+        public int Index { get; set; }
+        public long OutfitId { get; set; }
+        public string? Name { get; set; }
+    }
+
+    public class OutfitCreateFailureModel
+    {
+        public int Index { get; set; }
+        public string? Name { get; set; }
+        public string Error { get; set; }
+    }
 }

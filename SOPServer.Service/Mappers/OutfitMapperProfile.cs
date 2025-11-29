@@ -47,6 +47,7 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.ItemId, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.CategoryId, opt => opt.MapFrom(src => src.CategoryId ?? 0))
                 .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category != null ? src.Category.Name : null))
+                .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => src.ItemType))
                 .ForMember(dest => dest.Occasions, opt => opt.MapFrom(src =>
                     src.ItemOccasions != null && src.ItemOccasions.Any()
                         ? src.ItemOccasions.Where(io => io.Occasion != null && !io.IsDeleted)

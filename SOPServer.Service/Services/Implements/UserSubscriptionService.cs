@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
+using SOPServer.Repository.Utils;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.SubscriptionLimitModels;
 using SOPServer.Service.BusinessModels.SubscriptionPlanModels;
@@ -102,7 +103,7 @@ namespace SOPServer.Service.Services.Implements
 
             var existingActiveSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
                 .Include(s => s.SubscriptionPlan)
-                .Where(s => s.UserId == userId && s.IsActive && s.DateExp > DateTime.UtcNow && s.SubscriptionPlan.Price > 0)
+                .Where(s => s.UserId == userId && s.IsActive && s.DateExp > CommonUtils.GetCurrentTime() && s.SubscriptionPlan.Price > 0)
                 .FirstOrDefaultAsync();
 
             if (existingActiveSubscription != null)
@@ -141,11 +142,9 @@ namespace SOPServer.Service.Services.Implements
                 {
                     UserId = userId,
                     SubscriptionPlanId = plan.Id,
-                    DateExp = DateTime.UtcNow.AddMonths(1), 
-                    IsActive = true, 
-                    BenefitUsed = JsonSerializer.Serialize(initialBenefits),
-                    CreatedDate = DateTime.UtcNow,
-                    UpdatedDate = DateTime.UtcNow
+                    DateExp = CommonUtils.GetCurrentTime().AddMonths(1),
+                    IsActive = true,
+                    BenefitUsed = JsonSerializer.Serialize(initialBenefits)
                 };
 
                 await _unitOfWork.UserSubscriptionRepository.AddAsync(freeSubscription);
@@ -157,9 +156,7 @@ namespace SOPServer.Service.Services.Implements
                     TransactionCode = GenerateTransactionCode(),
                     Price = 0,
                     Status = TransactionStatus.COMPLETED,
-                    Description = string.Format(MessageConstants.USER_SUBSCRIPTION_FREE_DESCRIPTION, plan.Name),
-                    CreatedDate = DateTime.UtcNow,
-                    UpdatedDate = DateTime.UtcNow
+                    Description = string.Format(MessageConstants.USER_SUBSCRIPTION_FREE_DESCRIPTION, plan.Name)
                 };
 
                 await _unitOfWork.UserSubscriptionTransactionRepository.AddAsync(freeTransaction);
@@ -188,11 +185,9 @@ namespace SOPServer.Service.Services.Implements
             {
                 UserId = userId,
                 SubscriptionPlanId = plan.Id,
-                DateExp = DateTime.UtcNow.AddMonths(1), 
+                DateExp = CommonUtils.GetCurrentTime().AddMonths(1),
                 IsActive = false,
-                BenefitUsed = JsonSerializer.Serialize(initialBenefits),
-                CreatedDate = DateTime.UtcNow,
-                UpdatedDate = DateTime.UtcNow
+                BenefitUsed = JsonSerializer.Serialize(initialBenefits)
             };
 
             await _unitOfWork.UserSubscriptionRepository.AddAsync(userSubscription);
@@ -204,9 +199,7 @@ namespace SOPServer.Service.Services.Implements
                 TransactionCode = GenerateTransactionCode(),
                 Price = plan.Price,
                 Status = TransactionStatus.PENDING,
-                Description = string.Format(MessageConstants.USER_SUBSCRIPTION_PAYMENT_DESCRIPTION, plan.Name),
-                CreatedDate = DateTime.UtcNow,
-                UpdatedDate = DateTime.UtcNow
+                Description = string.Format(MessageConstants.USER_SUBSCRIPTION_PAYMENT_DESCRIPTION, plan.Name)
             };
 
             await _unitOfWork.UserSubscriptionTransactionRepository.AddAsync(transaction);
@@ -276,7 +269,7 @@ namespace SOPServer.Service.Services.Implements
         {
             var subscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
                 .Include(s => s.SubscriptionPlan)
-                .Where(s => s.UserId == userId && s.IsActive && s.DateExp > DateTime.UtcNow)
+                .Where(s => s.UserId == userId && s.IsActive && s.DateExp > CommonUtils.GetCurrentTime())
                 .OrderByDescending(s => s.CreatedDate)
                 .FirstOrDefaultAsync();
 
@@ -530,7 +523,7 @@ namespace SOPServer.Service.Services.Implements
 
             var activeSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
                 .Include(s => s.SubscriptionPlan)
-                .Where(s => s.UserId == userId && s.IsActive && s.DateExp > DateTime.UtcNow)
+                .Where(s => s.UserId == userId && s.IsActive && s.DateExp > CommonUtils.GetCurrentTime())
                 .FirstOrDefaultAsync();
 
             if (activeSubscription != null)
@@ -552,7 +545,7 @@ namespace SOPServer.Service.Services.Implements
             {
                 activeSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
                     .Include(s => s.SubscriptionPlan)
-                    .Where(s => s.UserId == userId && s.IsActive && s.DateExp > DateTime.UtcNow)
+                    .Where(s => s.UserId == userId && s.IsActive && s.DateExp > CommonUtils.GetCurrentTime())
                     .FirstOrDefaultAsync();
 
                 if (activeSubscription != null)
@@ -576,9 +569,25 @@ namespace SOPServer.Service.Services.Implements
                     .OrderByDescending(s => s.CreatedDate)
                     .FirstOrDefaultAsync();
 
-                if (anyRecentSubscription != null && anyRecentSubscription.DateExp > DateTime.UtcNow)
+                if (anyRecentSubscription != null && anyRecentSubscription.DateExp > CommonUtils.GetCurrentTime())
                 {
                     return;
+                }
+
+                // Deactivate all expired subscriptions for this user
+                var expiredSubscriptions = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
+                    .Where(s => s.UserId == userId && s.IsActive && s.DateExp <= CommonUtils.GetCurrentTime())
+                    .ToListAsync();
+
+                foreach (var expiredSub in expiredSubscriptions)
+                {
+                    expiredSub.IsActive = false;
+                    _unitOfWork.UserSubscriptionRepository.UpdateAsync(expiredSub);
+                }
+
+                if (expiredSubscriptions.Any())
+                {
+                    await _unitOfWork.SaveAsync();
                 }
 
                 var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
@@ -611,11 +620,9 @@ namespace SOPServer.Service.Services.Implements
                 {
                     UserId = userId,
                     SubscriptionPlanId = freePlan.Id,
-                    DateExp = DateTime.UtcNow.AddMonths(1),
+                    DateExp = CommonUtils.GetCurrentTime().AddMonths(1),
                     IsActive = true,
-                    BenefitUsed = JsonSerializer.Serialize(initialBenefits),
-                    CreatedDate = DateTime.UtcNow,
-                    UpdatedDate = DateTime.UtcNow
+                    BenefitUsed = JsonSerializer.Serialize(initialBenefits)
                 };
 
                 await _unitOfWork.UserSubscriptionRepository.AddAsync(newSubscription);
@@ -689,7 +696,7 @@ namespace SOPServer.Service.Services.Implements
             var previousSubscription = await _unitOfWork.UserSubscriptionRepository.GetQueryable()
                 .Where(s => s.UserId == userId &&
                             s.SubscriptionPlanId == subscriptionPlanId &&
-                            s.DateExp <= DateTime.UtcNow) // Expired subscriptions only
+                            s.DateExp <= CommonUtils.GetCurrentTime()) // Expired subscriptions only
                 .OrderByDescending(s => s.DateExp)
                 .FirstOrDefaultAsync();
 

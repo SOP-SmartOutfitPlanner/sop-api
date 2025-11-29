@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
+using SOPServer.Repository.Utils;
 using SOPServer.Service.BusinessModels.SubscriptionLimitModels;
 using SOPServer.Service.Services.Interfaces;
 
@@ -124,7 +125,7 @@ namespace SOPServer.Service.Services.Implements
         {
             return await _unitOfWork.UserSubscriptionRepository
                 .GetQueryable()
-                .Where(us => us.UserId == userId && us.IsActive && us.DateExp > DateTime.UtcNow)
+                .Where(us => us.UserId == userId && us.IsActive && us.DateExp > CommonUtils.GetCurrentTime())
                 .Include(us => us.SubscriptionPlan)
                 .OrderByDescending(us => us.DateExp)
                 .FirstOrDefaultAsync();

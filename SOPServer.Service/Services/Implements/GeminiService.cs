@@ -618,24 +618,32 @@ Parse this compact format to make outfit decisions." }
         {
             const int maxRetryAttempts = 5;
 
+            // Thêm random delay nhỏ để mỗi request có seed time khác nhau
+            var randomDelay = Random.Shared.Next(50, 200);
+            await Task.Delay(randomDelay);
+
             for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
             {
                 try
                 {
                     _logger.LogInformation("ChooseOutfitV2: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
 
+                    // Tạo unique seed cho mỗi request
+                    var uniqueSeed = $"{Guid.NewGuid()}-{DateTime.UtcNow.Ticks}-{Random.Shared.Next(1000, 9999)}";
+
                     var requestJsonMode = new GenerateContentRequest();
                     requestJsonMode.UseJsonMode<OutfitSelectionModel>();
                     requestJsonMode.GenerationConfig = new GenerationConfig
                     {
                         MaxOutputTokens = 2000,
-                        Temperature = 0.8f,
-                        TopP = 0.9f,
+                        Temperature = 1.3f,  // Tăng lên để tăng tính ngẫu nhiên
+                        TopP = 0.95f,
                         TopK = 50
                     };
+
                     var systemParts = new List<Part>
-{
-    new Part { Text = $@"[Random Seed: {Guid.NewGuid()}]
+            {
+                new Part { Text = $@"[Unique Seed: {uniqueSeed}]
 You are an expert fashion stylist AI. Your task is to select a complete outfit from the provided list of items based on user characteristics and occasion.
 
 IMPORTANT RULES:
@@ -643,7 +651,14 @@ IMPORTANT RULES:
 2. Do not output any explanations outside the JSON object.
 3. Prioritize selecting items where ""itemType"" is null or ""itemType"" is ""USER"". After using those, only then consider items with ""itemType"" = ""SYSTEM"".
 4. Select items that form a COMPLETE outfit (typically **3-5 items** covering: top, bottom, shoes, and optional accessories)
-5. **MAXIMIZE DIVERSITY**: Each time you generate an outfit, try to use DIFFERENT items. Avoid repeating the same items across multiple generations.
+5. **CRITICAL - MAXIMIZE DIVERSITY AND CREATIVITY**: 
+   - Generate UNIQUE and UNEXPECTED outfit combinations each time
+   - Explore DIFFERENT style directions: casual, formal, sporty, elegant, streetwear, minimalist, bold, vintage, modern
+   - Vary color schemes dramatically: monochrome, complementary colors, analogous, triadic, warm tones, cool tones, neutral palettes
+   - Be CREATIVE and ADVENTUROUS - avoid obvious or safe choices
+   - Think like a fashion designer presenting different mood boards
+   - Consider mixing unexpected pieces that still work harmoniously
+   - Experiment with different aesthetics and fashion statements
 6. Ensure selected items complement each other in color, style, and occasion fit
 7. Do not modify or translate item IDs - use them exactly as provided
 8. Return the response in this exact JSON structure:
@@ -651,13 +666,14 @@ IMPORTANT RULES:
     ""itemIds"": [1001, 2005, 3012],
     ""reason"": ""<≤50 words in English explaining the outfit combination highlighting color harmony, style match, weather appropriateness, and occasion fit. Do not mention item IDs.>""
 }}" }
-};
+            };
 
                     var userParts = new List<Part>
-                    {
-                        new Part { Text = $"User Characteristics: {usercharacteristic}" },
-                        new Part { Text = $"Occasion: {occasion}" }
-                    };
+            {
+                new Part { Text = $"[Request ID: {Guid.NewGuid()}] [Timestamp: {DateTime.UtcNow.Ticks}]" },
+                new Part { Text = $"User Characteristics: {usercharacteristic}" },
+                new Part { Text = $"Occasion: {occasion}" }
+            };
 
                     if (!string.IsNullOrEmpty(weather))
                     {
@@ -695,7 +711,10 @@ IMPORTANT RULES:
 
                     _logger.LogInformation("ChooseOutfitV2: Successfully selected {Count} items on attempt {Attempt}",
                         result.ItemIds.Count, attempt);
-
+                    Console.WriteLine("");
+                    Console.Write("Item Selection: ");
+                    result.ItemIds.ForEach(id => Console.Write(id + ", "));
+                    Console.WriteLine("");
                     return result;
                 }
                 catch (BadRequestException)

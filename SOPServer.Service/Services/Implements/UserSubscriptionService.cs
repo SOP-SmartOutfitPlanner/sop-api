@@ -647,7 +647,7 @@ namespace SOPServer.Service.Services.Implements
 
             try
             {
-                await _payOSService.CancelPayment((int)transactionId, "Cancelled by user");
+                await _payOSService.CancelPayment(transaction.TransactionCode, "Cancelled by user");
             }
             catch
             {

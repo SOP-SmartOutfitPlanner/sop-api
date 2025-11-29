@@ -35,7 +35,7 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.Items, opt => opt.MapFrom(src =>
                     src.OutfitItems != null
                     ? src.OutfitItems
-                        .Where(oi => oi.Item != null)
+                        .Where(oi => !oi.IsDeleted && oi.Item != null)
                         .Select(oi => new PostItemDetailModel
                         {
                             Id = oi.Item.Id,

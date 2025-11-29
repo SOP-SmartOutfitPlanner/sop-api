@@ -50,6 +50,10 @@ public partial class SOPServerContext : DbContext
 
     public virtual DbSet<PostHashtags> PostHashtags { get; set; }
 
+    public virtual DbSet<PostItem> PostItems { get; set; }
+
+    public virtual DbSet<PostOutfit> PostOutfits { get; set; }
+
     public virtual DbSet<OutfitItem> OutfitItems { get; set; }
 
     public virtual DbSet<Outfit> Outfits { get; set; }
@@ -395,6 +399,42 @@ public partial class SOPServerContext : DbContext
             entity.HasOne(d => d.Hashtag).WithMany(p => p.PostHashtags)
                 .HasForeignKey(d => d.HashtagId)
                 .HasConstraintName("FK_PostHashtags_Hashtag");
+        });
+
+        modelBuilder.Entity<PostItem>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__PostItem__3214EC07");
+
+            entity.ToTable("PostItem");
+
+            entity.HasIndex(e => e.PostId).HasDatabaseName("IX_PostItem_PostId");
+            entity.HasIndex(e => e.ItemId).HasDatabaseName("IX_PostItem_ItemId");
+
+            entity.HasOne(d => d.Post).WithMany(p => p.PostItems)
+                .HasForeignKey(d => d.PostId)
+                .HasConstraintName("FK_PostItem_Post");
+
+            entity.HasOne(d => d.Item).WithMany(p => p.PostItems)
+                .HasForeignKey(d => d.ItemId)
+                .HasConstraintName("FK_PostItem_Item");
+        });
+
+        modelBuilder.Entity<PostOutfit>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__PostOutfit__3214EC07");
+
+            entity.ToTable("PostOutfit");
+
+            entity.HasIndex(e => e.PostId).HasDatabaseName("IX_PostOutfit_PostId");
+            entity.HasIndex(e => e.OutfitId).HasDatabaseName("IX_PostOutfit_OutfitId");
+
+            entity.HasOne(d => d.Post).WithMany(p => p.PostOutfits)
+                .HasForeignKey(d => d.PostId)
+                .HasConstraintName("FK_PostOutfit_Post");
+
+            entity.HasOne(d => d.Outfit).WithMany(p => p.PostOutfits)
+                .HasForeignKey(d => d.OutfitId)
+                .HasConstraintName("FK_PostOutfit_Outfit");
         });
 
         modelBuilder.Entity<Outfit>(entity =>

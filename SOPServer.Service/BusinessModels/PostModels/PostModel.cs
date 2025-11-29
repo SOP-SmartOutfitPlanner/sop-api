@@ -19,6 +19,8 @@ namespace SOPServer.Service.BusinessModels.PostModels
         public string Body { get; set; }
         public List<HashtagModel> Hashtags { get; set; } = new List<HashtagModel>();
         public List<string> Images { get; set; } = new List<string>();
+        public List<PostItemDetailModel>? Items { get; set; }
+        public PostOutfitDetailModel? Outfit { get; set; }
         public int LikeCount { get; set; }
         public int CommentCount { get; set; }
         public bool IsLiked { get; set; }

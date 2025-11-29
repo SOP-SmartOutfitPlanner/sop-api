@@ -15,4 +15,6 @@ public partial class Post : BaseEntity
     public virtual ICollection<LikePost> LikePosts { get; set; } = new List<LikePost>();
     public virtual ICollection<CommentPost> CommentPosts { get; set; } = new List<CommentPost>();
     public virtual ICollection<ReportCommunity> ReportCommunities { get; set; } = new List<ReportCommunity>();
+    public virtual ICollection<PostItem> PostItems { get; set; } = new List<PostItem>();
+    public virtual ICollection<PostOutfit> PostOutfits { get; set; } = new List<PostOutfit>();
 }

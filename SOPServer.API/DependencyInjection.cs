@@ -92,6 +92,8 @@ namespace SOPServer.API
             services.AddScoped<IPostService, PostService>();
 
             services.AddScoped<IPostImageRepository, PostImageRepository>();
+            services.AddScoped<IPostItemRepository, PostItemRepository>();
+            services.AddScoped<IPostOutfitRepository, PostOutfitRepository>();
 
             services.AddScoped<IHashtagRepository, HashtagRepository>();
             services.AddScoped<IPostHashtagsRepository, PostHashtagsRepository>();

@@ -64,25 +64,49 @@ namespace SOPServer.Repository.Repositories.Implements
             if (seasonIds == null || !seasonIds.Any())
                 return new List<Item>();
 
-            var query = _context.Items
+            var baseQuery = _context.Items
                 .Where(x => !x.IsDeleted && x.IsAnalyzed == true &&
                            x.ItemSeasons.Any(ise => !ise.IsDeleted && ise.SeasonId.HasValue && seasonIds.Contains(ise.SeasonId.Value)));
 
+            var items = new List<Item>();
+
             if (userId.HasValue)
-                query = query.Where(x => x.UserId == userId || x.ItemType == ItemType.SYSTEM);
+            {
+                // Get user items (10 items)
+                var userItems = await baseQuery
+                    .Where(x => x.UserId == userId)
+                    .ToListAsync();
 
-            var items = await query
-                .Include(x => x.Category)
-                .Include(x => x.User)
-                .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
-                .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-                .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
-                .ToListAsync();
+                var userItemsToTake = Math.Min(10, userItems.Count);
+                if (userItems.Count > 0)
+                {
+                    items.AddRange(userItems.OrderBy(x => Guid.NewGuid()).Take(userItemsToTake));
+                }
 
-            if (items.Count <= 10)
-                return items;
+                // Get system items to fill remaining slots (5 items + any shortfall from user items)
+                var systemItemsNeeded = 15 - items.Count;
+                if (systemItemsNeeded > 0)
+                {
+                    var systemItems = await baseQuery
+                        .Where(x => x.ItemType == ItemType.SYSTEM && !items.Select(i => i.Id).Contains(x.Id))
+                        .ToListAsync();
 
-            return items.OrderBy(x => Guid.NewGuid()).Take(10).ToList();
+                    if (systemItems.Count > 0)
+                    {
+                        items.AddRange(systemItems.OrderBy(x => Guid.NewGuid()).Take(systemItemsNeeded));
+                    }
+                }
+            }
+            else
+            {
+                // If no userId provided, get all available items
+                items = await baseQuery
+                    .OrderBy(x => Guid.NewGuid())
+                    .Take(15)
+                    .ToListAsync();
+            }
+
+            return items.Take(15).ToList();
         }
 
         public async Task<List<Item>> GetItemsByOccasionIdsAsync(List<long> occasionIds, long? userId = null)
@@ -90,25 +114,49 @@ namespace SOPServer.Repository.Repositories.Implements
             if (occasionIds == null || !occasionIds.Any())
                 return new List<Item>();
 
-            var query = _context.Items
+            var baseQuery = _context.Items
                 .Where(x => !x.IsDeleted && x.IsAnalyzed == true &&
                            x.ItemOccasions.Any(io => !io.IsDeleted && io.OccasionId.HasValue && occasionIds.Contains(io.OccasionId.Value)));
 
+            var items = new List<Item>();
+
             if (userId.HasValue)
-                query = query.Where(x => x.UserId == userId || x.ItemType == ItemType.SYSTEM);
+            {
+                // Get user items (10 items)
+                var userItems = await baseQuery
+                    .Where(x => x.UserId == userId)
+                    .ToListAsync();
 
-            var items = await query
-                .Include(x => x.Category)
-                .Include(x => x.User)
-                .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
-                .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-                .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
-                .ToListAsync();
+                var userItemsToTake = Math.Min(10, userItems.Count);
+                if (userItems.Count > 0)
+                {
+                    items.AddRange(userItems.OrderBy(x => Guid.NewGuid()).Take(userItemsToTake));
+                }
 
-            if (items.Count <= 5)
-                return items;
+                // Get system items to fill remaining slots (5 items + any shortfall from user items)
+                var systemItemsNeeded = 15 - items.Count;
+                if (systemItemsNeeded > 0)
+                {
+                    var systemItems = await baseQuery
+                        .Where(x => x.ItemType == ItemType.SYSTEM && !items.Select(i => i.Id).Contains(x.Id))
+                        .ToListAsync();
 
-            return items.OrderBy(x => Guid.NewGuid()).Take(5).ToList();
+                    if (systemItems.Count > 0)
+                    {
+                        items.AddRange(systemItems.OrderBy(x => Guid.NewGuid()).Take(systemItemsNeeded));
+                    }
+                }
+            }
+            else
+            {
+                // If no userId provided, get all available items
+                items = await baseQuery
+                    .OrderBy(x => Guid.NewGuid())
+                    .Take(15)
+                    .ToListAsync();
+            }
+
+            return items.Take(15).ToList();
         }
 
         public async Task<List<Item>> GetItemsByStyleIdsAsync(List<long> styleIds, long? userId = null)
@@ -116,25 +164,49 @@ namespace SOPServer.Repository.Repositories.Implements
             if (styleIds == null || !styleIds.Any())
                 return new List<Item>();
 
-            var query = _context.Items
+            var baseQuery = _context.Items
                 .Where(x => !x.IsDeleted && x.IsAnalyzed == true &&
                            x.ItemStyles.Any(ist => !ist.IsDeleted && ist.StyleId.HasValue && styleIds.Contains(ist.StyleId.Value)));
 
+            var items = new List<Item>();
+
             if (userId.HasValue)
-                query = query.Where(x => x.UserId == userId || x.ItemType == ItemType.SYSTEM);
+            {
+                // Get user items (10 items)
+                var userItems = await baseQuery
+                    .Where(x => x.UserId == userId)
+                    .ToListAsync();
 
-            var items = await query
-                .Include(x => x.Category)
-                .Include(x => x.User)
-                .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
-                .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-                .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
-                .ToListAsync();
+                var userItemsToTake = Math.Min(10, userItems.Count);
+                if (userItems.Count > 0)
+                {
+                    items.AddRange(userItems.OrderBy(x => Guid.NewGuid()).Take(userItemsToTake));
+                }
 
-            if (items.Count <= 5)
-                return items;
+                // Get system items to fill remaining slots (5 items + any shortfall from user items)
+                var systemItemsNeeded = 15 - items.Count;
+                if (systemItemsNeeded > 0)
+                {
+                    var systemItems = await baseQuery
+                        .Where(x => x.ItemType == ItemType.SYSTEM && !items.Select(i => i.Id).Contains(x.Id))
+                        .ToListAsync();
 
-            return items.OrderBy(x => Guid.NewGuid()).Take(5).ToList();
+                    if (systemItems.Count > 0)
+                    {
+                        items.AddRange(systemItems.OrderBy(x => Guid.NewGuid()).Take(systemItemsNeeded));
+                    }
+                }
+            }
+            else
+            {
+                // If no userId provided, get all available items
+                items = await baseQuery
+                    .OrderBy(x => Guid.NewGuid())
+                    .Take(15)
+                    .ToListAsync();
+            }
+
+            return items.Take(15).ToList();
         }
 
         public async Task<List<Item>> GetItemsBySeasonIdsAsync(List<long> seasonIds, List<long> excludeIds, long? userId = null)
@@ -224,30 +296,20 @@ namespace SOPServer.Repository.Repositories.Implements
                 // Get user items (60% = 6 items)
                 var userItems = await baseQuery
                     .Where(x => x.UserId == userId)
-                    .Include(x => x.Category)
-                    .Include(x => x.User)
-                    .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
-                    .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-                    .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
                     .ToListAsync();
 
-                var userItemsToTake = Math.Min(8, userItems.Count);
+                var userItemsToTake = Math.Min(10, userItems.Count);
                 if (userItems.Count > 0)
                 {
                     items.AddRange(userItems.OrderBy(x => Guid.NewGuid()).Take(userItemsToTake));
                 }
 
                 // Get system items to fill remaining slots (4 items + any shortfall from user items)
-                var systemItemsNeeded = 10 - items.Count;
+                var systemItemsNeeded = 15 - items.Count;
                 if (systemItemsNeeded > 0)
                 {
                     var systemItems = await baseQuery
                         .Where(x => x.ItemType == ItemType.SYSTEM && !items.Select(i => i.Id).Contains(x.Id))
-                        .Include(x => x.Category)
-                        .Include(x => x.User)
-                        .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
-                        .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-                        .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
                         .ToListAsync();
 
                     if (systemItems.Count > 0)
@@ -260,17 +322,12 @@ namespace SOPServer.Repository.Repositories.Implements
             {
                 // If no userId provided, get all available items
                 items = await baseQuery
-                    .Include(x => x.Category)
-                    .Include(x => x.User)
-                    .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
-                    .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-                    .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
                     .OrderBy(x => Guid.NewGuid())
-                    .Take(10)
+                    .Take(15)
                     .ToListAsync();
             }
 
-            return items.Take(10).ToList();
+            return items.Take(15).ToList();
         }
 
         public async Task<List<Item>> GetItemsByStyleIdsAsync(List<long> styleIds, List<long> excludeIds, long? userId = null)
@@ -289,33 +346,23 @@ namespace SOPServer.Repository.Repositories.Implements
 
             if (userId.HasValue)
             {
-                // Get user items (60% = 6 items)
+                // Get user items (10 items)
                 var userItems = await baseQuery
                     .Where(x => x.UserId == userId)
-                    .Include(x => x.Category)
-                    .Include(x => x.User)
-                    .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
-                    .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-                    .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
                     .ToListAsync();
 
-                var userItemsToTake = Math.Min(8, userItems.Count);
+                var userItemsToTake = Math.Min(10, userItems.Count);
                 if (userItems.Count > 0)
                 {
                     items.AddRange(userItems.OrderBy(x => Guid.NewGuid()).Take(userItemsToTake));
                 }
 
-                // Get system items to fill remaining slots (4 items + any shortfall from user items)
-                var systemItemsNeeded = 10 - items.Count;
+                // Get system items to fill remaining slots (5 items + any shortfall from user items)
+                var systemItemsNeeded = 15 - items.Count;
                 if (systemItemsNeeded > 0)
                 {
                     var systemItems = await baseQuery
                         .Where(x => x.ItemType == ItemType.SYSTEM && !items.Select(i => i.Id).Contains(x.Id))
-                        .Include(x => x.Category)
-                        .Include(x => x.User)
-                        .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
-                        .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-                        .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
                         .ToListAsync();
 
                     if (systemItems.Count > 0)
@@ -328,17 +375,12 @@ namespace SOPServer.Repository.Repositories.Implements
             {
                 // If no userId provided, get all available items
                 items = await baseQuery
-                    .Include(x => x.Category)
-                    .Include(x => x.User)
-                    .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
-                    .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-                    .Include(x => x.ItemStyles).ThenInclude(x => x.Style)
                     .OrderBy(x => Guid.NewGuid())
-                    .Take(10)
+                    .Take(15)
                     .ToListAsync();
             }
 
-            return items.Take(10).ToList();
+            return items.Take(15).ToList();
         }
     }
 }

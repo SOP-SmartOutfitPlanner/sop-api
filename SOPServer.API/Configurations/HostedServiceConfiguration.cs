@@ -7,6 +7,7 @@ namespace SOPServer.API.Configurations
         public static IServiceCollection AddHostedServiceConfiguration(this IServiceCollection services)
         {
             services.AddHostedService<PaymentPeriodicService>();
+            services.AddHostedService<SubscriptionPeriodicService>();
 
             return services;
         }

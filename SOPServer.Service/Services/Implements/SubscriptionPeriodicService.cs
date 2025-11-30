@@ -217,7 +217,7 @@ namespace SOPServer.Service.Services.Implements
         {
             try
             {
-                await CheckAndDeactivateExpiredSubscriptionsAsync();
+                //await CheckAndDeactivateExpiredSubscriptionsAsync();
 
                 while (await _timer.WaitForNextTickAsync(stoppingToken))
                 {

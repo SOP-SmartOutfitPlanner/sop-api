@@ -1470,7 +1470,7 @@ namespace SOPServer.Service.Services.Implements
                 throw new BadRequestException(MessageConstants.IMAGE_IS_NOT_VALID);
             }
 
-            if (itemURLs == null || itemURLs.Count == 0 || itemURLs.Count > 3)
+            if (itemURLs == null || itemURLs.Count == 0 || itemURLs.Count > 5)
             {
                 throw new BadRequestException(MessageConstants.ITEM_URLS_NOT_VALID);
             }

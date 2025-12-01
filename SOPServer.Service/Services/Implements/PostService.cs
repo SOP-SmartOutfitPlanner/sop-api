@@ -970,10 +970,10 @@ namespace SOPServer.Service.Services.Implements
                     throw new NotFoundException($"{MessageConstants.POST_ITEM_NOT_FOUND} (ID: {itemId})");
                 }
 
-                if (item.UserId != userId)
-                {
-                    throw new ForbiddenException($"{MessageConstants.POST_ITEM_NOT_BELONG_TO_USER} (ID: {itemId})");
-                }
+                //if (item.UserId != userId)
+                //{
+                //    throw new ForbiddenException($"{MessageConstants.POST_ITEM_NOT_BELONG_TO_USER} (ID: {itemId})");
+                //}
 
                 var postItem = new PostItem
                 {

@@ -1185,7 +1185,7 @@ namespace SOPServer.Service.Services.Implements
             FetchRequiredDataForOutfitSuggestion(OutfitSuggestionRequestModel model)
         {
             var dataFetchStopwatch = Stopwatch.StartNew();
-            var occasionString = await GetOccasionStringAsync(model.OccasionId);
+            var occasionString = await BuildOccasionContextString(model.OccasionId, model.UserOccasionId, model.UserId);
             var userCharacteristic = await _userService.GetUserCharacteristic(model.UserId);
             var listSeason = await _unitOfWork.SeasonRepository.GetAllAsync();
             var listOccasion = await _unitOfWork.OccasionRepository.GetAllAsync();
@@ -1560,6 +1560,56 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.OUTFIT_SUGGESTION_SUCCESS,
                 Data = allSuggestedOutfits
             };
+        }
+
+        private async Task<string> BuildOccasionContextString(long? occasionId, long? userOccasionId, long userId)
+        {
+            var contextParts = new List<string>();
+
+            // Handle UserOccasion first (more specific)
+            if (userOccasionId.HasValue)
+            {
+                var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdIncludeAsync(
+                    userOccasionId.Value,
+                    include: query => query.Include(uo => uo.Occasion));
+
+                if (userOccasion != null && userOccasion.UserId == userId)
+                {
+                    // Add user occasion details
+                    contextParts.Add($"Event: {userOccasion.Name}");
+                    
+                    if (!string.IsNullOrWhiteSpace(userOccasion.Description))
+                        contextParts.Add($"Description: {userOccasion.Description}");
+                    
+                    // Add date and time information
+                    contextParts.Add($"Date: {userOccasion.DateOccasion:yyyy-MM-dd}");
+                    
+                    if (userOccasion.StartTime.HasValue)
+                        contextParts.Add($"Time: {userOccasion.StartTime:HH:mm}");
+                    
+                    if (userOccasion.EndTime.HasValue)
+                        contextParts.Add($"Until: {userOccasion.EndTime:HH:mm}");
+                    
+                    // Add weather snapshot if available
+                    if (!string.IsNullOrWhiteSpace(userOccasion.WeatherSnapshot))
+                        contextParts.Add($"Weather: {userOccasion.WeatherSnapshot}");
+                    
+                    // Add occasion category if linked to system occasion
+                    if (userOccasion.Occasion != null)
+                        contextParts.Add($"Category: {userOccasion.Occasion.Name}");
+                }
+            }
+            // Fallback to system occasion if no user occasion provided
+            else if (occasionId.HasValue)
+            {
+                var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(occasionId.Value);
+                if (occasion != null)
+                {
+                    contextParts.Add($"Occasion: {occasion.Name}");
+                }
+            }
+
+            return contextParts.Any() ? string.Join("; ", contextParts) : string.Empty;
         }
     }
 }

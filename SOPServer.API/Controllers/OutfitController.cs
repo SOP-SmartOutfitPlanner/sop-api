@@ -363,12 +363,32 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _outfitService.OutfitSuggestion(userId, occasionId, weather));
         }
 
+        /// <summary>
+        /// Generate AI-powered outfit suggestions for user (V2)
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Query Parameters:**
+        /// - `userId`: User ID (required)
+        /// - `totalOutfit`: Number of outfit suggestions to generate (required)
+        /// - `occasionId`: System occasion ID for general category (optional)
+        /// - `userOccasionId`: User's specific occasion/event ID for detailed context (optional)
+        /// - `weather`: Weather information for outfit suggestions (optional, e.g., "sunny, 25°C" or "rainy, 15°C")
+        ///
+        /// **Note:** 
+        /// - Subject to subscription limits based on user's plan (monthly reset)
+        /// - UserOccasionId provides more detailed context (event name, description, date, time, weather snapshot)
+        /// - If both occasionId and userOccasionId are provided, userOccasionId takes precedence
+        /// </remarks>
         [HttpGet("suggestionV2")]
-        public Task<IActionResult> OutfitSuggestionV2(long userId, int totalOutfit, long? occasionId, string? weather = null)
+        [CheckSubscriptionLimit(FeatureCode.OutfitSuggestion)]
+        public Task<IActionResult> OutfitSuggestionV2(long userId, int totalOutfit, long? occasionId, long? userOccasionId, string? weather = null)
         {
             return ValidateAndExecute(async () => await _outfitService.OutfitSuggestionV2(new OutfitSuggestionRequestModel()
             {
                 OccasionId = occasionId,
+                UserOccasionId = userOccasionId,
                 UserId = userId,
                 Weather = weather,
                 TotalOutfit = totalOutfit

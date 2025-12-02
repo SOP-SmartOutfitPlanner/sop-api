@@ -25,13 +25,15 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.Brand, opt => opt.MapFrom(src => src.Brand))
                 .ForMember(dest => dest.ImgUrl, opt => opt.MapFrom(src => src.ImgUrl))
                 .ForMember(dest => dest.AiDescription, opt => opt.MapFrom(src => src.AiDescription))
-                .ForMember(dest => dest.IsDeleted, opt => opt.MapFrom(src => src.IsDeleted));
+                .ForMember(dest => dest.IsDeleted, opt => opt.MapFrom(src => src.IsDeleted))
+                .ForMember(dest => dest.IsSaved, opt => opt.Ignore()); // Set manually in service layer
 
             CreateMap<Outfit, PostOutfitDetailModel>()
                 .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
                 .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
                 .ForMember(dest => dest.IsDeleted, opt => opt.MapFrom(src => src.IsDeleted))
+                .ForMember(dest => dest.IsSaved, opt => opt.Ignore()) // Set manually in service layer
                 .ForMember(dest => dest.Items, opt => opt.MapFrom(src =>
                     src.OutfitItems != null
                     ? src.OutfitItems

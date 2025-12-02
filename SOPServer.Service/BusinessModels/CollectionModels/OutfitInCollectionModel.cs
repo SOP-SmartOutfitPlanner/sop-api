@@ -11,6 +11,7 @@ namespace SOPServer.Service.BusinessModels.CollectionModels
         public string Description { get; set; }
         public bool IsFavorite { get; set; }
         public bool IsSaved { get; set; }
+        public bool IsSavedFromCollection { get; set; }
         public int ItemCount { get; set; }
         public DateTime CreatedDate { get; set; }
         public List<OutfitItemModel> Items { get; set; } = new List<OutfitItemModel>();

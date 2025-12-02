@@ -17,4 +17,6 @@ public partial class Post : BaseEntity
     public virtual ICollection<ReportCommunity> ReportCommunities { get; set; } = new List<ReportCommunity>();
     public virtual ICollection<PostItem> PostItems { get; set; } = new List<PostItem>();
     public virtual ICollection<PostOutfit> PostOutfits { get; set; } = new List<PostOutfit>();
+    public virtual ICollection<SaveItemFromPost> SaveItemFromPosts { get; set; } = new List<SaveItemFromPost>();
+    public virtual ICollection<SaveOutfitFromPost> SaveOutfitFromPosts { get; set; } = new List<SaveOutfitFromPost>();
 }

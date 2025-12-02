@@ -32,6 +32,12 @@ namespace SOPServer.API.Controllers
             return ValidateAndExecute(async () => await _itemService.GetItemByUserPaginationAsync(paginationParameter, userId, filter));
         }
 
+        [HttpGet("system")]
+        public Task<IActionResult> GetSystemItems([FromQuery] PaginationParameter paginationParameter, [FromQuery] ItemFilterModel filter)
+        {
+            return ValidateAndExecute(async () => await _itemService.GetSystemItemPaginationAsync(paginationParameter, filter));
+        }
+
         [HttpGet("{id}")]
         public Task<IActionResult> GetItemById(long id)
         {

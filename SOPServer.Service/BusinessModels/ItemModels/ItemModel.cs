@@ -28,7 +28,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public string Brand { get; set; }
 
-        public string FrequencyWorn { get; set; }
+        public int UsageCount { get; set; }
 
         public DateTime? LastWornAt { get; set; }
 
@@ -46,6 +46,7 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public ItemType ItemType { get; set; }
         public string? AIAnalyzeJson { get; set; }
+        public string? WornAtHistoryJson { get; set; }
 
         public List<OccasionItemModel> Occasions { get; set; }
 

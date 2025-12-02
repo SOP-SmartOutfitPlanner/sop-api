@@ -25,6 +25,21 @@ namespace SOPServer.Repository.Repositories.Implements
             return await _context.Items.CountAsync(x => !x.IsDeleted && x.UserId == userId);
         }
 
+        public async Task<int> CountAnalyzedItemByUserId(long userId)
+        {
+            return await _context.Items.CountAsync(x => !x.IsDeleted && x.UserId == userId && x.IsAnalyzed == true);
+        }
+
+        public async Task<int> CountSystemItems()
+        {
+            return await _context.Items.CountAsync(x => !x.IsDeleted && x.ItemType == ItemType.SYSTEM);
+        }
+
+        public async Task<int> CountAnalyzedSystemItems()
+        {
+            return await _context.Items.CountAsync(x => !x.IsDeleted && x.ItemType == ItemType.SYSTEM && x.IsAnalyzed == true);
+        }
+
         public async Task<int> CountItemByUserIdAndCategoryParent(long userId, long categoryId)
         {
             return await _context.Items
@@ -357,7 +372,7 @@ namespace SOPServer.Repository.Repositories.Implements
                     items.AddRange(userItems.OrderBy(x => Guid.NewGuid()).Take(userItemsToTake));
                 }
 
-                // Get system items to fill remaining slots (5 items + any shortfall from user items)
+                // Get system items to fill remaining slots (5 items + any shortfall from userItems)
                 var systemItemsNeeded = 15 - items.Count;
                 if (systemItemsNeeded > 0)
                 {

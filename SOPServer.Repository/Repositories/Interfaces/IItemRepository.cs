@@ -12,6 +12,9 @@ namespace SOPServer.Repository.Repositories.Interfaces
     {
         Task<bool> ExistsByNameAsync(string name, long userId, long? excludeId = null);
         Task<int> CountItemByUserId(long userId);
+        Task<int> CountAnalyzedItemByUserId(long userId);
+        Task<int> CountSystemItems();
+        Task<int> CountAnalyzedSystemItems();
         Task<int> CountItemByUserIdAndCategoryParent(long userId, long category);
         
         /// <summary>

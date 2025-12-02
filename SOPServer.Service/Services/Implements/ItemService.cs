@@ -304,6 +304,11 @@ namespace SOPServer.Service.Services.Implements
 
             var itemModels = _mapper.Map<Pagination<ItemModel>>(items);
 
+            // Calculate analyzed percentage
+            var totalUserItems = await _unitOfWork.ItemRepository.CountItemByUserId(userid);
+            var analyzedUserItems = await _unitOfWork.ItemRepository.CountAnalyzedItemByUserId(userid);
+            var analyzedPercentage = totalUserItems > 0 ? Math.Round((double)analyzedUserItems / totalUserItems * 100, 2) : 0;
+
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
@@ -318,7 +323,8 @@ namespace SOPServer.Service.Services.Implements
                         itemModels.CurrentPage,
                         itemModels.TotalPages,
                         itemModels.HasNext,
-                        itemModels.HasPrevious
+                        itemModels.HasPrevious,
+                        AnalyzedPercentage = analyzedPercentage
                     }
                 }
             };
@@ -380,6 +386,11 @@ namespace SOPServer.Service.Services.Implements
 
             var itemModels = _mapper.Map<Pagination<ItemModel>>(items);
 
+            // Calculate analyzed percentage
+            var totalSystemItems = await _unitOfWork.ItemRepository.CountSystemItems();
+            var analyzedSystemItems = await _unitOfWork.ItemRepository.CountAnalyzedSystemItems();
+            var analyzedPercentage = totalSystemItems > 0 ? Math.Round((double)analyzedSystemItems / totalSystemItems * 100, 2) : 0;
+
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
@@ -394,7 +405,8 @@ namespace SOPServer.Service.Services.Implements
                         itemModels.CurrentPage,
                         itemModels.TotalPages,
                         itemModels.HasNext,
-                        itemModels.HasPrevious
+                        itemModels.HasPrevious,
+                        AnalyzedPercentage = analyzedPercentage
                     }
                 }
             };

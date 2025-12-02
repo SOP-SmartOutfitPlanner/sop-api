@@ -20,7 +20,7 @@ public partial class Item : BaseEntity
 
     public string? Brand { get; set; }
 
-    public string? FrequencyWorn { get; set; }
+    public int UsageCount { get; set; }
 
     public DateTime? LastWornAt { get; set; }
 
@@ -39,6 +39,7 @@ public partial class Item : BaseEntity
     public int? AIConfidence { get; set; }
     public string? AIAnalyzeJson { get; set; }
     public ItemType? ItemType { get; set; }
+    public string? WornAtHistoryJson { get; set; }
 
     public virtual ICollection<ItemOccasion> ItemOccasions { get; set; } = new List<ItemOccasion>();
 

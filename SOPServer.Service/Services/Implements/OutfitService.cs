@@ -1036,7 +1036,7 @@ namespace SOPServer.Service.Services.Implements
                 foreach (var outfitItem in outfit.OutfitItems.Where(oi => oi.ItemId.HasValue && !oi.IsDeleted))
                 {
                     var item = await _unitOfWork.ItemRepository.GetByIdAsync(outfitItem.ItemId.Value);
-                    if (item != null)
+                    if (item != null && item.ItemType != ItemType.SYSTEM)
                     {
                         // Increment usage count
                         item.UsageCount++;
@@ -1222,7 +1222,7 @@ namespace SOPServer.Service.Services.Implements
                         foreach (var outfitItem in oldOutfit.OutfitItems.Where(oi => oi.ItemId.HasValue && !oi.IsDeleted))
                         {
                             var item = await _unitOfWork.ItemRepository.GetByIdAsync(outfitItem.ItemId.Value);
-                            if (item != null)
+                            if (item != null && item.ItemType != ItemType.SYSTEM)
                             {
                                 // Decrement usage count
                                 if (item.UsageCount > 0)
@@ -1276,7 +1276,7 @@ namespace SOPServer.Service.Services.Implements
                         foreach (var outfitItem in newOutfit.OutfitItems.Where(oi => oi.ItemId.HasValue && !oi.IsDeleted))
                         {
                             var item = await _unitOfWork.ItemRepository.GetByIdAsync(outfitItem.ItemId.Value);
-                            if (item != null)
+                            if (item != null && item.ItemType != ItemType.SYSTEM)
                             {
                                 // Increment usage count
                                 item.UsageCount++;
@@ -1364,7 +1364,7 @@ namespace SOPServer.Service.Services.Implements
                     foreach (var outfitItem in outfit.OutfitItems.Where(oi => oi.ItemId.HasValue && !oi.IsDeleted))
                     {
                         var item = await _unitOfWork.ItemRepository.GetByIdAsync(outfitItem.ItemId.Value);
-                        if (item != null)
+                        if (item != null && item.ItemType != ItemType.SYSTEM)
                         {
                             // Decrement usage count
                             if (item.UsageCount > 0)

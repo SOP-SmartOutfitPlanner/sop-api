@@ -81,6 +81,9 @@ public partial class SOPServerContext : DbContext
     public virtual DbSet<UserSuspension> UserSuspensions { get; set; }
     public virtual DbSet<UserViolation> UserViolations { get; set; }
     public virtual DbSet<ReportReporter> ReportReporters { get; set; }
+    public virtual DbSet<SaveItemFromPost> SaveItemFromPosts { get; set; }
+    public virtual DbSet<SaveOutfitFromPost> SaveOutfitFromPosts { get; set; }
+    public virtual DbSet<SaveOutfitFromCollection> SaveOutfitFromCollections { get; set; }
 
 
     // protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -783,6 +786,78 @@ public partial class SOPServerContext : DbContext
                 .HasForeignKey(d => d.ReportId)
                 .HasConstraintName("FK_UserViolation_Report")
                 .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<SaveItemFromPost>(entity =>
+        {
+            entity.ToTable("SaveItemFromPost");
+
+            entity.HasOne(d => d.User).WithMany(p => p.SaveItemFromPosts)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_SaveItemFromPost_User")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Item).WithMany(p => p.SaveItemFromPosts)
+                .HasForeignKey(d => d.ItemId)
+                .HasConstraintName("FK_SaveItemFromPost_Item")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Post).WithMany(p => p.SaveItemFromPosts)
+                .HasForeignKey(d => d.PostId)
+                .HasConstraintName("FK_SaveItemFromPost_Post")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(e => new { e.UserId, e.ItemId, e.PostId })
+                .IsUnique()
+                .HasDatabaseName("IX_SaveItemFromPost_UserId_ItemId_PostId");
+        });
+
+        modelBuilder.Entity<SaveOutfitFromPost>(entity =>
+        {
+            entity.ToTable("SaveOutfitFromPost");
+
+            entity.HasOne(d => d.User).WithMany(p => p.SaveOutfitFromPosts)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_SaveOutfitFromPost_User")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Outfit).WithMany(p => p.SaveOutfitFromPosts)
+                .HasForeignKey(d => d.OutfitId)
+                .HasConstraintName("FK_SaveOutfitFromPost_Outfit")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Post).WithMany(p => p.SaveOutfitFromPosts)
+                .HasForeignKey(d => d.PostId)
+                .HasConstraintName("FK_SaveOutfitFromPost_Post")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(e => new { e.UserId, e.OutfitId, e.PostId })
+                .IsUnique()
+                .HasDatabaseName("IX_SaveOutfitFromPost_UserId_OutfitId_PostId");
+        });
+
+        modelBuilder.Entity<SaveOutfitFromCollection>(entity =>
+        {
+            entity.ToTable("SaveOutfitFromCollection");
+
+            entity.HasOne(d => d.User).WithMany(p => p.SaveOutfitFromCollections)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_SaveOutfitFromCollection_User")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Outfit).WithMany(p => p.SaveOutfitFromCollections)
+                .HasForeignKey(d => d.OutfitId)
+                .HasConstraintName("FK_SaveOutfitFromCollection_Outfit")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasOne(d => d.Collection).WithMany(p => p.SaveOutfitFromCollections)
+                .HasForeignKey(d => d.CollectionId)
+                .HasConstraintName("FK_SaveOutfitFromCollection_Collection")
+                .OnDelete(DeleteBehavior.NoAction);
+
+            entity.HasIndex(e => new { e.UserId, e.OutfitId, e.CollectionId })
+                .IsUnique()
+                .HasDatabaseName("IX_SaveOutfitFromCollection_UserId_OutfitId_CollectionId");
         });
 
 

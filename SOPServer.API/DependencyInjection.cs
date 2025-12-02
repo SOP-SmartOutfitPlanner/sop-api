@@ -78,6 +78,16 @@ namespace SOPServer.API
             services.AddScoped<ISaveCollectionRepository, SaveCollectionRepository>();
             services.AddScoped<ISaveCollectionService, SaveCollectionService>();
 
+            // ========== SAVE ITEMS AND OUTFITS ==========
+            services.AddScoped<ISaveItemFromPostRepository, SaveItemFromPostRepository>();
+            services.AddScoped<ISaveItemFromPostService, SaveItemFromPostService>();
+
+            services.AddScoped<ISaveOutfitFromPostRepository, SaveOutfitFromPostRepository>();
+            services.AddScoped<ISaveOutfitFromPostService, SaveOutfitFromPostService>();
+
+            services.AddScoped<ISaveOutfitFromCollectionRepository, SaveOutfitFromCollectionRepository>();
+            services.AddScoped<ISaveOutfitFromCollectionService, SaveOutfitFromCollectionService>();
+
 
             // Register comment collection dependencies
             services.AddScoped<ICommentCollectionRepository, CommentCollectionRepository>();

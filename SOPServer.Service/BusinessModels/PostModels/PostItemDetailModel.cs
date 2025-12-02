@@ -11,5 +11,6 @@ namespace SOPServer.Service.BusinessModels.PostModels
         public string ImgUrl { get; set; } = string.Empty;
         public string? AiDescription { get; set; }
         public bool IsDeleted { get; set; }
+        public bool IsSaved { get; set; }
     }
 }

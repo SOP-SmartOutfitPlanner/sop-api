@@ -30,7 +30,7 @@ namespace SOPServer.Service.Mappers
             CreateMap<Collection, CollectionModel>()
                 .ForMember(dest => dest.UserDisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : "Unknown"))
                 .ForMember(dest => dest.AvtUrl, opt => opt.MapFrom(src => src.User != null ? src.User.AvtUrl : null))
-                .ForMember(dest => dest.OutfitCount, opt => opt.MapFrom(src => 
+                .ForMember(dest => dest.OutfitCount, opt => opt.MapFrom(src =>
                     src.CollectionOutfits != null ? src.CollectionOutfits.Count(co => !co.IsDeleted) : 0))
                 .ForMember(dest => dest.LikeCount, opt => opt.MapFrom(src => src.LikeCollections != null ? src.LikeCollections.Count(lp => !lp.IsDeleted) : 0))
                 .ForMember(dest => dest.CommentCount, opt => opt.MapFrom(src => src.CommentCollections != null ? src.CommentCollections.Count(lp => !lp.IsDeleted) : 0))
@@ -39,9 +39,9 @@ namespace SOPServer.Service.Mappers
             CreateMap<Collection, CollectionDetailedModel>()
                 .ForMember(dest => dest.UserDisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : "Unknown"))
                 .ForMember(dest => dest.AvtUrl, opt => opt.MapFrom(src => src.User.AvtUrl != null ? src.User.AvtUrl : null))
-                .ForMember(dest => dest.Outfits, opt => opt.MapFrom(src => 
-                    src.CollectionOutfits != null 
-                        ? src.CollectionOutfits.Where(co => !co.IsDeleted && co.Outfit != null).ToList() 
+                .ForMember(dest => dest.Outfits, opt => opt.MapFrom(src =>
+                    src.CollectionOutfits != null
+                        ? src.CollectionOutfits.Where(co => !co.IsDeleted && co.Outfit != null).ToList()
                         : new List<CollectionOutfit>()))
                 .ForMember(dest => dest.LikeCount, opt => opt.MapFrom(src => src.LikeCollections != null ? src.LikeCollections.Count(lp => !lp.IsDeleted) : 0))
                 .ForMember(dest => dest.CommentCount, opt => opt.MapFrom(src => src.CommentCollections != null ? src.CommentCollections.Count(lp => !lp.IsDeleted) : 0))
@@ -50,7 +50,9 @@ namespace SOPServer.Service.Mappers
             CreateMap<CollectionOutfit, CollectionOutfitModel>();
 
             CreateMap<Outfit, OutfitInCollectionModel>()
-                .ForMember(dest => dest.ItemCount, opt => opt.MapFrom(src => 
+                .ForMember(dest => dest.IsSaved, opt => opt.Ignore()) // Set manually in service layer
+                .ForMember(dest => dest.IsSavedFromCollection, opt => opt.Ignore()) // Set manually in service layer
+                .ForMember(dest => dest.ItemCount, opt => opt.MapFrom(src =>
                     src.OutfitItems != null ? src.OutfitItems.Count(oi => !oi.IsDeleted) : 0))
                 .ForMember(dest => dest.Items, opt => opt.MapFrom(src =>
                     src.OutfitItems != null && src.OutfitItems.Any()

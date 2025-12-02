@@ -122,20 +122,35 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
-            // Get saved outfit - find from ANY post (post-independent unsave)
-            // Since outfits can only be saved once from posts, we find the saved record regardless of postId parameter
-            var savedOutfit = await _unitOfWork.SaveOutfitFromPostRepository.GetQueryable()
+            // Check BOTH repositories - outfit could be saved from post OR collection
+            // Try to find saved outfit from post first
+            var savedOutfitFromPost = await _unitOfWork.SaveOutfitFromPostRepository.GetQueryable()
                 .FirstOrDefaultAsync(s => s.UserId == userId && s.OutfitId == outfitId && !s.IsDeleted);
 
-            if (savedOutfit == null)
+            // If not found in post, check collection repository
+            var savedOutfitFromCollection = await _unitOfWork.SaveOutfitFromCollectionRepository.GetQueryable()
+                .FirstOrDefaultAsync(s => s.UserId == userId && s.OutfitId == outfitId && !s.IsDeleted);
+
+            // If outfit is not saved in either repository, throw error
+            if (savedOutfitFromPost == null && savedOutfitFromCollection == null)
             {
                 throw new NotFoundException(MessageConstants.OUTFIT_NOT_SAVED_FROM_POST);
             }
 
-            // Soft delete
-            savedOutfit.IsDeleted = true;
-            savedOutfit.UpdatedDate = DateTime.UtcNow;
-            _unitOfWork.SaveOutfitFromPostRepository.UpdateAsync(savedOutfit);
+            // Soft delete from whichever repository has the saved outfit
+            if (savedOutfitFromPost != null)
+            {
+                savedOutfitFromPost.IsDeleted = true;
+                savedOutfitFromPost.UpdatedDate = DateTime.UtcNow;
+                _unitOfWork.SaveOutfitFromPostRepository.UpdateAsync(savedOutfitFromPost);
+            }
+            else if (savedOutfitFromCollection != null)
+            {
+                savedOutfitFromCollection.IsDeleted = true;
+                savedOutfitFromCollection.UpdatedDate = DateTime.UtcNow;
+                _unitOfWork.SaveOutfitFromCollectionRepository.UpdateAsync(savedOutfitFromCollection);
+            }
+
             await _unitOfWork.SaveAsync();
 
             return new BaseResponseModel

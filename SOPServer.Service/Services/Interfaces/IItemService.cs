@@ -21,6 +21,7 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> GetItemById(long id);
         Task<BaseResponseModel> GetItemPaginationAsync(PaginationParameter paginationParameter);
         Task<BaseResponseModel> GetItemByUserPaginationAsync(PaginationParameter paginationParameter, long userid, ItemFilterModel filter);
+        Task<BaseResponseModel> GetSystemItemPaginationAsync(PaginationParameter paginationParameter, ItemFilterModel filter);
         Task<BaseResponseModel> UpdateItemAsync(long id, ItemCreateModel model);
         Task<BaseResponseModel> BulkCreateItemAuto(BulkItemRequestAutoModel bulkUploadModel);
         Task<BaseResponseModel> BulkCreateItemManual(BulkItemRequestManualModel bulkUploadModel);

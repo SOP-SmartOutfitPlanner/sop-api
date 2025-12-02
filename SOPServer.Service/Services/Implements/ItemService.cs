@@ -324,6 +324,82 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<BaseResponseModel> GetSystemItemPaginationAsync(PaginationParameter paginationParameter, ItemFilterModel filter)
+        {
+            if (filter == null)
+            {
+                throw new BadRequestException("Filter is required");
+            }
+
+            // Get child category IDs if filtering by a root/parent category
+            List<long>? categoryIdsToFilter = null;
+            if (filter.CategoryId.HasValue)
+            {
+                var category = await _unitOfWork.CategoryRepository.GetByIdIncludeAsync(
+                    filter.CategoryId.Value,
+                    include: query => query.Include(c => c.InverseParent)
+                );
+
+                if (category == null)
+                {
+                    throw new NotFoundException(MessageConstants.CATEGORY_NOT_EXIST);
+                }
+
+                // If it's a root/parent category (ParentId is null), get all child category IDs
+                if (category.ParentId == null)
+                {
+                    categoryIdsToFilter = category.InverseParent
+                        .Where(c => !c.IsDeleted)
+                        .Select(c => c.Id)
+                        .ToList();
+                }
+                else
+                {
+                    // If it's a child category, only filter by this specific category
+                    categoryIdsToFilter = new List<long> { filter.CategoryId.Value };
+                }
+            }
+
+            var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter,
+                include: query => query
+                    .Include(x => x.Category)
+                    .Include(x => x.User)
+                    .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+                    .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+                    .Include(x => x.ItemStyles).ThenInclude(x => x.Style),
+                filter: x => x.ItemType == ItemType.SYSTEM
+                    && (!filter.IsAnalyzed.HasValue || x.IsAnalyzed == filter.IsAnalyzed.Value)
+                    && (categoryIdsToFilter == null || (x.CategoryId.HasValue && categoryIdsToFilter.Contains(x.CategoryId.Value)))
+                    && (!filter.StyleId.HasValue || x.ItemStyles.Any(isr => !isr.IsDeleted && isr.StyleId == filter.StyleId.Value))
+                    && (!filter.SeasonId.HasValue || x.ItemSeasons.Any(ss => !ss.IsDeleted && ss.SeasonId == filter.SeasonId.Value))
+                    && (!filter.OccasionId.HasValue || x.ItemOccasions.Any(ss => !ss.IsDeleted && ss.OccasionId == filter.OccasionId.Value))
+                    && (string.IsNullOrEmpty(paginationParameter.Search) || x.Name.Contains(paginationParameter.Search)),
+                orderBy: x => filter.SortByDate.HasValue && filter.SortByDate.Value == SortOrder.Ascending
+                    ? x.OrderBy(item => item.UpdatedDate ?? item.CreatedDate)
+                    : x.OrderByDescending(item => item.UpdatedDate ?? item.CreatedDate));
+
+            var itemModels = _mapper.Map<Pagination<ItemModel>>(items);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_ITEM_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = itemModels,
+                    MetaData = new
+                    {
+                        itemModels.TotalCount,
+                        itemModels.PageSize,
+                        itemModels.CurrentPage,
+                        itemModels.TotalPages,
+                        itemModels.HasNext,
+                        itemModels.HasPrevious
+                    }
+                }
+            };
+        }
+
         public async Task<BaseResponseModel> GetItemPaginationAsync(PaginationParameter paginationParameter)
         {
             var items = await _unitOfWork.ItemRepository.ToPaginationIncludeAsync(paginationParameter,

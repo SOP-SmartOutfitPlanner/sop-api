@@ -127,10 +127,10 @@ public partial class SOPServerContext : DbContext
                 .HasMaxLength(255)
                 .IsUnicode(true)
                 .IsRequired(false);
-            entity.Property(e => e.FrequencyWorn)
-                .HasMaxLength(255)
-                .IsUnicode(true)
-                .IsRequired(false);
+            entity.Property(e => e.UsageCount)
+                .HasColumnType("int")
+                .IsRequired()
+                .HasDefaultValue(0);
             entity.Property(e => e.ImgUrl)
                 .HasMaxLength(255)
                 .IsUnicode(true);
@@ -159,6 +159,11 @@ public partial class SOPServerContext : DbContext
                 .HasDefaultValue(0);
 
             entity.Property(e => e.AIAnalyzeJson)
+                .HasColumnType("nvarchar(max)")
+                .IsUnicode(true)
+                .IsRequired(false);
+
+            entity.Property(e => e.WornAtHistoryJson)
                 .HasColumnType("nvarchar(max)")
                 .IsUnicode(true)
                 .IsRequired(false);

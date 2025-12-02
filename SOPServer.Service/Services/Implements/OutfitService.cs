@@ -927,7 +927,10 @@ namespace SOPServer.Service.Services.Implements
             var outfits = new List<Outfit>();
             foreach (var outfitId in model.OutfitIds)
             {
-                var outfit = await _unitOfWork.OutfitRepository.GetByIdAsync(outfitId);
+                var outfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
+                    outfitId,
+                    include: query => query.Include(o => o.OutfitItems));
+                
                 if (outfit == null)
                 {
                     throw new NotFoundException($"Outfit with ID {outfitId} not found");
@@ -941,9 +944,12 @@ namespace SOPServer.Service.Services.Implements
 
             // Handle Daily outfit logic
             long? userOccasionId = null;
+            DateTime wornAtDateTime;
+            
             if (model.IsDaily)
             {
                 var targetDate = model.Time.Value.Date;
+                wornAtDateTime = model.Time.Value;
 
                 // Check if a "Daily" UserOccasion already exists for this user on this date
                 var existingDailyOccasions = await _unitOfWork.UserOccasionRepository
@@ -992,6 +998,9 @@ namespace SOPServer.Service.Services.Implements
                     throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
                 }
                 userOccasionId = model.UserOccasionId.Value;
+                
+                // Use the UserOccasion's StartTime or DateOccasion for worn at tracking
+                wornAtDateTime = userOccasion.StartTime ?? userOccasion.DateOccasion;
             }
 
             // Get existing outfits for this UserOccasion to prevent duplicates
@@ -1020,6 +1029,51 @@ namespace SOPServer.Service.Services.Implements
                     CreatedBy = OutfitCreatedBy.USER
                 };
                 await _unitOfWork.OutfitRepository.AddOutfitCalendarAsync(outfitCalendar);
+                await _unitOfWork.SaveAsync();
+
+                // Update usage tracking for all items in the outfit
+                var outfit = outfits.First(o => o.Id == outfitId);
+                foreach (var outfitItem in outfit.OutfitItems.Where(oi => oi.ItemId.HasValue && !oi.IsDeleted))
+                {
+                    var item = await _unitOfWork.ItemRepository.GetByIdAsync(outfitItem.ItemId.Value);
+                    if (item != null)
+                    {
+                        // Increment usage count
+                        item.UsageCount++;
+                        
+                        // Update last worn at
+                        item.LastWornAt = wornAtDateTime;
+                        
+                        // Update worn at history
+                        List<DateTime> wornHistory;
+                        if (!string.IsNullOrEmpty(item.WornAtHistoryJson))
+                        {
+                            try
+                            {
+                                wornHistory = JsonSerializer.Deserialize<List<DateTime>>(item.WornAtHistoryJson) ?? new List<DateTime>();
+                            }
+                            catch
+                            {
+                                wornHistory = new List<DateTime>();
+                            }
+                        }
+                        else
+                        {
+                            wornHistory = new List<DateTime>();
+                        }
+                        
+                        // Add new worn at date and sort in ascending order
+                        wornHistory.Add(wornAtDateTime);
+                        wornHistory = wornHistory.OrderBy(d => d).ToList();
+                        
+                        // Serialize back to JSON
+                        item.WornAtHistoryJson = JsonSerializer.Serialize(wornHistory);
+                        
+                        // Update the item
+                        _unitOfWork.ItemRepository.UpdateAsync(item);
+                    }
+                }
+                
                 await _unitOfWork.SaveAsync();
 
                 var created = await _unitOfWork.OutfitRepository.GetOutfitCalendarByIdAsync(outfitCalendar.Id);
@@ -1078,6 +1132,20 @@ namespace SOPServer.Service.Services.Implements
                 }
             }
 
+            // Track old outfit for usage decrement
+            long oldOutfitId = outfitCalendar.OutfitId;
+            DateTime? oldWornAtDateTime = null;
+            
+            // Get old UserOccasion time if we need to remove old usage tracking
+            if (outfitCalendar.UserOccassionId.HasValue)
+            {
+                var oldUserOccasion = await _unitOfWork.UserOccasionRepository.GetByIdAsync(outfitCalendar.UserOccassionId.Value);
+                if (oldUserOccasion != null)
+                {
+                    oldWornAtDateTime = oldUserOccasion.StartTime ?? oldUserOccasion.DateOccasion;
+                }
+            }
+
             // Verify outfit if provided
             if (model.OutfitId.HasValue)
             {
@@ -1094,6 +1162,8 @@ namespace SOPServer.Service.Services.Implements
 
                 outfitCalendar.OutfitId = model.OutfitId.Value;
             }
+
+            DateTime? newWornAtDateTime = null;
 
             // Handle Daily outfit logic
             if (model.IsDaily.HasValue && model.IsDaily.Value)
@@ -1114,6 +1184,7 @@ namespace SOPServer.Service.Services.Implements
 
                 // Set the UserOccasionId to the Daily occasion
                 outfitCalendar.UserOccassionId = dailyOccasion.Id;
+                newWornAtDateTime = model.Time.Value;
             }
             else if (model.UserOccasionId.HasValue)
             {
@@ -1130,10 +1201,121 @@ namespace SOPServer.Service.Services.Implements
                 }
 
                 outfitCalendar.UserOccassionId = model.UserOccasionId.Value;
+                newWornAtDateTime = userOccasion.StartTime ?? userOccasion.DateOccasion;
             }
 
             _unitOfWork.OutfitRepository.UpdateOutfitCalendar(outfitCalendar);
             await _unitOfWork.SaveAsync();
+
+            // Update usage tracking if outfit changed
+            if (model.OutfitId.HasValue && model.OutfitId.Value != oldOutfitId)
+            {
+                // Decrement usage for old outfit items
+                if (oldWornAtDateTime.HasValue)
+                {
+                    var oldOutfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
+                        oldOutfitId,
+                        include: query => query.Include(o => o.OutfitItems));
+                    
+                    if (oldOutfit != null)
+                    {
+                        foreach (var outfitItem in oldOutfit.OutfitItems.Where(oi => oi.ItemId.HasValue && !oi.IsDeleted))
+                        {
+                            var item = await _unitOfWork.ItemRepository.GetByIdAsync(outfitItem.ItemId.Value);
+                            if (item != null)
+                            {
+                                // Decrement usage count
+                                if (item.UsageCount > 0)
+                                {
+                                    item.UsageCount--;
+                                }
+                                
+                                // Remove from worn at history
+                                List<DateTime> wornHistory;
+                                if (!string.IsNullOrEmpty(item.WornAtHistoryJson))
+                                {
+                                    try
+                                    {
+                                        wornHistory = JsonSerializer.Deserialize<List<DateTime>>(item.WornAtHistoryJson) ?? new List<DateTime>();
+                                    }
+                                    catch
+                                    {
+                                        wornHistory = new List<DateTime>();
+                                    }
+                                }
+                                else
+                                {
+                                    wornHistory = new List<DateTime>();
+                                }
+                                
+                                // Remove the specific worn at date
+                                wornHistory.Remove(oldWornAtDateTime.Value);
+                                
+                                // Update LastWornAt to the most recent date, or null if no history
+                                item.LastWornAt = wornHistory.Any() ? wornHistory.Max() : null;
+                                
+                                // Serialize back to JSON
+                                item.WornAtHistoryJson = JsonSerializer.Serialize(wornHistory);
+                                
+                                _unitOfWork.ItemRepository.UpdateAsync(item);
+                            }
+                        }
+                        await _unitOfWork.SaveAsync();
+                    }
+                }
+
+                // Increment usage for new outfit items
+                if (newWornAtDateTime.HasValue)
+                {
+                    var newOutfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
+                        model.OutfitId.Value,
+                        include: query => query.Include(o => o.OutfitItems));
+                    
+                    if (newOutfit != null)
+                    {
+                        foreach (var outfitItem in newOutfit.OutfitItems.Where(oi => oi.ItemId.HasValue && !oi.IsDeleted))
+                        {
+                            var item = await _unitOfWork.ItemRepository.GetByIdAsync(outfitItem.ItemId.Value);
+                            if (item != null)
+                            {
+                                // Increment usage count
+                                item.UsageCount++;
+                                
+                                // Update last worn at
+                                item.LastWornAt = newWornAtDateTime.Value;
+                                
+                                // Update worn at history
+                                List<DateTime> wornHistory;
+                                if (!string.IsNullOrEmpty(item.WornAtHistoryJson))
+                                {
+                                    try
+                                    {
+                                        wornHistory = JsonSerializer.Deserialize<List<DateTime>>(item.WornAtHistoryJson) ?? new List<DateTime>();
+                                    }
+                                    catch
+                                    {
+                                        wornHistory = new List<DateTime>();
+                                    }
+                                }
+                                else
+                                {
+                                    wornHistory = new List<DateTime>();
+                                }
+                                
+                                // Add new worn at date and sort in ascending order
+                                wornHistory.Add(newWornAtDateTime.Value);
+                                wornHistory = wornHistory.OrderBy(d => d).ToList();
+                                
+                                // Serialize back to JSON
+                                item.WornAtHistoryJson = JsonSerializer.Serialize(wornHistory);
+                                
+                                _unitOfWork.ItemRepository.UpdateAsync(item);
+                            }
+                        }
+                        await _unitOfWork.SaveAsync();
+                    }
+                }
+            }
 
             var updated = await _unitOfWork.OutfitRepository.GetOutfitCalendarByIdAsync(id);
 
@@ -1157,6 +1339,71 @@ namespace SOPServer.Service.Services.Implements
             if (outfitCalendar.UserId != userId)
             {
                 throw new ForbiddenException(MessageConstants.OUTFIT_CALENDAR_ACCESS_DENIED);
+            }
+
+            // Get the worn at time before deletion for usage tracking
+            DateTime? wornAtDateTime = null;
+            if (outfitCalendar.UserOccassionId.HasValue)
+            {
+                var userOccasion = await _unitOfWork.UserOccasionRepository.GetByIdAsync(outfitCalendar.UserOccassionId.Value);
+                if (userOccasion != null)
+                {
+                    wornAtDateTime = userOccasion.StartTime ?? userOccasion.DateOccasion;
+                }
+            }
+
+            // Decrement usage tracking for all items in the outfit
+            if (wornAtDateTime.HasValue)
+            {
+                var outfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
+                    outfitCalendar.OutfitId,
+                    include: query => query.Include(o => o.OutfitItems));
+                
+                if (outfit != null)
+                {
+                    foreach (var outfitItem in outfit.OutfitItems.Where(oi => oi.ItemId.HasValue && !oi.IsDeleted))
+                    {
+                        var item = await _unitOfWork.ItemRepository.GetByIdAsync(outfitItem.ItemId.Value);
+                        if (item != null)
+                        {
+                            // Decrement usage count
+                            if (item.UsageCount > 0)
+                            {
+                                item.UsageCount--;
+                            }
+                            
+                            // Remove from worn at history
+                            List<DateTime> wornHistory;
+                            if (!string.IsNullOrEmpty(item.WornAtHistoryJson))
+                            {
+                                try
+                                {
+                                    wornHistory = JsonSerializer.Deserialize<List<DateTime>>(item.WornAtHistoryJson) ?? new List<DateTime>();
+                                }
+                                catch
+                                {
+                                    wornHistory = new List<DateTime>();
+                                }
+                            }
+                            else
+                            {
+                                wornHistory = new List<DateTime>();
+                            }
+                            
+                            // Remove the specific worn at date
+                            wornHistory.Remove(wornAtDateTime.Value);
+                            
+                            // Update LastWornAt to the most recent date, or null if no history
+                            item.LastWornAt = wornHistory.Any() ? wornHistory.Max() : null;
+                            
+                            // Serialize back to JSON
+                            item.WornAtHistoryJson = JsonSerializer.Serialize(wornHistory);
+                            
+                            _unitOfWork.ItemRepository.UpdateAsync(item);
+                        }
+                    }
+                    await _unitOfWork.SaveAsync();
+                }
             }
 
             _unitOfWork.OutfitRepository.DeleteOutfitCalendar(outfitCalendar);

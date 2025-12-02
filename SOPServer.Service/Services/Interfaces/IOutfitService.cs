@@ -27,6 +27,11 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> DeleteOutfitAsync(long id, long userId);
         Task<BaseResponseModel> ToggleOutfitFavoriteAsync(long id, long userId);
         Task<BaseResponseModel> ToggleOutfitSaveAsync(long id, long userId);
+        Task<BaseResponseModel> GetSavedOutfitsPaginationAsync(
+            PaginationParameter paginationParameter,
+            long userId,
+            string? sourceType = null,
+            string? search = null);
 
         // Calendar methods
         Task<BaseResponseModel> GetOutfitCalendarPaginationAsync(

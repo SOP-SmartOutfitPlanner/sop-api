@@ -614,11 +614,10 @@ namespace SOPServer.Service.Services.Implements
                         // Check if outfit is saved from ANY source (post or collection)
                         var isSavedFromAnyPost = await _unitOfWork.SaveOutfitFromPostRepository.ExistsByUserAndOutfitAsync(userId, collectionOutfit.Outfit.Id);
                         var isSavedFromAnyCollection = await _unitOfWork.SaveOutfitFromCollectionRepository.ExistsByUserAndOutfitAsync(userId, collectionOutfit.Outfit.Id);
-                        collectionOutfit.Outfit.IsSaved = isSavedFromAnyPost || isSavedFromAnyCollection;
 
-                        // Check if outfit is saved from this specific collection
-                        var isSavedFromThisCollection = await _unitOfWork.SaveOutfitFromCollectionRepository.ExistsAsync(userId, collectionOutfit.Outfit.Id, collectionModel.Id);
-                        collectionOutfit.Outfit.IsSavedFromCollection = isSavedFromThisCollection;
+                        // Both IsSaved and IsSavedFromCollection now show true if saved from ANY source
+                        collectionOutfit.Outfit.IsSaved = isSavedFromAnyPost || isSavedFromAnyCollection;
+                        collectionOutfit.Outfit.IsSavedFromCollection = isSavedFromAnyPost || isSavedFromAnyCollection;
                     }
                 }
             }

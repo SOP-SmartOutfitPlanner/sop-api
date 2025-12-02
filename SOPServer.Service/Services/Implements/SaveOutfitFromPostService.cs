@@ -123,11 +123,9 @@ namespace SOPServer.Service.Services.Implements
             }
 
             // Check BOTH repositories - outfit could be saved from post OR collection
-            // Try to find saved outfit from post first
             var savedOutfitFromPost = await _unitOfWork.SaveOutfitFromPostRepository.GetQueryable()
                 .FirstOrDefaultAsync(s => s.UserId == userId && s.OutfitId == outfitId && !s.IsDeleted);
 
-            // If not found in post, check collection repository
             var savedOutfitFromCollection = await _unitOfWork.SaveOutfitFromCollectionRepository.GetQueryable()
                 .FirstOrDefaultAsync(s => s.UserId == userId && s.OutfitId == outfitId && !s.IsDeleted);
 
@@ -137,14 +135,15 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.OUTFIT_NOT_SAVED_FROM_POST);
             }
 
-            // Soft delete from whichever repository has the saved outfit
+            // Soft delete from BOTH repositories to ensure complete removal
             if (savedOutfitFromPost != null)
             {
                 savedOutfitFromPost.IsDeleted = true;
                 savedOutfitFromPost.UpdatedDate = DateTime.UtcNow;
                 _unitOfWork.SaveOutfitFromPostRepository.UpdateAsync(savedOutfitFromPost);
             }
-            else if (savedOutfitFromCollection != null)
+
+            if (savedOutfitFromCollection != null)
             {
                 savedOutfitFromCollection.IsDeleted = true;
                 savedOutfitFromCollection.UpdatedDate = DateTime.UtcNow;

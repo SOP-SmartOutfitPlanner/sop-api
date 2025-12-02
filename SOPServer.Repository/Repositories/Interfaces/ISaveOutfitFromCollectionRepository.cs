@@ -1,6 +1,7 @@
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Repositories.Generic;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace SOPServer.Repository.Repositories.Interfaces
@@ -12,5 +13,6 @@ namespace SOPServer.Repository.Repositories.Interfaces
         Task<bool> ExistsAsync(long userId, long outfitId, long collectionId);
         Task<bool> ExistsByUserAndOutfitAsync(long userId, long outfitId);
         Task<IEnumerable<SaveOutfitFromCollection>> GetByUserIdAsync(long userId);
+        IQueryable<SaveOutfitFromCollection> GetQueryableByUserId(long userId);
     }
 }

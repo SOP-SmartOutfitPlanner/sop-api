@@ -58,5 +58,32 @@ namespace SOPServer.Repository.Repositories.Implements
                 .OrderByDescending(s => s.CreatedDate)
                 .ToListAsync();
         }
+
+        public IQueryable<SaveOutfitFromPost> GetQueryableByUserId(long userId)
+        {
+            return _context.SaveOutfitFromPosts
+                .Include(s => s.Outfit)
+                    .ThenInclude(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemOccasions)
+                                .ThenInclude(io => io.Occasion)
+                .Include(s => s.Outfit)
+                    .ThenInclude(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemSeasons)
+                                .ThenInclude(is_ => is_.Season)
+                .Include(s => s.Outfit)
+                    .ThenInclude(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.ItemStyles)
+                                .ThenInclude(ist => ist.Style)
+                .Include(s => s.Outfit)
+                    .ThenInclude(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item)
+                            .ThenInclude(i => i.Category)
+                .Include(s => s.Post)
+                    .ThenInclude(p => p.User)
+                .Where(s => s.UserId == userId && !s.IsDeleted);
+        }
     }
 }

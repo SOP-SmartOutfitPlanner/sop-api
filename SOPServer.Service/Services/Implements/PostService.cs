@@ -206,7 +206,27 @@ namespace SOPServer.Service.Services.Implements
             // Populate IsSaved status for items and outfits if requesterId is provided
             if (requesterId.HasValue)
             {
+                // Check if user has liked the post
+                var likeExists = await _unitOfWork.LikePostRepository.GetByUserAndPost(requesterId.Value, postModel.Id);
+                postModel.IsLiked = likeExists != null && !likeExists.IsDeleted;
+
+                // Check following status - don't check if post author is the same as requester
+                if (postModel.UserId != requesterId.Value)
+                {
+                    var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(requesterId.Value, postModel.UserId);
+                    postModel.IsFollowing = isFollowing;
+                }
+                else
+                {
+                    postModel.IsFollowing = false;
+                }
+
                 await PopulateSavedStatusForPostAsync(postModel, requesterId.Value);
+            }
+            else
+            {
+                postModel.IsLiked = false;
+                postModel.IsFollowing = false;
             }
 
             return new BaseResponseModel

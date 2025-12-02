@@ -389,5 +389,31 @@ namespace SOPServer.Service.Constants
         public const string USER_SUBSCRIPTION_NO_PENDING_PAYMENT = "No pending payment found";
         public const string USER_SUBSCRIPTION_PENDING_PAYMENT_RETRIEVED = "Pending payment retrieved successfully. Please scan the QR code to complete payment.";
         public const string USER_SUBSCRIPTION_PAYMENT_ALREADY_COMPLETED = "Payment has already been completed. Your subscription is now active.";
+
+        // SaveItemFromPost related messages
+        public const string ITEM_NOT_FOUND = "Item not found";
+        public const string ITEM_NOT_IN_POST = "Item does not belong to this post";
+        public const string ITEM_ALREADY_SAVED = "Item already saved from this post";
+        public const string ITEM_NOT_SAVED = "Item not saved from this post";
+        public const string ITEM_SAVED_SUCCESS = "Item saved successfully";
+        public const string ITEM_UNSAVED_SUCCESS = "Item unsaved successfully";
+        public const string GET_SAVED_ITEMS_SUCCESS = "Saved items retrieved successfully";
+        public const string CHECK_SAVED_STATUS_SUCCESS = "Saved status checked successfully";
+
+        // SaveOutfitFromPost related messages
+        public const string OUTFIT_NOT_IN_POST = "Outfit does not belong to this post";
+        public const string OUTFIT_ALREADY_SAVED_FROM_POST = "Outfit already saved from this post";
+        public const string OUTFIT_NOT_SAVED_FROM_POST = "Outfit not saved from this post";
+        public const string OUTFIT_SAVED_FROM_POST_SUCCESS = "Outfit saved from post successfully";
+        public const string OUTFIT_UNSAVED_FROM_POST_SUCCESS = "Outfit unsaved from post successfully";
+        public const string GET_SAVED_OUTFITS_FROM_POST_SUCCESS = "Saved outfits from posts retrieved successfully";
+
+        // SaveOutfitFromCollection related messages
+        public const string OUTFIT_NOT_IN_COLLECTION = "Outfit does not belong to this collection";
+        public const string OUTFIT_ALREADY_SAVED_FROM_COLLECTION = "Outfit already saved from this collection";
+        public const string OUTFIT_NOT_SAVED_FROM_COLLECTION = "Outfit not saved from this collection";
+        public const string OUTFIT_SAVED_FROM_COLLECTION_SUCCESS = "Outfit saved from collection successfully";
+        public const string OUTFIT_UNSAVED_FROM_COLLECTION_SUCCESS = "Outfit unsaved from collection successfully";
+        public const string GET_SAVED_OUTFITS_FROM_COLLECTION_SUCCESS = "Saved outfits from collections retrieved successfully";
     }
 }

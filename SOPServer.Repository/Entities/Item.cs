@@ -48,6 +48,7 @@ public partial class Item : BaseEntity
     public virtual ICollection<ItemStyle> ItemStyles { get; set; } = new List<ItemStyle>();
     public virtual ICollection<OutfitItem> OutfitItems { get; set; } = new List<OutfitItem>();
     public virtual ICollection<PostItem> PostItems { get; set; } = new List<PostItem>();
+    public virtual ICollection<SaveItemFromPost> SaveItemFromPosts { get; set; } = new List<SaveItemFromPost>();
     public virtual User User { get; set; }
     public virtual Category Category { get; set; }
 }

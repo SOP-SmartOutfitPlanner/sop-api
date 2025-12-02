@@ -203,6 +203,32 @@ namespace SOPServer.Service.Services.Implements
 
             var postModel = _mapper.Map<PostModel>(post);
 
+            // Populate IsSaved status for items and outfits if requesterId is provided
+            if (requesterId.HasValue)
+            {
+                // Check if user has liked the post
+                var likeExists = await _unitOfWork.LikePostRepository.GetByUserAndPost(requesterId.Value, postModel.Id);
+                postModel.IsLiked = likeExists != null && !likeExists.IsDeleted;
+
+                // Check following status - don't check if post author is the same as requester
+                if (postModel.UserId != requesterId.Value)
+                {
+                    var isFollowing = await _unitOfWork.FollowerRepository.IsFollowing(requesterId.Value, postModel.UserId);
+                    postModel.IsFollowing = isFollowing;
+                }
+                else
+                {
+                    postModel.IsFollowing = false;
+                }
+
+                await PopulateSavedStatusForPostAsync(postModel, requesterId.Value);
+            }
+            else
+            {
+                postModel.IsLiked = false;
+                postModel.IsFollowing = false;
+            }
+
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
@@ -244,7 +270,7 @@ namespace SOPServer.Service.Services.Implements
 
             var postModels = _mapper.Map<Pagination<PostModel>>(posts);
 
-            // Check following status if caller user ID is provided
+            // Check following status and saved status if caller user ID is provided
             if (callerUserId.HasValue)
             {
                 foreach (var postModel in postModels)
@@ -259,6 +285,9 @@ namespace SOPServer.Service.Services.Implements
                     {
                         postModel.IsFollowing = false;
                     }
+
+                    // Populate saved status for items and outfits
+                    await PopulateSavedStatusForPostAsync(postModel, callerUserId.Value);
                 }
             }
             else
@@ -311,7 +340,7 @@ namespace SOPServer.Service.Services.Implements
 
             var postModels = _mapper.Map<Pagination<PostModel>>(post);
 
-            // Check if user has liked each post and following status
+            // Check if user has liked each post, following status, and saved status
             if (callerUserId.HasValue)
             {
                 foreach (var postModel in postModels)
@@ -329,6 +358,9 @@ namespace SOPServer.Service.Services.Implements
                     {
                         postModel.IsFollowing = false;
                     }
+
+                    // Populate saved status for items and outfits
+                    await PopulateSavedStatusForPostAsync(postModel, callerUserId.Value);
                 }
             }
             else
@@ -395,6 +427,15 @@ namespace SOPServer.Service.Services.Implements
             );
 
             var postModels = _mapper.Map<Pagination<PostModel>>(posts);
+
+            // Populate saved status if requesterId is provided
+            if (requesterId.HasValue)
+            {
+                foreach (var postModel in postModels)
+                {
+                    await PopulateSavedStatusForPostAsync(postModel, requesterId.Value);
+                }
+            }
 
             return new BaseResponseModel
             {
@@ -464,7 +505,7 @@ namespace SOPServer.Service.Services.Implements
 
             var postModels = _mapper.Map<Pagination<PostModel>>(posts);
 
-            // Check if user has liked each post and following status
+            // Check if user has liked each post, following status, and saved status
             if (callerUserId.HasValue)
             {
                 foreach (var postModel in postModels)
@@ -482,6 +523,9 @@ namespace SOPServer.Service.Services.Implements
                     {
                         postModel.IsFollowing = false;
                     }
+
+                    // Populate saved status for items and outfits
+                    await PopulateSavedStatusForPostAsync(postModel, callerUserId.Value);
                 }
             }
             else
@@ -1080,6 +1124,40 @@ namespace SOPServer.Service.Services.Implements
 
             // Add new outfit
             await ValidateAndAddPostOutfitAsync(postId, newOutfitId, userId);
+        }
+
+        private async Task PopulateSavedStatusForPostAsync(PostModel postModel, long userId)
+        {
+            // Check saved status for items directly on the post
+            if (postModel.Items != null && postModel.Items.Any())
+            {
+                foreach (var item in postModel.Items)
+                {
+                    // Check if item is saved from ANY post (not just this specific post)
+                    var isSaved = await _unitOfWork.SaveItemFromPostRepository.ExistsByUserAndItemAsync(userId, item.Id);
+                    item.IsSaved = isSaved;
+                }
+            }
+
+            // Check saved status for outfit
+            if (postModel.Outfit != null)
+            {
+                // Check if outfit is saved from ANY source (post or collection)
+                var isSavedFromPost = await _unitOfWork.SaveOutfitFromPostRepository.ExistsByUserAndOutfitAsync(userId, postModel.Outfit.Id);
+                var isSavedFromCollection = await _unitOfWork.SaveOutfitFromCollectionRepository.ExistsByUserAndOutfitAsync(userId, postModel.Outfit.Id);
+                postModel.Outfit.IsSaved = isSavedFromPost || isSavedFromCollection;
+
+                // Check saved status for items inside the outfit
+                if (postModel.Outfit.Items != null && postModel.Outfit.Items.Any())
+                {
+                    foreach (var item in postModel.Outfit.Items)
+                    {
+                        // Check if item is saved from ANY post (not just this specific post)
+                        var itemIsSaved = await _unitOfWork.SaveItemFromPostRepository.ExistsByUserAndItemAsync(userId, item.Id);
+                        item.IsSaved = itemIsSaved;
+                    }
+                }
+            }
         }
 
         #endregion

@@ -6,6 +6,7 @@ namespace SOPServer.Service.BusinessModels.PostModels
         public string? Name { get; set; }
         public string? Description { get; set; }
         public bool IsDeleted { get; set; }
+        public bool IsSaved { get; set; }
         public List<PostItemDetailModel> Items { get; set; } = new List<PostItemDetailModel>();
     }
 }

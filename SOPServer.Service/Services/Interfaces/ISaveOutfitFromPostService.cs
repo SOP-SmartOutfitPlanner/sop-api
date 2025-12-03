@@ -1,3 +1,4 @@
+using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.SaveOutfitFromPostModels;
 using System.Threading.Tasks;
@@ -8,7 +9,7 @@ namespace SOPServer.Service.Services.Interfaces
     {
         Task<BaseResponseModel> SaveOutfitAsync(long userId, SaveOutfitFromPostCreateModel model);
         Task<BaseResponseModel> UnsaveOutfitAsync(long userId, long outfitId, long postId);
-        Task<BaseResponseModel> GetSavedOutfitsByUserAsync(long userId);
+        Task<BaseResponseModel> GetSavedOutfitsByUserAsync(long userId, PaginationParameter paginationParameter);
         Task<BaseResponseModel> CheckIfSavedAsync(long userId, long outfitId, long postId);
     }
 }

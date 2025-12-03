@@ -1,3 +1,4 @@
+using SOPServer.Service.BusinessModels.OutfitModels;
 using System;
 
 namespace SOPServer.Service.BusinessModels.SaveOutfitFromCollectionModels
@@ -11,6 +12,19 @@ namespace SOPServer.Service.BusinessModels.SaveOutfitFromCollectionModels
         public DateTime CreatedDate { get; set; }
         public string? OutfitName { get; set; }
         public string? OutfitDescription { get; set; }
+        public string? CollectionTitle { get; set; }
+        public long? CollectionUserId { get; set; }
+        public string? CollectionUserDisplayName { get; set; }
+    }
+
+    public class SaveOutfitFromCollectionDetailedModel
+    {
+        public long Id { get; set; }
+        public long UserId { get; set; }
+        public long OutfitId { get; set; }
+        public long CollectionId { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public OutfitModel Outfit { get; set; }
         public string? CollectionTitle { get; set; }
         public long? CollectionUserId { get; set; }
         public string? CollectionUserDisplayName { get; set; }

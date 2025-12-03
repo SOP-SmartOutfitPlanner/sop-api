@@ -186,7 +186,6 @@ namespace SOPServer.Service.Services.Implements
                                                                             PaginationParameter paginationParameter,
                                                                             long userId,
                                                                             bool? isFavorite,
-                                                                            bool? isSaved,
                                                                             DateTime? startDate,
                                                                             DateTime? endDate)
         {
@@ -220,7 +219,6 @@ namespace SOPServer.Service.Services.Implements
                             (x.Name != null && x.Name.Contains(paginationParameter.Search)) ||
                             (x.Description != null && x.Description.Contains(paginationParameter.Search))) &&
                            (!isFavorite.HasValue || x.IsFavorite == isFavorite.Value) &&
-                           (!isSaved.HasValue || x.IsSaved == isSaved.Value) &&
                            (!startDate.HasValue || x.CreatedDate >= startDate.Value) &&
                            (!endDate.HasValue || x.CreatedDate <= endDate.Value),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
@@ -300,7 +298,6 @@ namespace SOPServer.Service.Services.Implements
                 Description = model.Description,
                 IsFavorite = false,
                 CreatedBy = OutfitCreatedBy.USER,
-                IsSaved = false
             };
 
             await _unitOfWork.OutfitRepository.AddAsync(outfit);
@@ -423,7 +420,6 @@ namespace SOPServer.Service.Services.Implements
                         Description = outfitModel.Description,
                         IsFavorite = false,
                         CreatedBy = OutfitCreatedBy.USER,
-                        IsSaved = false
                     };
 
                     await _unitOfWork.OutfitRepository.AddAsync(outfit);
@@ -653,7 +649,6 @@ namespace SOPServer.Service.Services.Implements
             }
 
             // Toggle the save status
-            outfit.IsSaved = !outfit.IsSaved;
             _unitOfWork.OutfitRepository.UpdateAsync(outfit);
             await _unitOfWork.SaveAsync();
 

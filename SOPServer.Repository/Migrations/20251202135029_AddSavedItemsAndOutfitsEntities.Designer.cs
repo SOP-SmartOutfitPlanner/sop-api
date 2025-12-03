@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SOPServer.Repository.DBContext;
 
@@ -11,9 +12,11 @@ using SOPServer.Repository.DBContext;
 namespace SOPServer.Repository.Migrations
 {
     [DbContext(typeof(SOPServerContext))]
-    partial class SOPServerContextModelSnapshot : ModelSnapshot
+    [Migration("20251202135029_AddSavedItemsAndOutfitsEntities")]
+    partial class AddSavedItemsAndOutfitsEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -418,6 +421,10 @@ namespace SOPServer.Repository.Migrations
                         .IsUnicode(true)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<string>("WornAtHistoryJson")
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id")
                         .HasName("PK__Item__3214EC0747906DDA");
 
@@ -525,36 +532,6 @@ namespace SOPServer.Repository.Migrations
                     b.HasIndex("StyleId");
 
                     b.ToTable("ItemStyle", (string)null);
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.ItemWornAtHistory", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<long>("ItemId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("WornAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ItemId");
-
-                    b.ToTable("ItemWornAtHistories");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Job", b =>
@@ -2005,17 +1982,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("Style");
                 });
 
-            modelBuilder.Entity("SOPServer.Repository.Entities.ItemWornAtHistory", b =>
-                {
-                    b.HasOne("SOPServer.Repository.Entities.Item", "Item")
-                        .WithMany("ItemWornAtHistories")
-                        .HasForeignKey("ItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Item");
-                });
-
             modelBuilder.Entity("SOPServer.Repository.Entities.LikeCollection", b =>
                 {
                     b.HasOne("SOPServer.Repository.Entities.Collection", "Collection")
@@ -2568,8 +2534,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("ItemSeasons");
 
                     b.Navigation("ItemStyles");
-
-                    b.Navigation("ItemWornAtHistories");
 
                     b.Navigation("OutfitItems");
 

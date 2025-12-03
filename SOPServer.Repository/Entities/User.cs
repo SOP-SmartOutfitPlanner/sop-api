@@ -70,4 +70,7 @@ public partial class User : BaseEntity
     public virtual ICollection<UserNotification> UserNotifications { get; set; } = new List<UserNotification>();
     public virtual ICollection<UserDevice> UserDevices { get; set; } = new List<UserDevice>();
     public virtual ICollection<ReportReporter> ReportReporters { get; set; } = new List<ReportReporter>();
+    public virtual ICollection<SaveItemFromPost> SaveItemFromPosts { get; set; } = new List<SaveItemFromPost>();
+    public virtual ICollection<SaveOutfitFromPost> SaveOutfitFromPosts { get; set; } = new List<SaveOutfitFromPost>();
+    public virtual ICollection<SaveOutfitFromCollection> SaveOutfitFromCollections { get; set; } = new List<SaveOutfitFromCollection>();
 }

@@ -54,6 +54,9 @@ namespace SOPServer.Repository.UnitOfWork
         private INotificationRepository _notificationRepository;
         private IUserNotificationRepository _userNotificationRepository;
         private IUserDeviceRepository _userDeviceRepository;
+        private ISaveItemFromPostRepository _saveItemFromPostRepository;
+        private ISaveOutfitFromPostRepository _saveOutfitFromPostRepository;
+        private ISaveOutfitFromCollectionRepository _saveOutfitFromCollectionRepository;
         private IItemWornAtHistoryRepository _itemWornAtHistoryRepository;
 
         public UnitOfWork(SOPServerContext context)
@@ -371,6 +374,30 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _userDeviceRepository ??= new UserDeviceRepository(_context);
+            }
+        }
+
+        public ISaveItemFromPostRepository SaveItemFromPostRepository
+        {
+            get
+            {
+                return _saveItemFromPostRepository ??= new SaveItemFromPostRepository(_context);
+            }
+        }
+
+        public ISaveOutfitFromPostRepository SaveOutfitFromPostRepository
+        {
+            get
+            {
+                return _saveOutfitFromPostRepository ??= new SaveOutfitFromPostRepository(_context);
+            }
+        }
+
+        public ISaveOutfitFromCollectionRepository SaveOutfitFromCollectionRepository
+        {
+            get
+            {
+                return _saveOutfitFromCollectionRepository ??= new SaveOutfitFromCollectionRepository(_context);
             }
         }
 

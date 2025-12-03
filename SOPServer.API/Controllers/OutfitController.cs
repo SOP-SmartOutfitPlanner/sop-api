@@ -74,6 +74,52 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
+        /// Get saved outfits with pagination (from both posts and collections)
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Query Parameters:**
+        /// - `page-index`: Page number (default: 1)
+        /// - `page-size`: Items per page (default: 10)
+        /// - `source-type`: Filter by source type: "Post" or "Collection" (optional, omit for both)
+        /// - `search`: Search in outfit name, description, or source title (optional)
+        ///
+        /// **Response Data:**
+        /// Each saved outfit includes:
+        /// - `id`: Save record ID
+        /// - `outfitId`: Outfit ID
+        /// - `outfitName`: Outfit name
+        /// - `outfitDescription`: Outfit description
+        /// - `savedDate`: When the outfit was saved
+        /// - `sourceType`: "Post" or "Collection" (to distinguish the source)
+        /// - `sourceId`: ID of the post or collection
+        /// - `sourceTitle`: Post body or collection title
+        /// - `sourceOwnerId`: ID of the post/collection owner
+        /// - `sourceOwnerDisplayName`: Display name of the owner
+        /// - `items`: Array of outfit items with full details (category, occasions, seasons, styles)
+        ///
+        /// **Usage:**
+        /// - Use `sourceType` field to determine if the outfit came from a post or collection
+        /// - Different UI treatment can be applied based on `sourceType`
+        /// - All items include complete details for rendering
+        /// </remarks>
+        [HttpGet("saved")]
+        public Task<IActionResult> GetSavedOutfits(
+            [FromQuery] PaginationParameter paginationParameter,
+            [FromQuery(Name = "source-type")] string? sourceType)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+            return ValidateAndExecute(async () =>
+                await _outfitService.GetSavedOutfitsPaginationAsync(
+                    paginationParameter,
+                    userId,
+                    sourceType,
+                    paginationParameter.Search));
+        }
+
+        /// <summary>
         /// Get outfit by ID with item details
         /// </summary>
         /// <remarks>

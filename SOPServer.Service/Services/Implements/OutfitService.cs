@@ -685,6 +685,126 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        // ========== SAVED OUTFITS ==========
+
+        public async Task<BaseResponseModel> GetSavedOutfitsPaginationAsync(
+            PaginationParameter paginationParameter,
+            long userId,
+            string? sourceType = null,
+            string? search = null)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            var savedOutfitsList = new List<SavedOutfitModel>();
+
+            // Get saved outfits from posts if sourceType is null or "Post"
+            if (string.IsNullOrEmpty(sourceType) || sourceType.Equals("Post", StringComparison.OrdinalIgnoreCase))
+            {
+                var savedFromPosts = _unitOfWork.SaveOutfitFromPostRepository.GetQueryableByUserId(userId);
+
+                var postOutfits = await savedFromPosts.ToListAsync();
+                foreach (var saved in postOutfits)
+                {
+                    savedOutfitsList.Add(new SavedOutfitModel
+                    {
+                        Id = saved.Id,
+                        OutfitId = saved.OutfitId,
+                        OutfitName = saved.Outfit?.Name,
+                        OutfitDescription = saved.Outfit?.Description,
+                        UserId = saved.UserId,
+                        SavedDate = saved.UpdatedDate ?? saved.CreatedDate,
+                        SourceType = "Post",
+                        SourceId = saved.PostId,
+                        SourceTitle = saved.Post?.Body,
+                        SourceOwnerId = saved.Post?.UserId,
+                        SourceOwnerDisplayName = saved.Post?.User?.DisplayName,
+                        Items = saved.Outfit?.OutfitItems
+                            .Where(oi => !oi.IsDeleted && !oi.Item.IsDeleted)
+                            .Select(oi => _mapper.Map<OutfitItemModel>(oi.Item))
+                            .ToList() ?? new List<OutfitItemModel>()
+                    });
+                }
+            }
+
+            // Get saved outfits from collections if sourceType is null or "Collection"
+            if (string.IsNullOrEmpty(sourceType) || sourceType.Equals("Collection", StringComparison.OrdinalIgnoreCase))
+            {
+                var savedFromCollections = _unitOfWork.SaveOutfitFromCollectionRepository.GetQueryableByUserId(userId);
+
+                var collectionOutfits = await savedFromCollections.ToListAsync();
+                foreach (var saved in collectionOutfits)
+                {
+                    savedOutfitsList.Add(new SavedOutfitModel
+                    {
+                        Id = saved.Id,
+                        OutfitId = saved.OutfitId,
+                        OutfitName = saved.Outfit?.Name,
+                        OutfitDescription = saved.Outfit?.Description,
+                        UserId = saved.UserId,
+                        SavedDate = saved.UpdatedDate ?? saved.CreatedDate,
+                        SourceType = "Collection",
+                        SourceId = saved.CollectionId,
+                        SourceTitle = saved.Collection?.Title,
+                        SourceOwnerId = saved.Collection?.UserId,
+                        SourceOwnerDisplayName = saved.Collection?.User?.DisplayName,
+                        Items = saved.Outfit?.OutfitItems
+                            .Where(oi => !oi.IsDeleted && !oi.Item.IsDeleted)
+                            .Select(oi => _mapper.Map<OutfitItemModel>(oi.Item))
+                            .ToList() ?? new List<OutfitItemModel>()
+                    });
+                }
+            }
+
+            // Apply search filter
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var searchLower = search.ToLower();
+                savedOutfitsList = savedOutfitsList.Where(s =>
+                    (!string.IsNullOrEmpty(s.OutfitName) && s.OutfitName.ToLower().Contains(searchLower)) ||
+                    (!string.IsNullOrEmpty(s.OutfitDescription) && s.OutfitDescription.ToLower().Contains(searchLower)) ||
+                    (!string.IsNullOrEmpty(s.SourceTitle) && s.SourceTitle.ToLower().Contains(searchLower))
+                ).ToList();
+            }
+
+            // Sort by saved date descending
+            savedOutfitsList = savedOutfitsList.OrderByDescending(s => s.SavedDate).ToList();
+
+            // Apply pagination
+            var totalCount = savedOutfitsList.Count;
+            var pagedOutfits = savedOutfitsList
+                .Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
+                .Take(paginationParameter.PageSize)
+                .ToList();
+
+            var pagination = new Pagination<SavedOutfitModel>(
+                pagedOutfits,
+                totalCount,
+                paginationParameter.PageIndex,
+                paginationParameter.PageSize
+            );
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_LIST_OUTFIT_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = pagination,
+                    MetaData = new
+                    {
+                        pagination.TotalCount,
+                        pagination.PageSize,
+                        pagination.CurrentPage,
+                        pagination.TotalPages
+                    }
+                }
+            };
+        }
+
 
         public async Task<BaseResponseModel> GetOutfitCalendarPaginationAsync(
             PaginationParameter paginationParameter,
@@ -930,7 +1050,7 @@ namespace SOPServer.Service.Services.Implements
                 var outfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
                     outfitId,
                     include: query => query.Include(o => o.OutfitItems));
-                
+
                 if (outfit == null)
                 {
                     throw new NotFoundException($"Outfit with ID {outfitId} not found");
@@ -945,7 +1065,7 @@ namespace SOPServer.Service.Services.Implements
             // Handle Daily outfit logic
             long? userOccasionId = null;
             DateTime wornAtDateTime;
-            
+
             if (model.IsDaily)
             {
                 var targetDate = model.Time.Value.Date;
@@ -998,7 +1118,7 @@ namespace SOPServer.Service.Services.Implements
                     throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
                 }
                 userOccasionId = model.UserOccasionId.Value;
-                
+
                 // Use the UserOccasion's StartTime or DateOccasion for worn at tracking
                 wornAtDateTime = userOccasion.StartTime ?? userOccasion.DateOccasion;
             }
@@ -1040,7 +1160,7 @@ namespace SOPServer.Service.Services.Implements
                     {
                         // Increment usage count
                         item.UsageCount++;
-                        
+
                         // Update last worn at
                         item.LastWornAt = wornAtDateTime;
                         
@@ -1056,7 +1176,7 @@ namespace SOPServer.Service.Services.Implements
                         _unitOfWork.ItemRepository.UpdateAsync(item);
                     }
                 }
-                
+
                 await _unitOfWork.SaveAsync();
 
                 var created = await _unitOfWork.OutfitRepository.GetOutfitCalendarByIdAsync(outfitCalendar.Id);
@@ -1118,7 +1238,7 @@ namespace SOPServer.Service.Services.Implements
             // Track old outfit for usage decrement
             long oldOutfitId = outfitCalendar.OutfitId;
             DateTime? oldWornAtDateTime = null;
-            
+
             // Get old UserOccasion time if we need to remove old usage tracking
             if (outfitCalendar.UserOccassionId.HasValue)
             {
@@ -1199,7 +1319,7 @@ namespace SOPServer.Service.Services.Implements
                     var oldOutfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
                         oldOutfitId,
                         include: query => query.Include(o => o.OutfitItems));
-                    
+
                     if (oldOutfit != null)
                     {
                         foreach (var outfitItem in oldOutfit.OutfitItems.Where(oi => oi.ItemId.HasValue && !oi.IsDeleted))
@@ -1246,7 +1366,7 @@ namespace SOPServer.Service.Services.Implements
                     var newOutfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
                         model.OutfitId.Value,
                         include: query => query.Include(o => o.OutfitItems));
-                    
+
                     if (newOutfit != null)
                     {
                         foreach (var outfitItem in newOutfit.OutfitItems.Where(oi => oi.ItemId.HasValue && !oi.IsDeleted))
@@ -1256,7 +1376,7 @@ namespace SOPServer.Service.Services.Implements
                             {
                                 // Increment usage count
                                 item.UsageCount++;
-                                
+
                                 // Update last worn at
                                 item.LastWornAt = newWornAtDateTime.Value;
                                 
@@ -1317,7 +1437,7 @@ namespace SOPServer.Service.Services.Implements
                 var outfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
                     outfitCalendar.OutfitId,
                     include: query => query.Include(o => o.OutfitItems));
-                
+
                 if (outfit != null)
                 {
                     foreach (var outfitItem in outfit.OutfitItems.Where(oi => oi.ItemId.HasValue && !oi.IsDeleted))
@@ -1379,8 +1499,8 @@ namespace SOPServer.Service.Services.Implements
             }
         }
 
-        private async Task<(string occasionString, UserCharacteristicModel userCharacteristic, 
-            List<Season> listSeason, List<Occasion> listOccasion, List<Style> listStyle)> 
+        private async Task<(string occasionString, UserCharacteristicModel userCharacteristic,
+            List<Season> listSeason, List<Occasion> listOccasion, List<Style> listStyle)>
             FetchRequiredDataForOutfitSuggestion(OutfitSuggestionRequestModel model)
         {
             var dataFetchStopwatch = Stopwatch.StartNew();
@@ -1452,20 +1572,20 @@ namespace SOPServer.Service.Services.Implements
             // Fetch items matching the selected Season/Occasion/Style IDs from user's wardrobe
             // Exclude duplicate items across categories to get unique items per category
             var itemFetchStopwatch = Stopwatch.StartNew();
-            
+
             var seasonItems = await _unitOfWork.ItemRepository.GetItemsBySeasonIdsAsync(selectedSeasonIds ?? new List<long>(), userId);
             var seasonItemIds = seasonItems.Select(i => i.Id).ToList();
 
             var occasionItems = await _unitOfWork.ItemRepository.GetItemsByOccasionIdsAsync(
-                selectedOccasionIds ?? new List<long>(), 
-                seasonItemIds, 
+                selectedOccasionIds ?? new List<long>(),
+                seasonItemIds,
                 userId);
             var occasionItemIds = occasionItems.Select(i => i.Id).ToList();
 
             var excludedIds = seasonItemIds.Concat(occasionItemIds).ToList();
             var styleItems = await _unitOfWork.ItemRepository.GetItemsByStyleIdsAsync(
-                selectedStyleIds ?? new List<long>(), 
-                excludedIds, 
+                selectedStyleIds ?? new List<long>(),
+                excludedIds,
                 userId);
 
             itemFetchStopwatch.Stop();
@@ -1483,12 +1603,12 @@ namespace SOPServer.Service.Services.Implements
         }
 
         private async Task<OutfitSelectionModel[]> GenerateMultipleOutfitSuggestions(
-            List<ItemChooseModel> combinedItems, string occasionString, string characteristicString, 
+            List<ItemChooseModel> combinedItems, string occasionString, string characteristicString,
             string? weather, int totalOutfits)
         {
             // Generate multiple outfit suggestions concurrently
             var outfitGenerationStopwatch = Stopwatch.StartNew();
-            
+
             var outfitTasks = new List<Task<OutfitSelectionModel>>();
             for (int i = 0; i < totalOutfits; i++)
             {
@@ -1511,7 +1631,7 @@ namespace SOPServer.Service.Services.Implements
         private async Task<List<OutfitSuggestionModel>> MapOutfitSelectionsToSuggestions(OutfitSelectionModel[] outfitSelections)
         {
             var allSuggestedOutfits = new List<OutfitSuggestionModel>();
-            
+
             foreach (var selection in outfitSelections)
             {
                 var selectedItems = selection.ItemIds?.Any() == true
@@ -1519,7 +1639,7 @@ namespace SOPServer.Service.Services.Implements
                     : new List<Item>();
 
                 var selectedItemModels = selectedItems.Select(item => _mapper.Map<ItemModel>(item)).ToList();
-                
+
                 allSuggestedOutfits.Add(new OutfitSuggestionModel
                 {
                     SuggestedItems = selectedItemModels,
@@ -1732,12 +1852,12 @@ namespace SOPServer.Service.Services.Implements
             await ValidateUserForOutfitSuggestion(model.UserId);
 
             // Step 2: Fetch all required data in PARALLEL
-            var (occasionString, userCharacteristic, listSeason, listOccasion, listStyle) = 
+            var (occasionString, userCharacteristic, listSeason, listOccasion, listStyle) =
                 await FetchRequiredDataForOutfitSuggestion(model);
 
             // Step 3: Build characteristic string and get AI suggestions
             var characteristicString = BuildUserCharacteristicString(userCharacteristic);
-            var (selectedSeasonIds, selectedOccasionIds, selectedStyleIds) = 
+            var (selectedSeasonIds, selectedOccasionIds, selectedStyleIds) =
                 await GetAISuggestionsForCategories(occasionString, characteristicString, listSeason, listOccasion, listStyle);
 
             // Step 4: Filter and map items
@@ -1776,23 +1896,23 @@ namespace SOPServer.Service.Services.Implements
                 {
                     // Add user occasion details
                     contextParts.Add($"Event: {userOccasion.Name}");
-                    
+
                     if (!string.IsNullOrWhiteSpace(userOccasion.Description))
                         contextParts.Add($"Description: {userOccasion.Description}");
-                    
+
                     // Add date and time information
                     contextParts.Add($"Date: {userOccasion.DateOccasion:yyyy-MM-dd}");
-                    
+
                     if (userOccasion.StartTime.HasValue)
                         contextParts.Add($"Time: {userOccasion.StartTime:HH:mm}");
-                    
+
                     if (userOccasion.EndTime.HasValue)
                         contextParts.Add($"Until: {userOccasion.EndTime:HH:mm}");
-                    
+
                     // Add weather snapshot if available
                     if (!string.IsNullOrWhiteSpace(userOccasion.WeatherSnapshot))
                         contextParts.Add($"Weather: {userOccasion.WeatherSnapshot}");
-                    
+
                     // Add occasion category if linked to system occasion
                     if (userOccasion.Occasion != null)
                         contextParts.Add($"Category: {userOccasion.Occasion.Name}");

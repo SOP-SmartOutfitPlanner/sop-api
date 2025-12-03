@@ -20,5 +20,6 @@ namespace SOPServer.Repository.Entities
         public virtual ICollection<CommentCollection> CommentCollections { get; set; } = new HashSet<CommentCollection>();
         public virtual ICollection<LikeCollection> LikeCollections { get; set; } = new HashSet<LikeCollection>();
         public virtual ICollection<SaveCollection> SaveCollections { get; set; } = new HashSet<SaveCollection>();
+        public virtual ICollection<SaveOutfitFromCollection> SaveOutfitFromCollections { get; set; } = new HashSet<SaveOutfitFromCollection>();
     }
 }

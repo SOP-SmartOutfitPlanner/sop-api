@@ -653,8 +653,6 @@ IMPORTANT RULES:
 4. Select items that form a COMPLETE outfit (typically **3-5 items** covering: top, bottom, shoes, and optional accessories)
 5. **CRITICAL - MAXIMIZE DIVERSITY AND CREATIVITY**: 
    - Generate UNIQUE and UNEXPECTED outfit combinations each time
-   - Explore DIFFERENT style directions: casual, formal, sporty, elegant, streetwear, minimalist, bold, vintage, modern
-   - Vary color schemes dramatically: monochrome, complementary colors, analogous, triadic, warm tones, cool tones, neutral palettes
    - Be CREATIVE and ADVENTUROUS - avoid obvious or safe choices
    - Think like a fashion designer presenting different mood boards
    - Consider mixing unexpected pieces that still work harmoniously

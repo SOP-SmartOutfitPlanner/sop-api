@@ -1971,7 +1971,7 @@ namespace SOPServer.Service.Services.Implements
                 }
             }
 
-            return contextParts.Any() ? string.Join("; ", contextParts) : string.Empty;
+            return contextParts.Any() ? string.Join("; ", contextParts) : "Daily Home Wear";
         }
     }
 }

@@ -1,6 +1,10 @@
 using AutoMapper;
+using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
+using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.SaveOutfitFromCollectionModels;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace SOPServer.Service.Mappers
 {
@@ -20,6 +24,9 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.CollectionTitle, opt => opt.MapFrom(src => src.Collection != null ? src.Collection.Title : null))
                 .ForMember(dest => dest.CollectionUserId, opt => opt.MapFrom(src => src.Collection != null ? src.Collection.UserId : null))
                 .ForMember(dest => dest.CollectionUserDisplayName, opt => opt.MapFrom(src => src.Collection != null && src.Collection.User != null ? src.Collection.User.DisplayName : null));
+
+            CreateMap<Pagination<SaveOutfitFromCollection>, Pagination<SaveOutfitFromCollectionDetailedModel>>()
+                .ConvertUsing<PaginationConverter<SaveOutfitFromCollection, SaveOutfitFromCollectionDetailedModel>>();
 
             CreateMap<SaveOutfitFromCollectionCreateModel, SaveOutfitFromCollection>();
         }

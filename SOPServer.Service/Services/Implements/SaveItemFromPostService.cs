@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
+using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.ResultModels;
@@ -160,13 +161,47 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetSavedItemsByUserAsync(long userId, PaginationParameter paginationParameter)
+        public async Task<BaseResponseModel> GetSavedItemsByUserAsync(long userId, PaginationParameter paginationParameter, ItemFilterModel filter)
         {
             // Validate user exists
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
             if (user == null)
             {
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            if (filter == null)
+            {
+                throw new BadRequestException("Filter is required");
+            }
+
+            // Get child category IDs if filtering by a root/parent category
+            List<long>? categoryIdsToFilter = null;
+            if (filter.CategoryId.HasValue)
+            {
+                var category = await _unitOfWork.CategoryRepository.GetByIdIncludeAsync(
+                    filter.CategoryId.Value,
+                    include: query => query.Include(c => c.InverseParent)
+                );
+
+                if (category == null)
+                {
+                    throw new NotFoundException(MessageConstants.CATEGORY_NOT_EXIST);
+                }
+
+                // If it's a root/parent category (ParentId is null), get all child category IDs
+                if (category.ParentId == null)
+                {
+                    categoryIdsToFilter = category.InverseParent
+                        .Where(c => !c.IsDeleted)
+                        .Select(c => c.Id)
+                        .ToList();
+                }
+                else
+                {
+                    // If it's a child category, only filter by this specific category
+                    categoryIdsToFilter = new List<long> { filter.CategoryId.Value };
+                }
             }
 
             var savedItems = await _unitOfWork.SaveItemFromPostRepository.ToPaginationIncludeAsync(
@@ -187,12 +222,20 @@ namespace SOPServer.Service.Services.Implements
                             .ThenInclude(ist => ist.Style)
                     .Include(s => s.Post)
                         .ThenInclude(p => p.User),
-                filter: s => s.UserId == userId &&
-                           (string.IsNullOrEmpty(paginationParameter.Search) ||
-                            (s.Item.Name != null && s.Item.Name.Contains(paginationParameter.Search)) ||
-                            (s.Item.AiDescription != null && s.Item.AiDescription.Contains(paginationParameter.Search)) ||
-                            (s.Post.Body != null && s.Post.Body.Contains(paginationParameter.Search))),
-                orderBy: q => q.OrderByDescending(s => s.CreatedDate));
+                filter: s => s.UserId == userId
+                    && s.Item != null
+                    && (!filter.IsAnalyzed.HasValue || s.Item.IsAnalyzed == filter.IsAnalyzed.Value)
+                    && (categoryIdsToFilter == null || (s.Item.CategoryId.HasValue && categoryIdsToFilter.Contains(s.Item.CategoryId.Value)))
+                    && (!filter.StyleId.HasValue || s.Item.ItemStyles.Any(isr => !isr.IsDeleted && isr.StyleId == filter.StyleId.Value))
+                    && (!filter.SeasonId.HasValue || s.Item.ItemSeasons.Any(ss => !ss.IsDeleted && ss.SeasonId == filter.SeasonId.Value))
+                    && (!filter.OccasionId.HasValue || s.Item.ItemOccasions.Any(io => !io.IsDeleted && io.OccasionId == filter.OccasionId.Value))
+                    && (string.IsNullOrEmpty(paginationParameter.Search) ||
+                        (s.Item.Name != null && s.Item.Name.Contains(paginationParameter.Search)) ||
+                        (s.Item.AiDescription != null && s.Item.AiDescription.Contains(paginationParameter.Search)) ||
+                        (s.Post.Body != null && s.Post.Body.Contains(paginationParameter.Search))),
+                orderBy: q => filter.SortByDate.HasValue && filter.SortByDate.Value == SortOrder.Ascending
+                    ? q.OrderBy(s => s.CreatedDate)
+                    : q.OrderByDescending(s => s.CreatedDate));
 
             var models = _mapper.Map<Pagination<SaveItemFromPostDetailedModel>>(savedItems);
 

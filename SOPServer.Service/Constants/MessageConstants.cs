@@ -399,6 +399,7 @@ namespace SOPServer.Service.Constants
         public const string ITEM_UNSAVED_SUCCESS = "Item unsaved successfully";
         public const string GET_SAVED_ITEMS_SUCCESS = "Saved items retrieved successfully";
         public const string CHECK_SAVED_STATUS_SUCCESS = "Saved status checked successfully";
+        public const string ITEM_ALREADY_OWNED_BY_USER = "You already own this item and cannot save it";
 
         // SaveOutfitFromPost related messages
         public const string OUTFIT_NOT_IN_POST = "Outfit does not belong to this post";
@@ -407,6 +408,7 @@ namespace SOPServer.Service.Constants
         public const string OUTFIT_SAVED_FROM_POST_SUCCESS = "Outfit saved from post successfully";
         public const string OUTFIT_UNSAVED_FROM_POST_SUCCESS = "Outfit unsaved from post successfully";
         public const string GET_SAVED_OUTFITS_FROM_POST_SUCCESS = "Saved outfits from posts retrieved successfully";
+        public const string OUTFIT_ALREADY_OWNED_BY_USER = "You already own this outfit and cannot save it";
 
         // SaveOutfitFromCollection related messages
         public const string OUTFIT_NOT_IN_COLLECTION = "Outfit does not belong to this collection";

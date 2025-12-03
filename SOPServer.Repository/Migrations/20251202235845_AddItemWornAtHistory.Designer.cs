@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SOPServer.Repository.DBContext;
 
@@ -11,9 +12,11 @@ using SOPServer.Repository.DBContext;
 namespace SOPServer.Repository.Migrations
 {
     [DbContext(typeof(SOPServerContext))]
-    partial class SOPServerContextModelSnapshot : ModelSnapshot
+    [Migration("20251202235845_AddItemWornAtHistory")]
+    partial class AddItemWornAtHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,6 +24,53 @@ namespace SOPServer.Repository.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("Outfit", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFavorite")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsSaved")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id")
+                        .HasName("PK__Outfit__3214EC07");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Outfit", (string)null);
+                });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.AISetting", b =>
                 {
@@ -735,53 +785,6 @@ namespace SOPServer.Repository.Migrations
                     b.ToTable("Occasion", (string)null);
                 });
 
-            modelBuilder.Entity("SOPServer.Repository.Entities.Outfit", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<int>("CreatedBy")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsFavorite")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<bool>("IsSaved")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
-                    b.Property<string>("Name")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id")
-                        .HasName("PK__Outfit__3214EC07");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Outfit", (string)null);
-                });
-
             modelBuilder.Entity("SOPServer.Repository.Entities.OutfitItem", b =>
                 {
                     b.Property<long>("Id")
@@ -1159,123 +1162,6 @@ namespace SOPServer.Repository.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("SaveCollection");
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.SaveItemFromPost", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<long>("ItemId")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("PostId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ItemId");
-
-                    b.HasIndex("PostId");
-
-                    b.HasIndex("UserId", "ItemId", "PostId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_SaveItemFromPost_UserId_ItemId_PostId");
-
-                    b.ToTable("SaveItemFromPost", (string)null);
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.SaveOutfitFromCollection", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("CollectionId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<long>("OutfitId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CollectionId");
-
-                    b.HasIndex("OutfitId");
-
-                    b.HasIndex("UserId", "OutfitId", "CollectionId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_SaveOutfitFromCollection_UserId_OutfitId_CollectionId");
-
-                    b.ToTable("SaveOutfitFromCollection", (string)null);
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.SaveOutfitFromPost", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<long>("OutfitId")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("PostId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("UpdatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OutfitId");
-
-                    b.HasIndex("PostId");
-
-                    b.HasIndex("UserId", "OutfitId", "PostId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_SaveOutfitFromPost_UserId_OutfitId_PostId");
-
-                    b.ToTable("SaveOutfitFromPost", (string)null);
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Season", b =>
@@ -1822,6 +1708,18 @@ namespace SOPServer.Repository.Migrations
                     b.ToTable("UserViolations");
                 });
 
+            modelBuilder.Entity("Outfit", b =>
+                {
+                    b.HasOne("SOPServer.Repository.Entities.User", "User")
+                        .WithMany("Outfits")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_Outfit_User");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SOPServer.Repository.Entities.Category", b =>
                 {
                     b.HasOne("SOPServer.Repository.Entities.Category", "Parent")
@@ -1852,14 +1750,14 @@ namespace SOPServer.Repository.Migrations
                         .IsRequired()
                         .HasConstraintName("FK_CollectionOutfit_Collection");
 
-                    b.HasOne("SOPServer.Repository.Entities.Outfit", "Outfit")
+                    b.HasOne("Outfit", "Outfit")
                         .WithMany()
                         .HasForeignKey("OutfitId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("FK_CollectionOutfit_Outfit");
 
-                    b.HasOne("SOPServer.Repository.Entities.Outfit", null)
+                    b.HasOne("Outfit", null)
                         .WithMany("CollectionOutfits")
                         .HasForeignKey("OutfitId1");
 
@@ -2065,18 +1963,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("ActorUser");
                 });
 
-            modelBuilder.Entity("SOPServer.Repository.Entities.Outfit", b =>
-                {
-                    b.HasOne("SOPServer.Repository.Entities.User", "User")
-                        .WithMany("Outfits")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_Outfit_User");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("SOPServer.Repository.Entities.OutfitItem", b =>
                 {
                     b.HasOne("SOPServer.Repository.Entities.Item", "Item")
@@ -2084,7 +1970,7 @@ namespace SOPServer.Repository.Migrations
                         .HasForeignKey("ItemId")
                         .HasConstraintName("FK_OutfitItem_Item");
 
-                    b.HasOne("SOPServer.Repository.Entities.Outfit", "Outfit")
+                    b.HasOne("Outfit", "Outfit")
                         .WithMany("OutfitItems")
                         .HasForeignKey("OutfitId")
                         .HasConstraintName("FK_OutfitItem_Outfit");
@@ -2096,7 +1982,7 @@ namespace SOPServer.Repository.Migrations
 
             modelBuilder.Entity("SOPServer.Repository.Entities.OutfitUsageHistory", b =>
                 {
-                    b.HasOne("SOPServer.Repository.Entities.Outfit", "Outfit")
+                    b.HasOne("Outfit", "Outfit")
                         .WithMany("OutfitUsageHistories")
                         .HasForeignKey("OutfitId")
                         .OnDelete(DeleteBehavior.NoAction)
@@ -2187,7 +2073,7 @@ namespace SOPServer.Repository.Migrations
 
             modelBuilder.Entity("SOPServer.Repository.Entities.PostOutfit", b =>
                 {
-                    b.HasOne("SOPServer.Repository.Entities.Outfit", "Outfit")
+                    b.HasOne("Outfit", "Outfit")
                         .WithMany("PostOutfits")
                         .HasForeignKey("OutfitId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2277,96 +2163,6 @@ namespace SOPServer.Repository.Migrations
                         .IsRequired();
 
                     b.Navigation("Collection");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.SaveItemFromPost", b =>
-                {
-                    b.HasOne("SOPServer.Repository.Entities.Item", "Item")
-                        .WithMany("SaveItemFromPosts")
-                        .HasForeignKey("ItemId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_SaveItemFromPost_Item");
-
-                    b.HasOne("SOPServer.Repository.Entities.Post", "Post")
-                        .WithMany("SaveItemFromPosts")
-                        .HasForeignKey("PostId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_SaveItemFromPost_Post");
-
-                    b.HasOne("SOPServer.Repository.Entities.User", "User")
-                        .WithMany("SaveItemFromPosts")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_SaveItemFromPost_User");
-
-                    b.Navigation("Item");
-
-                    b.Navigation("Post");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.SaveOutfitFromCollection", b =>
-                {
-                    b.HasOne("SOPServer.Repository.Entities.Collection", "Collection")
-                        .WithMany("SaveOutfitFromCollections")
-                        .HasForeignKey("CollectionId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_SaveOutfitFromCollection_Collection");
-
-                    b.HasOne("SOPServer.Repository.Entities.Outfit", "Outfit")
-                        .WithMany("SaveOutfitFromCollections")
-                        .HasForeignKey("OutfitId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_SaveOutfitFromCollection_Outfit");
-
-                    b.HasOne("SOPServer.Repository.Entities.User", "User")
-                        .WithMany("SaveOutfitFromCollections")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_SaveOutfitFromCollection_User");
-
-                    b.Navigation("Collection");
-
-                    b.Navigation("Outfit");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SOPServer.Repository.Entities.SaveOutfitFromPost", b =>
-                {
-                    b.HasOne("SOPServer.Repository.Entities.Outfit", "Outfit")
-                        .WithMany("SaveOutfitFromPosts")
-                        .HasForeignKey("OutfitId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_SaveOutfitFromPost_Outfit");
-
-                    b.HasOne("SOPServer.Repository.Entities.Post", "Post")
-                        .WithMany("SaveOutfitFromPosts")
-                        .HasForeignKey("PostId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_SaveOutfitFromPost_Post");
-
-                    b.HasOne("SOPServer.Repository.Entities.User", "User")
-                        .WithMany("SaveOutfitFromPosts")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_SaveOutfitFromPost_User");
-
-                    b.Navigation("Outfit");
-
-                    b.Navigation("Post");
 
                     b.Navigation("User");
                 });
@@ -2529,6 +2325,17 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Outfit", b =>
+                {
+                    b.Navigation("CollectionOutfits");
+
+                    b.Navigation("OutfitItems");
+
+                    b.Navigation("OutfitUsageHistories");
+
+                    b.Navigation("PostOutfits");
+                });
+
             modelBuilder.Entity("SOPServer.Repository.Entities.Category", b =>
                 {
                     b.Navigation("InverseParent");
@@ -2545,8 +2352,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("LikeCollections");
 
                     b.Navigation("SaveCollections");
-
-                    b.Navigation("SaveOutfitFromCollections");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.CommentPost", b =>
@@ -2574,8 +2379,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("OutfitItems");
 
                     b.Navigation("PostItems");
-
-                    b.Navigation("SaveItemFromPosts");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.Job", b =>
@@ -2595,21 +2398,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("UserOccasions");
                 });
 
-            modelBuilder.Entity("SOPServer.Repository.Entities.Outfit", b =>
-                {
-                    b.Navigation("CollectionOutfits");
-
-                    b.Navigation("OutfitItems");
-
-                    b.Navigation("OutfitUsageHistories");
-
-                    b.Navigation("PostOutfits");
-
-                    b.Navigation("SaveOutfitFromCollections");
-
-                    b.Navigation("SaveOutfitFromPosts");
-                });
-
             modelBuilder.Entity("SOPServer.Repository.Entities.Post", b =>
                 {
                     b.Navigation("CommentPosts");
@@ -2625,10 +2413,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("PostOutfits");
 
                     b.Navigation("ReportCommunities");
-
-                    b.Navigation("SaveItemFromPosts");
-
-                    b.Navigation("SaveOutfitFromPosts");
                 });
 
             modelBuilder.Entity("SOPServer.Repository.Entities.ReportCommunity", b =>
@@ -2682,12 +2466,6 @@ namespace SOPServer.Repository.Migrations
                     b.Navigation("ReportReporters");
 
                     b.Navigation("SaveCollections");
-
-                    b.Navigation("SaveItemFromPosts");
-
-                    b.Navigation("SaveOutfitFromCollections");
-
-                    b.Navigation("SaveOutfitFromPosts");
 
                     b.Navigation("UserDevices");
 

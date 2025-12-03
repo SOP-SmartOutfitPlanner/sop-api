@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SOPServer.Repository.Commons;
+using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.SaveItemFromPostModels;
 using SOPServer.Service.Services.Interfaces;
 using System.Threading.Tasks;
@@ -45,20 +46,26 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
-        /// Get all saved items from posts for the authenticated user with pagination and search
+        /// Get all saved items from posts for the authenticated user with pagination, search, and filters
         /// </summary>
         /// <remarks>
         /// **Query Parameters:**
         /// - `page-index`: Page number (default: 1)
         /// - `page-size`: Items per page (default: 10)
         /// - `search`: Search in item name, description, or post body (optional)
+        /// - `is-analyzed`: Filter by analysis status (optional)
+        /// - `category-id`: Filter by category (supports parent category filtering) (optional)
+        /// - `season-id`: Filter by season (optional)
+        /// - `style-id`: Filter by style (optional)
+        /// - `occasion-id`: Filter by occasion (optional)
+        /// - `sort-by-date`: Sort order: 0 = Ascending, 1 = Descending (optional)
         /// </remarks>
         [HttpGet]
-        public Task<IActionResult> GetSavedItems([FromQuery] PaginationParameter paginationParameter)
+        public Task<IActionResult> GetSavedItems([FromQuery] PaginationParameter paginationParameter, [FromQuery] ItemFilterModel filter)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;
             return ValidateAndExecute(async () =>
-                await _service.GetSavedItemsByUserAsync(long.Parse(userIdClaim), paginationParameter));
+                await _service.GetSavedItemsByUserAsync(long.Parse(userIdClaim), paginationParameter, filter));
         }
 
         /// <summary>

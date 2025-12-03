@@ -13,5 +13,7 @@ namespace SOPServer.Service.BusinessModels.OutfitModels
         public long? OccasionId { get; set; }
         public long? UserOccasionId { get; set; }
         public int TotalOutfit { get; set; }
+        public int? GapDay { get; set; }
+        public DateTime? TargetDate { get; set; }
     }
 }

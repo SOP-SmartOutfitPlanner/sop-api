@@ -1562,31 +1562,41 @@ namespace SOPServer.Service.Services.Implements
         }
 
         private async Task<List<ItemChooseModel>> FilterAndMapItemsForOutfitSuggestion(
-            List<long>? selectedSeasonIds, List<long>? selectedOccasionIds, List<long>? selectedStyleIds, long userId)
+            List<long>? selectedSeasonIds, List<long>? selectedOccasionIds, List<long>? selectedStyleIds, long userId, int? gapDay, DateTime? targetDate)
         {
             // Fetch items matching the selected Season/Occasion/Style IDs from user's wardrobe
             // Exclude duplicate items across categories to get unique items per category
+            // The repository now handles gapDay filtering to exclude recently worn items based on targetDate
             var itemFetchStopwatch = Stopwatch.StartNew();
 
-            var seasonItems = await _unitOfWork.ItemRepository.GetItemsBySeasonIdsAsync(selectedSeasonIds ?? new List<long>(), userId);
+            var seasonItems = await _unitOfWork.ItemRepository.GetItemsBySeasonIdsAsync(
+                selectedSeasonIds ?? new List<long>(), 
+                new List<long>(), 
+                userId, 
+                gapDay,
+                targetDate);
             var seasonItemIds = seasonItems.Select(i => i.Id).ToList();
 
             var occasionItems = await _unitOfWork.ItemRepository.GetItemsByOccasionIdsAsync(
                 selectedOccasionIds ?? new List<long>(),
                 seasonItemIds,
-                userId);
+                userId,
+                gapDay,
+                targetDate);
             var occasionItemIds = occasionItems.Select(i => i.Id).ToList();
 
             var excludedIds = seasonItemIds.Concat(occasionItemIds).ToList();
             var styleItems = await _unitOfWork.ItemRepository.GetItemsByStyleIdsAsync(
                 selectedStyleIds ?? new List<long>(),
                 excludedIds,
-                userId);
+                userId,
+                gapDay,
+                targetDate);
 
             itemFetchStopwatch.Stop();
             Console.WriteLine($"[TIMING] Item fetch and filtering: {itemFetchStopwatch.ElapsedMilliseconds}ms");
 
-            // Map items to ItemModel
+            // Map items to ItemChooseModel
             var seasonItemsModel = seasonItems.Select(i => _mapper.Map<ItemChooseModel>(i)).ToList();
             var occasionItemsModel = occasionItems.Select(i => _mapper.Map<ItemChooseModel>(i)).ToList();
             var styleItemsModel = styleItems.Select(i => _mapper.Map<ItemChooseModel>(i)).ToList();
@@ -1855,8 +1865,8 @@ namespace SOPServer.Service.Services.Implements
             var (selectedSeasonIds, selectedOccasionIds, selectedStyleIds) =
                 await GetAISuggestionsForCategories(occasionString, characteristicString, listSeason, listOccasion, listStyle);
 
-            // Step 4: Filter and map items
-            var combinedItems = await FilterAndMapItemsForOutfitSuggestion(selectedSeasonIds, selectedOccasionIds, selectedStyleIds, model.UserId);
+            // Step 4: Filter and map items (with gapDay and targetDate filtering if provided)
+            var combinedItems = await FilterAndMapItemsForOutfitSuggestion(selectedSeasonIds, selectedOccasionIds, selectedStyleIds, model.UserId, model.GapDay, model.TargetDate);
 
             // Step 5: Generate multiple outfit suggestions
             var totalOutfits = model.TotalOutfit > 0 ? model.TotalOutfit : 1;

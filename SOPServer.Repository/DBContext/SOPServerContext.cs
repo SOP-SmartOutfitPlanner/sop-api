@@ -84,6 +84,7 @@ public partial class SOPServerContext : DbContext
     public virtual DbSet<SaveItemFromPost> SaveItemFromPosts { get; set; }
     public virtual DbSet<SaveOutfitFromPost> SaveOutfitFromPosts { get; set; }
     public virtual DbSet<SaveOutfitFromCollection> SaveOutfitFromCollections { get; set; }
+    public virtual DbSet<ItemWornAtHistory> ItemWornAtHistories { get; set; }
 
 
     // protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -162,11 +163,6 @@ public partial class SOPServerContext : DbContext
                 .HasDefaultValue(0);
 
             entity.Property(e => e.AIAnalyzeJson)
-                .HasColumnType("nvarchar(max)")
-                .IsUnicode(true)
-                .IsRequired(false);
-
-            entity.Property(e => e.WornAtHistoryJson)
                 .HasColumnType("nvarchar(max)")
                 .IsUnicode(true)
                 .IsRequired(false);

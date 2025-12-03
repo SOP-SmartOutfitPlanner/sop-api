@@ -51,6 +51,7 @@ namespace SOPServer.Repository.UnitOfWork
         ISaveItemFromPostRepository SaveItemFromPostRepository { get; }
         ISaveOutfitFromPostRepository SaveOutfitFromPostRepository { get; }
         ISaveOutfitFromCollectionRepository SaveOutfitFromCollectionRepository { get; }
+        IItemWornAtHistoryRepository ItemWornAtHistoryRepository { get; }
         int Save();
         void Commit();
         void Rollback();

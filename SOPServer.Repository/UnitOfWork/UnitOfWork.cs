@@ -57,6 +57,7 @@ namespace SOPServer.Repository.UnitOfWork
         private ISaveItemFromPostRepository _saveItemFromPostRepository;
         private ISaveOutfitFromPostRepository _saveOutfitFromPostRepository;
         private ISaveOutfitFromCollectionRepository _saveOutfitFromCollectionRepository;
+        private IItemWornAtHistoryRepository _itemWornAtHistoryRepository;
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -397,6 +398,14 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _saveOutfitFromCollectionRepository ??= new SaveOutfitFromCollectionRepository(_context);
+            }
+        }
+
+        public IItemWornAtHistoryRepository ItemWornAtHistoryRepository
+        {
+            get
+            {
+                return _itemWornAtHistoryRepository ??= new ItemWornAtHistoryRepository(_context);
             }
         }
 

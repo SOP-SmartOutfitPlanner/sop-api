@@ -1163,32 +1163,15 @@ namespace SOPServer.Service.Services.Implements
 
                         // Update last worn at
                         item.LastWornAt = wornAtDateTime;
-
-                        // Update worn at history
-                        List<DateTime> wornHistory;
-                        if (!string.IsNullOrEmpty(item.WornAtHistoryJson))
+                        
+                        // Add to ItemWornAtHistory table
+                        var wornAtHistory = new ItemWornAtHistory
                         {
-                            try
-                            {
-                                wornHistory = JsonSerializer.Deserialize<List<DateTime>>(item.WornAtHistoryJson) ?? new List<DateTime>();
-                            }
-                            catch
-                            {
-                                wornHistory = new List<DateTime>();
-                            }
-                        }
-                        else
-                        {
-                            wornHistory = new List<DateTime>();
-                        }
-
-                        // Add new worn at date and sort in ascending order
-                        wornHistory.Add(wornAtDateTime);
-                        wornHistory = wornHistory.OrderBy(d => d).ToList();
-
-                        // Serialize back to JSON
-                        item.WornAtHistoryJson = JsonSerializer.Serialize(wornHistory);
-
+                            ItemId = item.Id,
+                            WornAt = wornAtDateTime
+                        };
+                        await _unitOfWork.ItemWornAtHistoryRepository.AddAsync(wornAtHistory);
+                        
                         // Update the item
                         _unitOfWork.ItemRepository.UpdateAsync(item);
                     }
@@ -1349,34 +1332,27 @@ namespace SOPServer.Service.Services.Implements
                                 {
                                     item.UsageCount--;
                                 }
-
-                                // Remove from worn at history
-                                List<DateTime> wornHistory;
-                                if (!string.IsNullOrEmpty(item.WornAtHistoryJson))
+                                
+                                // Find and remove the specific worn at history entry
+                                var wornAtHistoryToRemove = await _unitOfWork.ItemWornAtHistoryRepository
+                                    .GetQueryable()
+                                    .FirstOrDefaultAsync(w => w.ItemId == item.Id && w.WornAt == oldWornAtDateTime.Value);
+                                
+                                if (wornAtHistoryToRemove != null)
                                 {
-                                    try
-                                    {
-                                        wornHistory = JsonSerializer.Deserialize<List<DateTime>>(item.WornAtHistoryJson) ?? new List<DateTime>();
-                                    }
-                                    catch
-                                    {
-                                        wornHistory = new List<DateTime>();
-                                    }
+                                    _unitOfWork.ItemWornAtHistoryRepository.SoftDeleteAsync(wornAtHistoryToRemove);
                                 }
-                                else
-                                {
-                                    wornHistory = new List<DateTime>();
-                                }
-
-                                // Remove the specific worn at date
-                                wornHistory.Remove(oldWornAtDateTime.Value);
-
-                                // Update LastWornAt to the most recent date, or null if no history
-                                item.LastWornAt = wornHistory.Any() ? wornHistory.Max() : null;
-
-                                // Serialize back to JSON
-                                item.WornAtHistoryJson = JsonSerializer.Serialize(wornHistory);
-
+                                
+                                // Update LastWornAt to the most recent date from history, or null if no history
+                                var latestWornAt = await _unitOfWork.ItemWornAtHistoryRepository
+                                    .GetQueryable()
+                                    .Where(w => w.ItemId == item.Id && !w.IsDeleted)
+                                    .OrderByDescending(w => w.WornAt)
+                                    .Select(w => (DateTime?)w.WornAt)
+                                    .FirstOrDefaultAsync();
+                                
+                                item.LastWornAt = latestWornAt;
+                                
                                 _unitOfWork.ItemRepository.UpdateAsync(item);
                             }
                         }
@@ -1403,32 +1379,15 @@ namespace SOPServer.Service.Services.Implements
 
                                 // Update last worn at
                                 item.LastWornAt = newWornAtDateTime.Value;
-
-                                // Update worn at history
-                                List<DateTime> wornHistory;
-                                if (!string.IsNullOrEmpty(item.WornAtHistoryJson))
+                                
+                                // Add to ItemWornAtHistory table
+                                var wornAtHistory = new ItemWornAtHistory
                                 {
-                                    try
-                                    {
-                                        wornHistory = JsonSerializer.Deserialize<List<DateTime>>(item.WornAtHistoryJson) ?? new List<DateTime>();
-                                    }
-                                    catch
-                                    {
-                                        wornHistory = new List<DateTime>();
-                                    }
-                                }
-                                else
-                                {
-                                    wornHistory = new List<DateTime>();
-                                }
-
-                                // Add new worn at date and sort in ascending order
-                                wornHistory.Add(newWornAtDateTime.Value);
-                                wornHistory = wornHistory.OrderBy(d => d).ToList();
-
-                                // Serialize back to JSON
-                                item.WornAtHistoryJson = JsonSerializer.Serialize(wornHistory);
-
+                                    ItemId = item.Id,
+                                    WornAt = newWornAtDateTime.Value
+                                };
+                                await _unitOfWork.ItemWornAtHistoryRepository.AddAsync(wornAtHistory);
+                                
                                 _unitOfWork.ItemRepository.UpdateAsync(item);
                             }
                         }
@@ -1491,34 +1450,27 @@ namespace SOPServer.Service.Services.Implements
                             {
                                 item.UsageCount--;
                             }
-
-                            // Remove from worn at history
-                            List<DateTime> wornHistory;
-                            if (!string.IsNullOrEmpty(item.WornAtHistoryJson))
+                            
+                            // Find and remove the specific worn at history entry
+                            var wornAtHistoryToRemove = await _unitOfWork.ItemWornAtHistoryRepository
+                                .GetQueryable()
+                                .FirstOrDefaultAsync(w => w.ItemId == item.Id && w.WornAt == wornAtDateTime.Value);
+                            
+                            if (wornAtHistoryToRemove != null)
                             {
-                                try
-                                {
-                                    wornHistory = JsonSerializer.Deserialize<List<DateTime>>(item.WornAtHistoryJson) ?? new List<DateTime>();
-                                }
-                                catch
-                                {
-                                    wornHistory = new List<DateTime>();
-                                }
+                                _unitOfWork.ItemWornAtHistoryRepository.SoftDeleteAsync(wornAtHistoryToRemove);
                             }
-                            else
-                            {
-                                wornHistory = new List<DateTime>();
-                            }
-
-                            // Remove the specific worn at date
-                            wornHistory.Remove(wornAtDateTime.Value);
-
-                            // Update LastWornAt to the most recent date, or null if no history
-                            item.LastWornAt = wornHistory.Any() ? wornHistory.Max() : null;
-
-                            // Serialize back to JSON
-                            item.WornAtHistoryJson = JsonSerializer.Serialize(wornHistory);
-
+                            
+                            // Update LastWornAt to the most recent date from history, or null if no history
+                            var latestWornAt = await _unitOfWork.ItemWornAtHistoryRepository
+                                .GetQueryable()
+                                .Where(w => w.ItemId == item.Id && !w.IsDeleted)
+                                .OrderByDescending(w => w.WornAt)
+                                .Select(w => (DateTime?)w.WornAt)
+                                .FirstOrDefaultAsync();
+                            
+                            item.LastWornAt = latestWornAt;
+                            
                             _unitOfWork.ItemRepository.UpdateAsync(item);
                         }
                     }

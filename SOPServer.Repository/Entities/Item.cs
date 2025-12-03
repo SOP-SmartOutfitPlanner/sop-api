@@ -39,7 +39,6 @@ public partial class Item : BaseEntity
     public int? AIConfidence { get; set; }
     public string? AIAnalyzeJson { get; set; }
     public ItemType? ItemType { get; set; }
-    public string? WornAtHistoryJson { get; set; }
 
     public virtual ICollection<ItemOccasion> ItemOccasions { get; set; } = new List<ItemOccasion>();
 
@@ -49,6 +48,7 @@ public partial class Item : BaseEntity
     public virtual ICollection<OutfitItem> OutfitItems { get; set; } = new List<OutfitItem>();
     public virtual ICollection<PostItem> PostItems { get; set; } = new List<PostItem>();
     public virtual ICollection<SaveItemFromPost> SaveItemFromPosts { get; set; } = new List<SaveItemFromPost>();
+    public virtual ICollection<ItemWornAtHistory> ItemWornAtHistories { get; set; } = new List<ItemWornAtHistory>();
     public virtual User User { get; set; }
     public virtual Category Category { get; set; }
 }

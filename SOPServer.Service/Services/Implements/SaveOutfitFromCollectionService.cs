@@ -42,6 +42,12 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.OUTFIT_NOT_FOUND);
             }
 
+            // Check if outfit already belongs to the user
+            if (outfit.UserId == userId)
+            {
+                throw new BadRequestException(MessageConstants.OUTFIT_ALREADY_OWNED_BY_USER);
+            }
+
             // Validate collection exists
             var collection = await _unitOfWork.CollectionRepository.GetByIdAsync(model.CollectionId);
             if (collection == null)

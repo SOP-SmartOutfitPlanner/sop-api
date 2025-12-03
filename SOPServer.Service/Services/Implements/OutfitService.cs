@@ -1614,23 +1614,61 @@ namespace SOPServer.Service.Services.Implements
             // Generate multiple outfit suggestions concurrently
             var outfitGenerationStopwatch = Stopwatch.StartNew();
 
-            var outfitTasks = new List<Task<OutfitSelectionModel>>();
-            for (int i = 0; i < totalOutfits; i++)
+            var uniqueOutfits = new List<OutfitSelectionModel>();
+            var seenItemCombinations = new HashSet<string>();
+            var maxAttempts = totalOutfits * 3; // Allow up to 3x attempts to get unique outfits
+            var attemptCount = 0;
+
+            while (uniqueOutfits.Count < totalOutfits && attemptCount < maxAttempts)
             {
-                var task = _geminiService.ChooseOutfitV2(
-                    JsonSerializer.Serialize(combinedItems.OrderBy(x => Random.Shared.Next()).ToList()),
-                    occasionString,
-                    characteristicString,
-                    weather
-                );
-                outfitTasks.Add(task);
+                var remainingCount = totalOutfits - uniqueOutfits.Count;
+                var outfitTasks = new List<Task<OutfitSelectionModel>>();
+                
+                for (int i = 0; i < remainingCount; i++)
+                {
+                    var task = _geminiService.ChooseOutfitV2(
+                        JsonSerializer.Serialize(combinedItems.OrderBy(x => Random.Shared.Next()).ToList()),
+                        occasionString,
+                        characteristicString,
+                        weather
+                    );
+                    outfitTasks.Add(task);
+                }
+
+                var outfitSelections = await Task.WhenAll(outfitTasks);
+                attemptCount += remainingCount;
+
+                // Check each outfit for uniqueness
+                foreach (var outfit in outfitSelections)
+                {
+                    if (outfit.ItemIds != null && outfit.ItemIds.Any())
+                    {
+                        // Create a sorted, comma-separated string of item IDs as the combination key
+                        var combinationKey = string.Join(",", outfit.ItemIds.OrderBy(id => id));
+                        
+                        // Only add if this combination hasn't been seen before
+                        if (seenItemCombinations.Add(combinationKey))
+                        {
+                            uniqueOutfits.Add(outfit);
+                            
+                            if (uniqueOutfits.Count >= totalOutfits)
+                            {
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[DEBUG] Duplicate outfit detected: {combinationKey}");
+                        }
+                    }
+                }
             }
 
-            var outfitSelections = await Task.WhenAll(outfitTasks);
             outfitGenerationStopwatch.Stop();
-            Console.WriteLine($"[TIMING] Outfit generation (concurrent {totalOutfits} calls): {outfitGenerationStopwatch.ElapsedMilliseconds}ms");
+            Console.WriteLine($"[TIMING] Outfit generation (concurrent {totalOutfits} calls, {attemptCount} total attempts): {outfitGenerationStopwatch.ElapsedMilliseconds}ms");
+            Console.WriteLine($"[DEBUG] Generated {uniqueOutfits.Count} unique outfits out of {totalOutfits} requested");
 
-            return outfitSelections;
+            return uniqueOutfits.ToArray();
         }
 
         private async Task<List<OutfitSuggestionModel>> MapOutfitSelectionsToSuggestions(OutfitSelectionModel[] outfitSelections)

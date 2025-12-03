@@ -55,7 +55,7 @@ namespace SOPServer.Service.Services.Implements
             _embeddingModel = embeddingAiClient.CreateEmbeddingModel(modelIdEmbedding);
 
             var apiKeySuggestion = GetAiSettingValue(AISettingType.API_SUGGESTION);
-            var modelIdSuggestiong = GetAiSettingValue(AISettingType.MODEL_ANALYZING);
+            var modelIdSuggestiong = GetAiSettingValue(AISettingType.MODEL_SUGGESTION);
             var generativeAiClientSuggestion = new GoogleAi(apiKeySuggestion);
             _suggestionModel = generativeAiClientSuggestion.CreateGenerativeModel(modelIdSuggestiong);
         }
@@ -649,7 +649,7 @@ You are an expert fashion stylist AI. Your task is to select a complete outfit f
 IMPORTANT RULES:
 1. Return ONLY valid JSON in English. Do not include Vietnamese text.
 2. Do not output any explanations outside the JSON object.
-3. Prioritize selecting items where ""itemType"" is null or ""itemType"" is ""USER"". After using those, only then consider items with ""itemType"" = ""SYSTEM"".
+3. Prioritize selecting items where ""itemType"" is null or ""itemType"" is ""0"". After using those, only then consider items with ""itemType"" = ""1"".
 4. Select items that form a COMPLETE outfit (typically **3-5 items** covering: top, bottom, shoes, and optional accessories)
 5. **CRITICAL - MAXIMIZE DIVERSITY AND CREATIVITY**: 
    - Generate UNIQUE and UNEXPECTED outfit combinations each time

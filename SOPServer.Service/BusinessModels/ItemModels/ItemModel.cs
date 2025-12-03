@@ -46,7 +46,6 @@ namespace SOPServer.Service.BusinessModels.ItemModels
 
         public ItemType ItemType { get; set; }
         public string? AIAnalyzeJson { get; set; }
-        public string? WornAtHistoryJson { get; set; }
 
         public List<OccasionItemModel> Occasions { get; set; }
 

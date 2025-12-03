@@ -417,6 +417,11 @@ namespace SOPServer.API.Controllers
         /// **Query Parameters:**
         /// - `userId`: User ID (required)
         /// - `totalOutfit`: Number of outfit suggestions to generate (required)
+        /// - `gapDay`: Number of days to avoid recently worn items (optional). 
+        ///   Items worn within (targetDate - gapDay) to (targetDate + gapDay) will be excluded from suggestions.
+        ///   For example, gapDay=7 will exclude items worn 7 days before or after the target date.
+        /// - `targetDate`: The target date for the outfit suggestion (optional, defaults to today).
+        ///   This is used as the reference point for gapDay calculations.
         /// - `occasionId`: System occasion ID for general category (optional)
         /// - `userOccasionId`: User's specific occasion/event ID for detailed context (optional)
         /// - `weather`: Weather information for outfit suggestions (optional, e.g., "sunny, 25°C" or "rainy, 15°C")
@@ -425,10 +430,12 @@ namespace SOPServer.API.Controllers
         /// - Subject to subscription limits based on user's plan (monthly reset)
         /// - UserOccasionId provides more detailed context (event name, description, date, time, weather snapshot)
         /// - If both occasionId and userOccasionId are provided, userOccasionId takes precedence
+        /// - GapDay helps avoid suggesting recently worn items, promoting outfit variety
+        /// - TargetDate determines the reference point for calculating the gapDay range
         /// </remarks>
         [HttpGet("suggestionV2")]
         [CheckSubscriptionLimit(FeatureCode.OutfitSuggestion)]
-        public Task<IActionResult> OutfitSuggestionV2(long userId, int totalOutfit, long? occasionId, long? userOccasionId, string? weather = null)
+        public Task<IActionResult> OutfitSuggestionV2(long userId, int totalOutfit, int? gapDay, DateTime? targetDate, long? occasionId, long? userOccasionId, string? weather = null)
         {
             return ValidateAndExecute(async () => await _outfitService.OutfitSuggestionV2(new OutfitSuggestionRequestModel()
             {
@@ -436,7 +443,9 @@ namespace SOPServer.API.Controllers
                 UserOccasionId = userOccasionId,
                 UserId = userId,
                 Weather = weather,
-                TotalOutfit = totalOutfit
+                TotalOutfit = totalOutfit,
+                GapDay = gapDay,
+                TargetDate = targetDate
             }));
         }
 

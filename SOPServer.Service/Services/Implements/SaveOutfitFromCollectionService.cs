@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.ResultModels;
@@ -166,7 +167,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetSavedOutfitsByUserAsync(long userId)
+        public async Task<BaseResponseModel> GetSavedOutfitsByUserAsync(long userId, PaginationParameter paginationParameter)
         {
             // Validate user exists
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
@@ -175,14 +176,58 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
-            var savedOutfits = await _unitOfWork.SaveOutfitFromCollectionRepository.GetByUserIdAsync(userId);
-            var result = _mapper.Map<List<SaveOutfitFromCollectionModel>>(savedOutfits);
+            var savedOutfits = await _unitOfWork.SaveOutfitFromCollectionRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query
+                    .Include(s => s.Outfit)
+                        .ThenInclude(o => o.User)
+                    .Include(s => s.Outfit)
+                        .ThenInclude(o => o.OutfitItems)
+                            .ThenInclude(oi => oi.Item)
+                                .ThenInclude(i => i.Category)
+                    .Include(s => s.Outfit)
+                        .ThenInclude(o => o.OutfitItems)
+                            .ThenInclude(oi => oi.Item)
+                                .ThenInclude(i => i.ItemOccasions)
+                                    .ThenInclude(io => io.Occasion)
+                    .Include(s => s.Outfit)
+                        .ThenInclude(o => o.OutfitItems)
+                            .ThenInclude(oi => oi.Item)
+                                .ThenInclude(i => i.ItemSeasons)
+                                    .ThenInclude(ise => ise.Season)
+                    .Include(s => s.Outfit)
+                        .ThenInclude(o => o.OutfitItems)
+                            .ThenInclude(oi => oi.Item)
+                                .ThenInclude(i => i.ItemStyles)
+                                    .ThenInclude(ist => ist.Style)
+                    .Include(s => s.Collection)
+                        .ThenInclude(c => c.User),
+                filter: s => s.UserId == userId &&
+                           (string.IsNullOrEmpty(paginationParameter.Search) ||
+                            (s.Outfit.Name != null && s.Outfit.Name.Contains(paginationParameter.Search)) ||
+                            (s.Outfit.Description != null && s.Outfit.Description.Contains(paginationParameter.Search)) ||
+                            (s.Collection.Title != null && s.Collection.Title.Contains(paginationParameter.Search))),
+                orderBy: q => q.OrderByDescending(s => s.CreatedDate));
+
+            var models = _mapper.Map<Pagination<SaveOutfitFromCollectionDetailedModel>>(savedOutfits);
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.GET_SAVED_OUTFITS_FROM_COLLECTION_SUCCESS,
-                Data = result
+                Data = new ModelPaging
+                {
+                    Data = models,
+                    MetaData = new
+                    {
+                        models.TotalCount,
+                        models.PageSize,
+                        models.CurrentPage,
+                        models.TotalPages,
+                        models.HasNext,
+                        models.HasPrevious
+                    }
+                }
             };
         }
 

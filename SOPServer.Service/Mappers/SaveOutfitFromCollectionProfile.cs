@@ -15,6 +15,12 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.CollectionUserId, opt => opt.MapFrom(src => src.Collection != null ? src.Collection.UserId : null))
                 .ForMember(dest => dest.CollectionUserDisplayName, opt => opt.MapFrom(src => src.Collection != null && src.Collection.User != null ? src.Collection.User.DisplayName : null));
 
+            CreateMap<SaveOutfitFromCollection, SaveOutfitFromCollectionDetailedModel>()
+                .ForMember(dest => dest.Outfit, opt => opt.MapFrom(src => src.Outfit))
+                .ForMember(dest => dest.CollectionTitle, opt => opt.MapFrom(src => src.Collection != null ? src.Collection.Title : null))
+                .ForMember(dest => dest.CollectionUserId, opt => opt.MapFrom(src => src.Collection != null ? src.Collection.UserId : null))
+                .ForMember(dest => dest.CollectionUserDisplayName, opt => opt.MapFrom(src => src.Collection != null && src.Collection.User != null ? src.Collection.User.DisplayName : null));
+
             CreateMap<SaveOutfitFromCollectionCreateModel, SaveOutfitFromCollection>();
         }
     }

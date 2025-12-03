@@ -23,7 +23,6 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
                 .ForMember(dest => dest.UserDisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : "Unknown"))
                 .ForMember(dest => dest.IsFavorite, opt => opt.MapFrom(src => src.IsFavorite))
-                .ForMember(dest => dest.IsSaved, opt => opt.MapFrom(src => src.IsSaved))
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
                 .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
                 .ForMember(dest => dest.Items, opt => opt.MapFrom(src =>
@@ -35,7 +34,6 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
                 .ForMember(dest => dest.UserDisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : "Unknown"))
                 .ForMember(dest => dest.IsFavorite, opt => opt.MapFrom(src => src.IsFavorite))
-                .ForMember(dest => dest.IsSaved, opt => opt.MapFrom(src => src.IsSaved))
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
                 .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description))
                 .ForMember(dest => dest.Items, opt => opt.MapFrom(src =>

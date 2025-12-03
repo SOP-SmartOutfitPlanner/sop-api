@@ -1,8 +1,10 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
+using SOPServer.Service.BusinessModels.ItemModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.SaveItemFromPostModels;
 using SOPServer.Service.Constants;
@@ -158,7 +160,7 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
-        public async Task<BaseResponseModel> GetSavedItemsByUserAsync(long userId)
+        public async Task<BaseResponseModel> GetSavedItemsByUserAsync(long userId, PaginationParameter paginationParameter)
         {
             // Validate user exists
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
@@ -167,14 +169,50 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
             }
 
-            var savedItems = await _unitOfWork.SaveItemFromPostRepository.GetByUserIdAsync(userId);
-            var result = _mapper.Map<List<SaveItemFromPostModel>>(savedItems);
+            var savedItems = await _unitOfWork.SaveItemFromPostRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query
+                    .Include(s => s.Item)
+                        .ThenInclude(i => i.Category)
+                    .Include(s => s.Item)
+                        .ThenInclude(i => i.User)
+                    .Include(s => s.Item)
+                        .ThenInclude(i => i.ItemOccasions)
+                            .ThenInclude(io => io.Occasion)
+                    .Include(s => s.Item)
+                        .ThenInclude(i => i.ItemSeasons)
+                            .ThenInclude(ise => ise.Season)
+                    .Include(s => s.Item)
+                        .ThenInclude(i => i.ItemStyles)
+                            .ThenInclude(ist => ist.Style)
+                    .Include(s => s.Post)
+                        .ThenInclude(p => p.User),
+                filter: s => s.UserId == userId &&
+                           (string.IsNullOrEmpty(paginationParameter.Search) ||
+                            (s.Item.Name != null && s.Item.Name.Contains(paginationParameter.Search)) ||
+                            (s.Item.AiDescription != null && s.Item.AiDescription.Contains(paginationParameter.Search)) ||
+                            (s.Post.Body != null && s.Post.Body.Contains(paginationParameter.Search))),
+                orderBy: q => q.OrderByDescending(s => s.CreatedDate));
+
+            var models = _mapper.Map<Pagination<SaveItemFromPostDetailedModel>>(savedItems);
 
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.GET_SAVED_ITEMS_SUCCESS,
-                Data = result
+                Data = new ModelPaging
+                {
+                    Data = models,
+                    MetaData = new
+                    {
+                        models.TotalCount,
+                        models.PageSize,
+                        models.CurrentPage,
+                        models.TotalPages,
+                        models.HasNext,
+                        models.HasPrevious
+                    }
+                }
             };
         }
 

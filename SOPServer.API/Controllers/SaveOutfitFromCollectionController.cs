@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SOPServer.Repository.Commons;
 using SOPServer.Service.BusinessModels.SaveOutfitFromCollectionModels;
 using SOPServer.Service.Services.Interfaces;
 using System.Threading.Tasks;
@@ -44,14 +45,20 @@ namespace SOPServer.API.Controllers
         }
 
         /// <summary>
-        /// Get all saved outfits from collections for the authenticated user
+        /// Get all saved outfits from collections for the authenticated user with pagination and search
         /// </summary>
+        /// <remarks>
+        /// **Query Parameters:**
+        /// - `page-index`: Page number (default: 1)
+        /// - `page-size`: Items per page (default: 10)
+        /// - `search`: Search in outfit name, description, or collection title (optional)
+        /// </remarks>
         [HttpGet]
-        public Task<IActionResult> GetSavedOutfits()
+        public Task<IActionResult> GetSavedOutfits([FromQuery] PaginationParameter paginationParameter)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;
             return ValidateAndExecute(async () =>
-                await _service.GetSavedOutfitsByUserAsync(long.Parse(userIdClaim)));
+                await _service.GetSavedOutfitsByUserAsync(long.Parse(userIdClaim), paginationParameter));
         }
 
         /// <summary>

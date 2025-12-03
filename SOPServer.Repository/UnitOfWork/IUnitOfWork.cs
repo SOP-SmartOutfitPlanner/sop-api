@@ -48,6 +48,7 @@ namespace SOPServer.Repository.UnitOfWork
         INotificationRepository NotificationRepository { get; }
         IUserNotificationRepository UserNotificationRepository { get; }
         IUserDeviceRepository UserDeviceRepository { get; }
+        IItemWornAtHistoryRepository ItemWornAtHistoryRepository { get; }
         int Save();
         void Commit();
         void Rollback();

@@ -81,6 +81,7 @@ public partial class SOPServerContext : DbContext
     public virtual DbSet<UserSuspension> UserSuspensions { get; set; }
     public virtual DbSet<UserViolation> UserViolations { get; set; }
     public virtual DbSet<ReportReporter> ReportReporters { get; set; }
+    public virtual DbSet<ItemWornAtHistory> ItemWornAtHistories { get; set; }
 
 
     // protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -159,11 +160,6 @@ public partial class SOPServerContext : DbContext
                 .HasDefaultValue(0);
 
             entity.Property(e => e.AIAnalyzeJson)
-                .HasColumnType("nvarchar(max)")
-                .IsUnicode(true)
-                .IsRequired(false);
-
-            entity.Property(e => e.WornAtHistoryJson)
                 .HasColumnType("nvarchar(max)")
                 .IsUnicode(true)
                 .IsRequired(false);

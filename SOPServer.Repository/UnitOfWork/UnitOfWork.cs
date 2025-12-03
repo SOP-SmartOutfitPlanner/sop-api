@@ -54,6 +54,7 @@ namespace SOPServer.Repository.UnitOfWork
         private INotificationRepository _notificationRepository;
         private IUserNotificationRepository _userNotificationRepository;
         private IUserDeviceRepository _userDeviceRepository;
+        private IItemWornAtHistoryRepository _itemWornAtHistoryRepository;
 
         public UnitOfWork(SOPServerContext context)
         {
@@ -370,6 +371,14 @@ namespace SOPServer.Repository.UnitOfWork
             get
             {
                 return _userDeviceRepository ??= new UserDeviceRepository(_context);
+            }
+        }
+
+        public IItemWornAtHistoryRepository ItemWornAtHistoryRepository
+        {
+            get
+            {
+                return _itemWornAtHistoryRepository ??= new ItemWornAtHistoryRepository(_context);
             }
         }
 

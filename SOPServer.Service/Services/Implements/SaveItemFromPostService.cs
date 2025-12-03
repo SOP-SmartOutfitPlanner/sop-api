@@ -42,6 +42,12 @@ namespace SOPServer.Service.Services.Implements
                 throw new NotFoundException(MessageConstants.ITEM_NOT_FOUND);
             }
 
+            // Check if item already belongs to the user
+            if (item.UserId == userId)
+            {
+                throw new BadRequestException(MessageConstants.ITEM_ALREADY_OWNED_BY_USER);
+            }
+
             // Validate post exists
             var post = await _unitOfWork.PostRepository.GetByIdAsync(model.PostId);
             if (post == null)

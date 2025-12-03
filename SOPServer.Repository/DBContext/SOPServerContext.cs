@@ -450,9 +450,6 @@ public partial class SOPServerContext : DbContext
             entity.Property(e => e.IsFavorite)
                 .HasDefaultValue(false);
 
-            entity.Property(e => e.IsSaved)
-                .HasDefaultValue(false);
-
             entity.Property(e => e.CreatedBy)
                 .HasConversion<int>();
 

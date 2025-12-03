@@ -15,6 +15,12 @@ namespace SOPServer.Service.Mappers
                 .ForMember(dest => dest.PostUserId, opt => opt.MapFrom(src => src.Post != null ? src.Post.UserId : null))
                 .ForMember(dest => dest.PostUserDisplayName, opt => opt.MapFrom(src => src.Post != null && src.Post.User != null ? src.Post.User.DisplayName : null));
 
+            CreateMap<SaveOutfitFromPost, SaveOutfitFromPostDetailedModel>()
+                .ForMember(dest => dest.Outfit, opt => opt.MapFrom(src => src.Outfit))
+                .ForMember(dest => dest.PostBody, opt => opt.MapFrom(src => src.Post != null ? src.Post.Body : null))
+                .ForMember(dest => dest.PostUserId, opt => opt.MapFrom(src => src.Post != null ? src.Post.UserId : null))
+                .ForMember(dest => dest.PostUserDisplayName, opt => opt.MapFrom(src => src.Post != null && src.Post.User != null ? src.Post.User.DisplayName : null));
+
             CreateMap<SaveOutfitFromPostCreateModel, SaveOutfitFromPost>();
         }
     }

@@ -18,7 +18,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> GetOutfitByUserPaginationAsync(PaginationParameter paginationParameter,
                                                                long userId,
                                                                bool? isFavorite,
-                                                               bool? isSaved,
                                                                DateTime? startDate,
                                                                DateTime? endDate);
         Task<BaseResponseModel> CreateOutfitAsync(long userId, OutfitCreateModel model);

@@ -1721,7 +1721,7 @@ namespace SOPServer.Service.Services.Implements
         private async Task<string> GetOccasionStringAsync(long? occasionId)
         {
             if (!occasionId.HasValue)
-                return string.Empty;
+                return "Daily home wear";
 
             var occasion = await _unitOfWork.OccasionRepository.GetByIdAsync(occasionId.Value);
             if (occasion == null)

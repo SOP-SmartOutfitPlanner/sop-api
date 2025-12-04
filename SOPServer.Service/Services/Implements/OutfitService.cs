@@ -1585,7 +1585,9 @@ namespace SOPServer.Service.Services.Implements
         {
             // Fetch items matching the selected Season/Occasion/Style IDs from user's wardrobe
             // Exclude duplicate items across categories to get unique items per category
-            // The repository now handles gapDay filtering to exclude recently worn items based on targetDate
+            // Also exclude items worn within gapDay from targetDate
+            // if not have 15 items per method, we will find item with item type == system to fill
+            // item with type == system will not be counted in gap day logic
             var itemFetchStopwatch = Stopwatch.StartNew();
 
             var seasonItems = await _unitOfWork.ItemRepository.GetItemsBySeasonIdsAsync(

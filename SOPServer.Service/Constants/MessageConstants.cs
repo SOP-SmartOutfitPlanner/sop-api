@@ -152,6 +152,7 @@ namespace SOPServer.Service.Constants
         public const string OUTFIT_MASS_CREATE_PARTIAL = "Some outfits created with failures";
         public const string OUTFIT_MASS_CREATE_FAILED = "All outfit creations failed";
         public const string OUTFIT_LINKED_TO_OCCASION = "Cannot update outfit because it is linked to an active occasion";
+        public const string OUTFIT_LINKED_TO_OCCASION_DELETE = "Cannot delete outfit because it is linked to an active occasion";
 
         // Reset Password related messages
         public const string RESET_PASSWORD_REQUEST_SENT = "If the email exists, a password reset OTP has been sent";

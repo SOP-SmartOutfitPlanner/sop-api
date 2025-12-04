@@ -633,7 +633,15 @@ namespace SOPServer.Service.Services.Implements
             {
                 throw new ForbiddenException(MessageConstants.OUTFIT_ACCESS_DENIED);
             }
+            var linkedOccasion = await _unitOfWork.OutfitUsageHistoryRepository.GetQueryable()
+                .Include(ouh => ouh.UserOccasion)
+                .Where(ouh => ouh.OutfitId == id && !ouh.IsDeleted && ouh.UserOccasion != null && !ouh.UserOccasion.IsDeleted)
+                .FirstOrDefaultAsync();
 
+            if (linkedOccasion != null)
+            {
+                throw new BadRequestException(MessageConstants.OUTFIT_LINKED_TO_OCCASION);
+            }
             _unitOfWork.OutfitRepository.SoftDeleteAsync(outfit);
             await _unitOfWork.SaveAsync();
 

@@ -502,6 +502,17 @@ namespace SOPServer.Service.Services.Implements
                 throw new ForbiddenException(MessageConstants.OUTFIT_ACCESS_DENIED);
             }
 
+            // Check if the outfit is linked to a non-deleted occasion
+            var linkedOccasion = await _unitOfWork.OutfitUsageHistoryRepository.GetQueryable()
+                .Include(ouh => ouh.UserOccasion)
+                .Where(ouh => ouh.OutfitId == id && !ouh.IsDeleted && ouh.UserOccasion != null && !ouh.UserOccasion.IsDeleted)
+                .FirstOrDefaultAsync();
+
+            if (linkedOccasion != null)
+            {
+                throw new BadRequestException(MessageConstants.OUTFIT_LINKED_TO_OCCASION);
+            }
+
             outfit.Name = model.Name;
             outfit.Description = model.Description;
 
@@ -523,7 +534,7 @@ namespace SOPServer.Service.Services.Implements
                         }
 
                         // Validate that the item belongs to the user
-                        if (item.UserId != userId)
+                        if (item.ItemType != ItemType.SYSTEM && item.UserId != userId)
                         {
                             throw new ForbiddenException($"Item with ID {itemId} does not belong to you. You can only use your own items in outfits.");
                         }
@@ -622,7 +633,15 @@ namespace SOPServer.Service.Services.Implements
             {
                 throw new ForbiddenException(MessageConstants.OUTFIT_ACCESS_DENIED);
             }
+            var linkedOccasion = await _unitOfWork.OutfitUsageHistoryRepository.GetQueryable()
+                .Include(ouh => ouh.UserOccasion)
+                .Where(ouh => ouh.OutfitId == id && !ouh.IsDeleted && ouh.UserOccasion != null && !ouh.UserOccasion.IsDeleted)
+                .FirstOrDefaultAsync();
 
+            if (linkedOccasion != null)
+            {
+                throw new BadRequestException(MessageConstants.OUTFIT_LINKED_TO_OCCASION);
+            }
             _unitOfWork.OutfitRepository.SoftDeleteAsync(outfit);
             await _unitOfWork.SaveAsync();
 
@@ -1158,7 +1177,7 @@ namespace SOPServer.Service.Services.Implements
 
                         // Update last worn at
                         item.LastWornAt = wornAtDateTime;
-                        
+
                         // Add to ItemWornAtHistory table
                         var wornAtHistory = new ItemWornAtHistory
                         {
@@ -1166,7 +1185,7 @@ namespace SOPServer.Service.Services.Implements
                             WornAt = wornAtDateTime
                         };
                         await _unitOfWork.ItemWornAtHistoryRepository.AddAsync(wornAtHistory);
-                        
+
                         // Update the item
                         _unitOfWork.ItemRepository.UpdateAsync(item);
                     }
@@ -1327,17 +1346,17 @@ namespace SOPServer.Service.Services.Implements
                                 {
                                     item.UsageCount--;
                                 }
-                                
+
                                 // Find and remove the specific worn at history entry
                                 var wornAtHistoryToRemove = await _unitOfWork.ItemWornAtHistoryRepository
                                     .GetQueryable()
                                     .FirstOrDefaultAsync(w => w.ItemId == item.Id && w.WornAt == oldWornAtDateTime.Value);
-                                
+
                                 if (wornAtHistoryToRemove != null)
                                 {
                                     _unitOfWork.ItemWornAtHistoryRepository.SoftDeleteAsync(wornAtHistoryToRemove);
                                 }
-                                
+
                                 // Update LastWornAt to the most recent date from history, or null if no history
                                 var latestWornAt = await _unitOfWork.ItemWornAtHistoryRepository
                                     .GetQueryable()
@@ -1345,9 +1364,9 @@ namespace SOPServer.Service.Services.Implements
                                     .OrderByDescending(w => w.WornAt)
                                     .Select(w => (DateTime?)w.WornAt)
                                     .FirstOrDefaultAsync();
-                                
+
                                 item.LastWornAt = latestWornAt;
-                                
+
                                 _unitOfWork.ItemRepository.UpdateAsync(item);
                             }
                         }
@@ -1374,7 +1393,7 @@ namespace SOPServer.Service.Services.Implements
 
                                 // Update last worn at
                                 item.LastWornAt = newWornAtDateTime.Value;
-                                
+
                                 // Add to ItemWornAtHistory table
                                 var wornAtHistory = new ItemWornAtHistory
                                 {
@@ -1382,7 +1401,7 @@ namespace SOPServer.Service.Services.Implements
                                     WornAt = newWornAtDateTime.Value
                                 };
                                 await _unitOfWork.ItemWornAtHistoryRepository.AddAsync(wornAtHistory);
-                                
+
                                 _unitOfWork.ItemRepository.UpdateAsync(item);
                             }
                         }
@@ -1445,17 +1464,17 @@ namespace SOPServer.Service.Services.Implements
                             {
                                 item.UsageCount--;
                             }
-                            
+
                             // Find and remove the specific worn at history entry
                             var wornAtHistoryToRemove = await _unitOfWork.ItemWornAtHistoryRepository
                                 .GetQueryable()
                                 .FirstOrDefaultAsync(w => w.ItemId == item.Id && w.WornAt == wornAtDateTime.Value);
-                            
+
                             if (wornAtHistoryToRemove != null)
                             {
                                 _unitOfWork.ItemWornAtHistoryRepository.SoftDeleteAsync(wornAtHistoryToRemove);
                             }
-                            
+
                             // Update LastWornAt to the most recent date from history, or null if no history
                             var latestWornAt = await _unitOfWork.ItemWornAtHistoryRepository
                                 .GetQueryable()
@@ -1463,9 +1482,9 @@ namespace SOPServer.Service.Services.Implements
                                 .OrderByDescending(w => w.WornAt)
                                 .Select(w => (DateTime?)w.WornAt)
                                 .FirstOrDefaultAsync();
-                            
+
                             item.LastWornAt = latestWornAt;
-                            
+
                             _unitOfWork.ItemRepository.UpdateAsync(item);
                         }
                     }
@@ -1572,9 +1591,9 @@ namespace SOPServer.Service.Services.Implements
             var itemFetchStopwatch = Stopwatch.StartNew();
 
             var seasonItems = await _unitOfWork.ItemRepository.GetItemsBySeasonIdsAsync(
-                selectedSeasonIds ?? new List<long>(), 
-                new List<long>(), 
-                userId, 
+                selectedSeasonIds ?? new List<long>(),
+                new List<long>(),
+                userId,
                 gapDay,
                 targetDate);
             var seasonItemIds = seasonItems.Select(i => i.Id).ToList();
@@ -1625,7 +1644,7 @@ namespace SOPServer.Service.Services.Implements
             {
                 var remainingCount = totalOutfits - uniqueOutfits.Count;
                 var outfitTasks = new List<Task<OutfitSelectionModel>>();
-                
+
                 for (int i = 0; i < remainingCount; i++)
                 {
                     var task = _geminiService.ChooseOutfitV2(
@@ -1647,12 +1666,12 @@ namespace SOPServer.Service.Services.Implements
                     {
                         // Create a sorted, comma-separated string of item IDs as the combination key
                         var combinationKey = string.Join(",", outfit.ItemIds.OrderBy(id => id));
-                        
+
                         // Only add if this combination hasn't been seen before
                         if (seenItemCombinations.Add(combinationKey))
                         {
                             uniqueOutfits.Add(outfit);
-                            
+
                             if (uniqueOutfits.Count >= totalOutfits)
                             {
                                 break;

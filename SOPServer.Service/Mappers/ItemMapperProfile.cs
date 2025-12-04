@@ -68,6 +68,14 @@ namespace SOPServer.Service.Mappers
 
             CreateMap<ItemModelAI, ItemSummaryModel>();
             CreateMap<ItemChooseModel, Item>().ReverseMap();
+
+            // ItemWornAtHistory mappings
+            CreateMap<ItemWornAtHistory, ItemWornAtHistoryModel>()
+                .ForMember(dest => dest.ItemName, opt => opt.MapFrom(src => src.Item != null ? src.Item.Name : null))
+                .ForMember(dest => dest.ItemImgUrl, opt => opt.MapFrom(src => src.Item != null ? src.Item.ImgUrl : null));
+
+            CreateMap<Pagination<ItemWornAtHistory>, Pagination<ItemWornAtHistoryModel>>()
+                .ConvertUsing<PaginationConverter<ItemWornAtHistory, ItemWornAtHistoryModel>>();
         }
     }
 }

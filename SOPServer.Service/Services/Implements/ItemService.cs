@@ -1327,5 +1327,39 @@ namespace SOPServer.Service.Services.Implements
                 Data = imageUrls
             };
         }
+
+        public async Task<BaseResponseModel> GetItemWornAtHistoryAsync(long itemId, PaginationParameter paginationParameter)
+        {
+            var item = await _unitOfWork.ItemRepository.GetByIdAsync(itemId);
+            if (item == null)
+                throw new NotFoundException(MessageConstants.ITEM_NOT_EXISTED);
+
+            var history = await _unitOfWork.ItemWornAtHistoryRepository.ToPaginationIncludeAsync(
+                paginationParameter,
+                include: query => query.Include(x => x.Item),
+                filter: x => x.ItemId == itemId && !x.IsDeleted,
+                orderBy: x => x.OrderByDescending(x => x.WornAt));
+
+            var historyModels = _mapper.Map<Pagination<ItemWornAtHistoryModel>>(history);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.GET_ITEM_WORN_AT_HISTORY_SUCCESS,
+                Data = new ModelPaging
+                {
+                    Data = historyModels,
+                    MetaData = new
+                    {
+                        historyModels.TotalCount,
+                        historyModels.PageSize,
+                        historyModels.CurrentPage,
+                        historyModels.TotalPages,
+                        historyModels.HasNext,
+                        historyModels.HasPrevious
+                    }
+                }
+            };
+        }
     }
 }

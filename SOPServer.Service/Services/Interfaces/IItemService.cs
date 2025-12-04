@@ -28,5 +28,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> AnalysisItem(ItemModelRequest request);
         Task<BaseResponseModel> GetUserStats(long userId);
         Task<BaseResponseModel> SplitItem(IFormFile file);
+        Task<BaseResponseModel> GetItemWornAtHistoryAsync(long itemId, PaginationParameter paginationParameter);
     }
 }

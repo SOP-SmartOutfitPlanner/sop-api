@@ -109,5 +109,14 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _itemService.SplitItem(file));
         }
+
+        /// <summary>
+        /// Get worn at history for an item with pagination
+        /// </summary>
+        [HttpGet("{itemId}/worn-at-history")]
+        public Task<IActionResult> GetItemWornAtHistory(long itemId, [FromQuery] PaginationParameter paginationParameter)
+        {
+            return ValidateAndExecute(async () => await _itemService.GetItemWornAtHistoryAsync(itemId, paginationParameter));
+        }
     }
 }

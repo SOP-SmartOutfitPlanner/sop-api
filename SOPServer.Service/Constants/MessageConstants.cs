@@ -29,6 +29,7 @@ namespace SOPServer.Service.Constants
         public const string ITEM_ALREADY_EXISTS = "Item already exists";
         public const string ITEM_UPDATE_SUCCESS = "Item updated successfully";
         public const string ITEM_GET_SUCCESS = "Get item successfully";
+        public const string GET_ITEM_WORN_AT_HISTORY_SUCCESS = "Get item worn at history successfully";
 
         public const string GET_USER_BY_EMAIL_SUCCESS = "Get user by email successfully";
         public const string USER_NOT_EXIST = "User is not exist";

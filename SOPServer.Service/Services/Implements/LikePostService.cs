@@ -8,6 +8,7 @@ using SOPServer.Service.BusinessModels.LikePostModels;
 using SOPServer.Service.BusinessModels.NotificationModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
+using SOPServer.Service.Exceptions;
 using SOPServer.Service.Services.Interfaces;
 
 namespace SOPServer.Service.Services.Implements
@@ -33,6 +34,17 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> CreateLikePost(CreateLikePostModel model)
         {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(model.UserId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+            var post = await _unitOfWork.PostRepository.GetByIdAsync(model.PostId);
+            if (post == null)
+            {
+                throw new NotFoundException(MessageConstants.POST_NOT_FOUND);
+            }
+
             var likeExists = await _unitOfWork.LikePostRepository.GetByUserAndPost(model.UserId, model.PostId);
 
             LikePost likePost;

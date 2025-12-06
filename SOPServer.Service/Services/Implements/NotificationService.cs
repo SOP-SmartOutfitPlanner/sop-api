@@ -125,6 +125,69 @@ namespace SOPServer.Service.Services.Implements
             };
         }
 
+        public async Task<BaseResponseModel> PushSystemNotificationToUserAsync(long userId, NotificationRequestModel model)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            var notification = _mapper.Map<Notification>(model);
+            notification.Type = NotificationType.SYSTEM;
+            notification.ActorUserId = null;
+
+            await _unitOfWork.NotificationRepository.AddAsync(notification);
+            await _unitOfWork.SaveAsync();
+
+            var userNotification = new UserNotification
+            {
+                NotificationId = notification.Id,
+                UserId = userId,
+                IsRead = false
+            };
+
+            await _unitOfWork.UserNotificationRepository.AddAsync(userNotification);
+            await _unitOfWork.SaveAsync();
+
+            // Send push notification to user devices
+            var userDevices = await _unitOfWork.UserDeviceRepository.GetUserDeviceByUserId(userId);
+
+            if (!userDevices.Any())
+            {
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = MessageConstants.PUSH_NOTIFICATION_USER_SUCCESS,
+                    Data = new { Warning = MessageConstants.USER_DEVICE_NOT_FOUND }
+                };
+            }
+
+            // Collect tokens and send via batch method
+            var tokens = userDevices.Select(d => d.DeviceToken).Distinct().ToList();
+
+            try
+            {
+                var tokensNotValid = await FirebaseLibrary.SendRangeMessageFireBase(model.Title, model.Message, tokens);
+
+                // Remove invalid tokens
+                if (tokensNotValid.Any())
+                {
+                    await RemoveTokenNotValid(tokensNotValid);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending Firebase system notification to user {UserId}", userId);
+            }
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.PUSH_NOTIFICATION_USER_SUCCESS
+            };
+        }
+
         public async Task<BaseResponseModel> GetNotificationsByUserId(PaginationParameter paginationParameter, long userId, int? type, bool? isRead)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);

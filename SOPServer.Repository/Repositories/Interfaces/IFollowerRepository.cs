@@ -11,5 +11,6 @@ namespace SOPServer.Repository.Repositories.Interfaces
         Task<int> GetFollowerCount(long userId);
         Task<int> GetFollowingCount(long userId);
         Task<bool> IsFollowing(long followerId, long followingId);
+        Task<List<long>> GetFollowerUserIds(long userId);
     }
 }

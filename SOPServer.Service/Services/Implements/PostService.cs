@@ -1,11 +1,13 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.FirebaseModels;
+using SOPServer.Service.BusinessModels.NotificationModels;
 using SOPServer.Service.BusinessModels.PostModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
@@ -24,6 +26,8 @@ namespace SOPServer.Service.Services.Implements
         private readonly IRedisService _redisService;
         private readonly IMinioService _minioService;
         private readonly ContentVisibilityHelper _visibilityHelper;
+        private readonly INotificationService _notificationService;
+        private readonly ILogger<PostService> _logger;
 
         public PostService(
             IUnitOfWork unitOfWork,
@@ -31,7 +35,9 @@ namespace SOPServer.Service.Services.Implements
             IOptions<NewsfeedSettings> newsfeedSettings,
             IRedisService redisService,
             IMinioService minioService,
-            ContentVisibilityHelper visibilityHelper)
+            ContentVisibilityHelper visibilityHelper,
+            INotificationService notificationService,
+            ILogger<PostService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -39,6 +45,8 @@ namespace SOPServer.Service.Services.Implements
             _redisService = redisService;
             _minioService = minioService;
             _visibilityHelper = visibilityHelper;
+            _notificationService = notificationService;
+            _logger = logger;
         }
 
         public async Task<BaseResponseModel> CreatePostAsync(PostCreateModel model)
@@ -79,12 +87,75 @@ namespace SOPServer.Service.Services.Implements
             var createdPost = await GetPostWithRelationsAsync(newPost.Id);
             var postModel = _mapper.Map<PostModel>(createdPost);
 
+            // Notify followers about the new post
+            await NotifyFollowersAboutNewPostAsync(model.UserId, newPost.Id, postModel.UserDisplayName, model.Body);
+
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.POST_CREATE_SUCCESS,
                 Data = postModel
             };
+        }
+
+        private async Task NotifyFollowersAboutNewPostAsync(long authorId, long postId, string? authorDisplayName, string? postBody)
+        {
+            try
+            {
+                var followerIds = await _unitOfWork.FollowerRepository.GetFollowerUserIds(authorId);
+                if (followerIds == null || !followerIds.Any())
+                {
+                    return;
+                }
+
+                var author = await _unitOfWork.UserRepository.GetByIdAsync(authorId);
+                var displayName = authorDisplayName ?? author?.DisplayName ?? "Someone you follow";
+                var truncatedBody = TruncatePostBody(postBody, 100);
+                var message = string.IsNullOrWhiteSpace(truncatedBody)
+                    ? $"<b>{displayName}</b> has created a new post"
+                    : $"<b>{displayName}</b>: {truncatedBody}";
+
+                var notificationModel = new NotificationRequestModel
+                {
+                    Title = "New Post",
+                    Message = message,
+                    Href = $"/posts/{postId}",
+                    ImageUrl = author?.AvtUrl,
+                    ActorUserId = authorId
+                };
+
+                foreach (var followerId in followerIds)
+                {
+                    try
+                    {
+                        await _notificationService.PushNotificationByUserId(followerId, notificationModel);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send new post notification to follower {FollowerId}", followerId);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to notify followers about new post {PostId}", postId);
+            }
+        }
+
+        private static string? TruncatePostBody(string? body, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                return null;
+            }
+
+            var trimmed = body.Trim();
+            if (trimmed.Length <= maxLength)
+            {
+                return trimmed;
+            }
+
+            return trimmed.Substring(0, maxLength) + "...";
         }
 
         public async Task<BaseResponseModel> UpdatePostAsync(long postId, PostUpdateModel model)

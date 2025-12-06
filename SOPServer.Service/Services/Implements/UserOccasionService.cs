@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
+using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.UserOccasionModels;
@@ -270,6 +271,53 @@ namespace SOPServer.Service.Services.Implements
                 throw new ForbiddenException(MessageConstants.USER_OCCASION_ACCESS_DENIED);
             }
 
+            // Get all outfit usage history records for this occasion
+            var outfitUsageHistories = await _unitOfWork.OutfitUsageHistoryRepository.GetQueryable()
+                .Include(ouh => ouh.Outfit)
+                    .ThenInclude(o => o.OutfitItems)
+                .Where(ouh => ouh.UserOccassionId == id && !ouh.IsDeleted)
+                .ToListAsync();
+
+            // Get the worn at time for usage tracking
+            DateTime? wornAtDateTime = userOccasion.StartTime ?? userOccasion.DateOccasion;
+
+            // Collect all unique items from all outfits
+            var allItemsToUpdate = new HashSet<long>();
+            foreach (var usageHistory in outfitUsageHistories)
+            {
+                if (usageHistory.Outfit?.OutfitItems != null)
+                {
+                    foreach (var outfitItem in usageHistory.Outfit.OutfitItems.Where(oi => oi.ItemId.HasValue && !oi.IsDeleted))
+                    {
+                        allItemsToUpdate.Add(outfitItem.ItemId.Value);
+                    }
+                }
+            }
+
+            // Check if we should run in background (threshold: more than 50 items)
+            const int backgroundThreshold = 50;
+            if (allItemsToUpdate.Count > backgroundThreshold)
+            {
+                // Fire and forget - run in background
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await UpdateItemUsageTrackingAsync(allItemsToUpdate, wornAtDateTime.Value);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error but don't throw (fire and forget)
+                        Console.WriteLine($"[ERROR] Background item usage update failed: {ex.Message}");
+                    }
+                });
+            }
+            else
+            {
+                // Run synchronously for small number of items
+                await UpdateItemUsageTrackingAsync(allItemsToUpdate, wornAtDateTime.Value);
+            }
+
             _unitOfWork.UserOccasionRepository.SoftDeleteAsync(userOccasion);
             await _unitOfWork.SaveAsync();
 
@@ -278,6 +326,45 @@ namespace SOPServer.Service.Services.Implements
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.USER_OCCASION_DELETE_SUCCESS
             };
+        }
+
+        private async Task UpdateItemUsageTrackingAsync(HashSet<long> itemIds, DateTime wornAtDateTime)
+        {
+            foreach (var itemId in itemIds)
+            {
+                var item = await _unitOfWork.ItemRepository.GetByIdAsync(itemId);
+                if (item != null && item.ItemType != ItemType.SYSTEM)
+                {
+                    // Decrement usage count
+                    if (item.UsageCount > 0)
+                    {
+                        item.UsageCount--;
+                    }
+
+                    // Find and remove the specific worn at history entry
+                    var wornAtHistoryToRemove = await _unitOfWork.ItemWornAtHistoryRepository
+                        .GetQueryable()
+                        .FirstOrDefaultAsync(w => w.ItemId == item.Id && w.WornAt == wornAtDateTime && !w.IsDeleted);
+
+                    if (wornAtHistoryToRemove != null)
+                    {
+                        _unitOfWork.ItemWornAtHistoryRepository.SoftDeleteAsync(wornAtHistoryToRemove);
+                    }
+
+                    // Update LastWornAt to the most recent date from history, or null if no history
+                    var latestWornAt = await _unitOfWork.ItemWornAtHistoryRepository
+                        .GetQueryable()
+                        .Where(w => w.ItemId == item.Id && !w.IsDeleted)
+                        .OrderByDescending(w => w.WornAt)
+                        .Select(w => (DateTime?)w.WornAt)
+                        .FirstOrDefaultAsync();
+
+                    item.LastWornAt = latestWornAt;
+
+                    _unitOfWork.ItemRepository.UpdateAsync(item);
+                }
+            }
+            await _unitOfWork.SaveAsync();
         }
     }
 }

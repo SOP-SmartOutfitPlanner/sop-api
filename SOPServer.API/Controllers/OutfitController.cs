@@ -58,18 +58,32 @@ namespace SOPServer.API.Controllers
         /// - `page-size`: Items per page (default: 10)
         /// - `search`: Search in name or description (optional)
         /// - `is-favorite`: Filter by favorite status (optional)
-        /// - `is-saved`: Filter by saved status (optional)
+        /// - `start-date`: Filter by creation start date (optional)
+        /// - `end-date`: Filter by creation end date (optional)
+        /// - `target-date`: The reference date for gap day calculation (optional, defaults to today)
+        /// - `gap-day`: Number of days to exclude items worn within this range (optional). 
+        ///   For example, if target-date is 2024-12-05 and gap-day is 2, items worn between 2024-12-03 and 2024-12-05 will be excluded.
+        ///   Outfits containing any excluded items will not appear in results.
+        /// 
+        /// **Example:** 
+        /// - Today you want to see outfits to wear (2024-12-05) with gap-day=2
+        /// - Calculates range: 2024-12-05 - 2 = 2024-12-03
+        /// - Excludes outfits containing items worn between 2024-12-03 to 2024-12-05
+        /// - This promotes outfit variety by avoiding recently worn items
         /// </remarks>
         [HttpGet("user")]
         public Task<IActionResult> GetOutfitsByUser(
             [FromQuery] PaginationParameter paginationParameter,
             [FromQuery(Name = "is-favorite")] bool? isFavorite,
             [FromQuery(Name = "start-date")] DateTime? startDate,
-            [FromQuery(Name = "end-date")] DateTime? endDate)
+            [FromQuery(Name = "end-date")] DateTime? endDate,
+            [FromQuery(Name = "target-date")] DateTime? targetDate,
+            [FromQuery(Name = "gap-day")] int? gapDay)
         {
             var userIdClaim = User.FindFirst("UserId")?.Value;
             long.TryParse(userIdClaim, out long userId);
-            return ValidateAndExecute(async () => await _outfitService.GetOutfitByUserPaginationAsync(paginationParameter, userId, isFavorite, startDate, endDate));
+            return ValidateAndExecute(async () => await _outfitService.GetOutfitByUserPaginationAsync(
+                paginationParameter, userId, isFavorite, startDate, endDate, targetDate, gapDay));
         }
 
         /// <summary>
@@ -254,6 +268,52 @@ namespace SOPServer.API.Controllers
             var userIdClaim = User.FindFirst("UserId")?.Value;
             long.TryParse(userIdClaim, out long userId);
             return ValidateAndExecute(async () => await _outfitService.ToggleOutfitSaveAsync(id, userId));
+        }
+
+        /// <summary>
+        /// Check if an outfit is within gap day range and get affected items
+        /// </summary>
+        /// <remarks>
+        /// **Roles:** USER, STYLIST, ADMIN
+        ///
+        /// **Query Parameters:**
+        /// - `target-date`: The reference date for gap day calculation (optional, defaults to today)
+        /// - `gap-day`: Number of days to check for recently worn items (required)
+        ///
+        /// **Response:**
+        /// - `outfitId`: The outfit ID being checked
+        /// - `isWithinGapDay`: Boolean indicating if any items in the outfit were worn within the gap day range
+        /// - `gapDayRange`: Object containing the calculated date range (startDate, endDate, targetDate, gapDays)
+        /// - `affectedItems`: Array of items that were worn within the gap day range, including:
+        ///   - `itemId`: Item ID
+        ///   - `itemName`: Item name
+        ///   - `itemImageUrl`: Item image URL
+        ///   - `categoryName`: Item category
+        ///   - `lastWornAt`: Last worn date within the range
+        ///   - `wornDatesInRange`: All dates the item was worn within the range
+        ///   - `timesWornInRange`: Number of times worn within the range
+        /// - `totalAffectedItems`: Count of affected items
+        /// - `message`: Descriptive message about the gap day check result
+        ///
+        /// **Use Case:**
+        /// This endpoint helps users understand why certain outfits don't appear in suggestions
+        /// when gap-day filtering is applied. It shows which specific items in the outfit
+        /// were recently worn and when.
+        ///
+        /// **Example:**
+        /// - Check if outfit 123 is affected by a 3-day gap on 2024-12-06:
+        ///   GET /api/v1/outfits/123/check-gap-day?target-date=2024-12-06&amp;gap-day=3
+        /// - This checks if any items were worn between 2024-12-03 and 2024-12-06
+        /// </remarks>
+        [HttpGet("{id}/check-gap-day")]
+        public Task<IActionResult> CheckOutfitGapDay(
+            long id,
+            [FromQuery(Name = "target-date")] DateTime? targetDate,
+            [FromQuery(Name = "gap-day")] int gapDay)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+            return ValidateAndExecute(async () => await _outfitService.CheckOutfitGapDayAsync(id, userId, targetDate, gapDay));
         }
 
 

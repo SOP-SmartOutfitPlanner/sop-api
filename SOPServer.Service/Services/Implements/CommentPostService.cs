@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.CommentPostModels;
+using SOPServer.Service.BusinessModels.NotificationModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
@@ -18,12 +20,21 @@ namespace SOPServer.Service.Services.Implements
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ContentVisibilityHelper _visibilityHelper;
+        private readonly INotificationService _notificationService;
+        private readonly ILogger<CommentPostService> _logger;
 
-        public CommentPostService(IUnitOfWork unitOfWork, IMapper mapper, ContentVisibilityHelper visibilityHelper)
+        public CommentPostService(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            ContentVisibilityHelper visibilityHelper,
+            INotificationService notificationService,
+            ILogger<CommentPostService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _visibilityHelper = visibilityHelper;
+            _notificationService = notificationService;
+            _logger = logger;
         }
 
         public async Task<BaseResponseModel> CreateNewComment(CreateCommentPostModel model)
@@ -54,12 +65,76 @@ namespace SOPServer.Service.Services.Implements
             var commentPost = _mapper.Map<CommentPost>(model);
             await _unitOfWork.CommentPostRepository.AddAsync(commentPost);
             await _unitOfWork.SaveAsync();
+
+            // Send notification to post owner
+            await NotifyPostOwnerAboutCommentAsync(model.PostId, model.UserId, model.Comment);
+
             return new BaseResponseModel
             {
                 StatusCode = StatusCodes.Status201Created,
                 Message = MessageConstants.COMMENT_CREATE_SUCCESS,
                 Data = _mapper.Map<CommentPostModel>(commentPost)
             };
+        }
+
+        private async Task NotifyPostOwnerAboutCommentAsync(long postId, long commenterId, string? commentText)
+        {
+            try
+            {
+                var post = await _unitOfWork.PostRepository.GetByIdIncludeAsync(
+                    postId,
+                    include: query => query.Include(p => p.User));
+
+                if (post?.UserId == null || post.UserId == commenterId)
+                {
+                    // Don't notify if no post owner or if commenter is the post owner
+                    return;
+                }
+
+                var commenter = await _unitOfWork.UserRepository.GetByIdAsync(commenterId);
+                var commenterName = commenter?.DisplayName ?? "Someone";
+                var truncatedPostContent = TruncateText(post.Body, 30);
+                var truncatedComment = TruncateText(commentText, 100);
+
+                var title = string.IsNullOrWhiteSpace(truncatedPostContent)
+                    ? "New comment on your post"
+                    : $"New comment on post: {truncatedPostContent}";
+
+                var message = string.IsNullOrWhiteSpace(truncatedComment)
+                    ? $"<b>{commenterName}</b> commented on your post"
+                    : $"<b>{commenterName}</b> commented: {truncatedComment}";
+
+                var notificationModel = new NotificationRequestModel
+                {
+                    Title = title,
+                    Message = message,
+                    Href = $"/posts/{postId}",
+                    ImageUrl = commenter?.AvtUrl,
+                    ActorUserId = commenterId
+                };
+
+                await _notificationService.PushNotificationByUserId(post.UserId.Value, notificationModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send comment notification for post {PostId}", postId);
+            }
+        }
+
+        private static string? TruncateText(string? text, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return null;
+            }
+
+            var trimmed = text.Trim();
+            if (trimmed.Length <= maxLength)
+            {
+                return trimmed;
+            }
+
+            return trimmed.Substring(0, maxLength) + "...";
         }
 
         public async Task<BaseResponseModel> UpdateCommentPost(long id, UpdateCommentPostModel model)

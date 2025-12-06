@@ -187,7 +187,9 @@ namespace SOPServer.Service.Services.Implements
                                                                             long userId,
                                                                             bool? isFavorite,
                                                                             DateTime? startDate,
-                                                                            DateTime? endDate)
+                                                                            DateTime? endDate,
+                                                                            DateTime? targetDate,
+                                                                            int? gapDay)
         {
             var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
             if (user == null)
@@ -222,6 +224,66 @@ namespace SOPServer.Service.Services.Implements
                            (!startDate.HasValue || x.CreatedDate >= startDate.Value) &&
                            (!endDate.HasValue || x.CreatedDate <= endDate.Value),
                 orderBy: x => x.OrderByDescending(x => x.CreatedDate));
+
+            // Apply gap day filtering if provided
+            // Goal: Keep ONLY outfits where NO items were worn in the gap day range
+            if (gapDay.HasValue && gapDay.Value > 0)
+            {
+                var referenceDate = targetDate?.Date ?? DateTime.Today;
+                // Calculate gap day range: from (targetDate - gapDay) to targetDate
+                var gapStartDate = referenceDate.AddDays(-gapDay.Value);
+                var gapEndDate = referenceDate;
+
+                Console.WriteLine($"[GAP DAY DEBUG] Reference Date: {referenceDate:yyyy-MM-dd}");
+                Console.WriteLine($"[GAP DAY DEBUG] Gap Range: {gapStartDate:yyyy-MM-dd} to {gapEndDate:yyyy-MM-dd}");
+
+                // Get all item IDs that were worn within the gap day range
+                var wornItemIds = await _unitOfWork.ItemWornAtHistoryRepository
+                    .GetQueryable()
+                    .Where(w => !w.IsDeleted &&
+                               w.WornAt.Date >= gapStartDate &&
+                               w.WornAt.Date <= gapEndDate)
+                    .Select(w => w.ItemId)
+                    .Distinct()
+                    .ToListAsync();
+
+                Console.WriteLine($"[GAP DAY DEBUG] Worn Item IDs Count: {wornItemIds.Count}");
+                Console.WriteLine($"[GAP DAY DEBUG] Worn Item IDs: [{string.Join(", ", wornItemIds)}]");
+                Console.WriteLine($"[GAP DAY DEBUG] Total Outfits Before Filter: {outfits.Count}");
+
+                // Filter outfits: KEEP only outfits where NO user items were worn in gap day range
+                // Exclude outfits that have ANY item that was worn
+                if (wornItemIds.Any())
+                {
+                    var filteredOutfits = outfits
+                        .Where(outfit => !outfit.OutfitItems.Any(oi =>
+                            oi.ItemId.HasValue &&
+                            !oi.IsDeleted &&
+                            oi.Item != null &&
+                            oi.Item.ItemType != ItemType.SYSTEM &&  // Only check user items
+                            wornItemIds.Contains(oi.ItemId.Value)))  // Exclude if item was worn
+                        .ToList();
+
+                    Console.WriteLine($"[GAP DAY DEBUG] Filtered Outfits Count: {filteredOutfits.Count}");
+
+                    // Recalculate pagination with filtered results
+                    var totalCount = filteredOutfits.Count;
+                    var pagedOutfits = filteredOutfits
+                        .Skip((paginationParameter.PageIndex - 1) * paginationParameter.PageSize)
+                        .Take(paginationParameter.PageSize)
+                        .ToList();
+
+                    outfits = new Pagination<Outfit>(
+                        pagedOutfits,
+                        totalCount,
+                        paginationParameter.PageIndex,
+                        paginationParameter.PageSize);
+                }
+                else
+                {
+                    Console.WriteLine($"[GAP DAY DEBUG] No worn items found - keeping all outfits");
+                }
+            }
 
             var outfitModels = _mapper.Map<Pagination<OutfitModel>>(outfits);
             return new BaseResponseModel
@@ -700,6 +762,115 @@ namespace SOPServer.Service.Services.Implements
         }
 
         // ========== SAVED OUTFITS ==========
+
+        public async Task<BaseResponseModel> CheckOutfitGapDayAsync(long outfitId, long userId, DateTime? targetDate, int gapDay)
+        {
+            // Validate outfit exists and belongs to user
+            var outfit = await _unitOfWork.OutfitRepository.GetByIdIncludeAsync(
+                outfitId,
+                include: query => query
+                    .Include(o => o.OutfitItems)
+                        .ThenInclude(oi => oi.Item));
+
+            if (outfit == null)
+            {
+                throw new NotFoundException(MessageConstants.OUTFIT_NOT_FOUND);
+            }
+
+            var referenceDate = targetDate?.Date ?? DateTime.Today;
+            var gapStartDate = referenceDate.AddDays(-gapDay);
+            var gapEndDate = referenceDate;
+
+            // Get all items in the outfit (excluding system items)
+            var outfitItemIds = outfit.OutfitItems
+                .Where(oi => oi.ItemId.HasValue && 
+                            !oi.IsDeleted && 
+                            oi.Item != null && 
+                            oi.Item.ItemType != ItemType.SYSTEM)
+                .Select(oi => oi.ItemId.Value)
+                .ToList();
+
+            if (!outfitItemIds.Any())
+            {
+                // No user items in outfit, so it's not affected by gap day
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "Outfit gap day check completed",
+                    Data = new
+                    {
+                        OutfitId = outfitId,
+                        IsWithinGapDay = false,
+                        GapDayRange = new
+                        {
+                            StartDate = gapStartDate,
+                            EndDate = gapEndDate,
+                            TargetDate = referenceDate,
+                            GapDays = gapDay
+                        },
+                        AffectedItems = new List<object>(),
+                        TotalAffectedItems = 0,
+                        Message = "This outfit contains no user items affected by gap day filtering"
+                    }
+                };
+            }
+
+            // Get worn history for these items within the gap day range
+            var wornItemsInRange = await _unitOfWork.ItemWornAtHistoryRepository
+                .GetQueryable()
+                .Include(w => w.Item)
+                    .ThenInclude(i => i.Category)
+                .Where(w => !w.IsDeleted &&
+                           outfitItemIds.Contains(w.ItemId) &&
+                           w.WornAt.Date >= gapStartDate &&
+                           w.WornAt.Date <= gapEndDate)
+                .GroupBy(w => w.ItemId)
+                .Select(g => new
+                {
+                    ItemId = g.Key,
+                    Item = g.First().Item,
+                    WornDates = g.Select(w => w.WornAt).OrderByDescending(d => d).ToList(),
+                    LastWornAt = g.Max(w => w.WornAt),
+                    WornCount = g.Count()
+                })
+                .ToListAsync();
+
+            var isWithinGapDay = wornItemsInRange.Any();
+
+            var affectedItems = wornItemsInRange.Select(w => new
+            {
+                ItemId = w.ItemId,
+                ItemName = w.Item.Name,
+                ItemImageUrl = w.Item.ImgUrl,
+                CategoryName = w.Item.Category?.Name,
+                LastWornAt = w.LastWornAt,
+                WornDatesInRange = w.WornDates,
+                TimesWornInRange = w.WornCount
+            }).ToList();
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = "Outfit gap day check completed",
+                Data = new
+                {
+                    OutfitId = outfitId,
+                    IsWithinGapDay = isWithinGapDay,
+                    GapDayRange = new
+                    {
+                        StartDate = gapStartDate,
+                        EndDate = gapEndDate,
+                        TargetDate = referenceDate,
+                        GapDays = gapDay
+                    },
+                    AffectedItems = affectedItems,
+                    TotalAffectedItems = affectedItems.Count,
+                    Message = isWithinGapDay 
+                        ? $"This outfit contains {affectedItems.Count} item(s) that were worn within the gap day range and would be excluded from suggestions" 
+                        : "This outfit contains no items worn within the gap day range"
+                }
+            };
+        }
 
         public async Task<BaseResponseModel> GetSavedOutfitsPaginationAsync(
             PaginationParameter paginationParameter,

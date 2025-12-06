@@ -19,7 +19,9 @@ namespace SOPServer.Service.Services.Interfaces
                                                                long userId,
                                                                bool? isFavorite,
                                                                DateTime? startDate,
-                                                               DateTime? endDate);
+                                                               DateTime? endDate,
+                                                               DateTime? targetDate,
+                                                               int? gapDay);
         Task<BaseResponseModel> CreateOutfitAsync(long userId, OutfitCreateModel model);
         Task<BaseResponseModel> CreateMassOutfitAsync(long userId, MassOutfitCreateModel model);
         Task<BaseResponseModel> UpdateOutfitAsync(long id, long userId, OutfitUpdateModel model);
@@ -31,6 +33,8 @@ namespace SOPServer.Service.Services.Interfaces
             long userId,
             string? sourceType = null,
             string? search = null);
+
+        Task<BaseResponseModel> CheckOutfitGapDayAsync(long outfitId, long userId, DateTime? targetDate, int gapDay);
 
         // Calendar methods
         Task<BaseResponseModel> GetOutfitCalendarPaginationAsync(

@@ -43,4 +43,28 @@ namespace SOPServer.Service.BusinessModels.WeatherModel
         public string Code { get; set; }
         public string Name { get; set; }
     }
+
+    public class WeatherDetailsResponse
+    {
+        public string CityName { get; set; }
+        public List<HourlyWeather> HourlyForecasts { get; set; } = new List<HourlyWeather>();
+    }
+
+    public class HourlyWeather
+    {
+        public DateTime DateTime { get; set; }
+        public double Temperature { get; set; }
+        public double FeelsLike { get; set; }
+        public double MinTemperature { get; set; }
+        public double MaxTemperature { get; set; }
+        public double Pressure { get; set; }
+        public int Humidity { get; set; }
+        public string Description { get; set; }
+        public string Icon { get; set; }
+        public WindInfo Wind { get; set; }
+        public int CloudCoverage { get; set; }
+        public int Visibility { get; set; }
+        public double? Rain { get; set; }
+        public double? Snow { get; set; }
+    }
 }

@@ -24,4 +24,11 @@ namespace SOPServer.Service.BusinessModels.EmailModels
         public string Email { get; set; } = string.Empty;
         public string ChangedTime { get; set; } = string.Empty;
     }
+
+    public class OtpPasswordChangeEmailTemplateModel
+    {
+        public string DisplayName { get; set; } = string.Empty;
+        public string Otp { get; set; } = string.Empty;
+        public int ExpiryMinutes { get; set; }
+    }
 }

@@ -13,5 +13,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<string> GenerateWelcomeEmailAsync(WelcomeEmailTemplateModel model);
         Task<string> GeneratePasswordResetSuccessEmailAsync(PasswordResetSuccessEmailTemplateModel model);
         Task<string> GeneratePasswordChangedEmailAsync(PasswordChangedEmailTemplateModel model);
+        Task<string> GenerateOtpPasswordChangeEmailAsync(OtpPasswordChangeEmailTemplateModel model);
     }
 }

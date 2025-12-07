@@ -854,7 +854,21 @@ namespace SOPServer.Service.Services.Implements
                 user.Bio = model.Bio;
             }
 
-            if (model.JobId.HasValue)
+            // Handle Job - prioritize OtherJob over JobId
+            if (!string.IsNullOrWhiteSpace(model.OtherJob))
+            {
+                // If OtherJob is provided, create new job and use it
+                var newJob = new Job
+                {
+                    Name = model.OtherJob,
+                    Description = "User-defined job",
+                    CreatedBy = CreatedBy.USER
+                };
+                await _unitOfWork.JobRepository.AddAsync(newJob);
+                await _unitOfWork.SaveAsync();
+                user.JobId = newJob.Id;
+            }
+            else if (model.JobId.HasValue)
             {
                 var job = await _unitOfWork.JobRepository.GetByIdAsync(model.JobId.Value);
                 if (job == null)
@@ -864,8 +878,8 @@ namespace SOPServer.Service.Services.Implements
                 user.JobId = model.JobId.Value;
             }
 
-            // Update styles if provided
-            if (model.StyleIds != null)
+            // Update styles if StyleIds or OtherStyles are provided
+            if ((model.StyleIds != null && model.StyleIds.Any()) || (model.OtherStyles != null && model.OtherStyles.Any()))
             {
                 // Soft delete existing active styles
                 var existingUserStyles = user.UserStyles.Where(us => !us.IsDeleted).ToList();
@@ -874,20 +888,48 @@ namespace SOPServer.Service.Services.Implements
                     userStyle.IsDeleted = true;
                 }
 
-                // Add new styles
-                foreach (var styleId in model.StyleIds)
+                // Add styles from StyleIds
+                if (model.StyleIds != null && model.StyleIds.Any())
                 {
-                    var style = await _unitOfWork.StyleRepository.GetByIdAsync(styleId);
-                    if (style == null)
+                    foreach (var styleId in model.StyleIds)
                     {
-                        throw new NotFoundException($"{MessageConstants.STYLE_NOT_EXIST}: {styleId}");
-                    }
+                        var style = await _unitOfWork.StyleRepository.GetByIdAsync(styleId);
+                        if (style == null)
+                        {
+                            throw new NotFoundException($"{MessageConstants.STYLE_NOT_EXIST}: {styleId}");
+                        }
 
-                    user.UserStyles.Add(new UserStyle
+                        user.UserStyles.Add(new UserStyle
+                        {
+                            UserId = userId,
+                            StyleId = styleId
+                        });
+                    }
+                }
+
+                // Handle OtherStyles - create new styles and add to UserStyles
+                if (model.OtherStyles != null && model.OtherStyles.Any())
+                {
+                    foreach (var otherStyleName in model.OtherStyles)
                     {
-                        UserId = userId,
-                        StyleId = styleId
-                    });
+                        if (!string.IsNullOrWhiteSpace(otherStyleName))
+                        {
+                            var newStyle = new Style
+                            {
+                                Name = otherStyleName,
+                                Description = "User-defined style",
+                                CreatedBy = CreatedBy.USER
+                            };
+                            await _unitOfWork.StyleRepository.AddAsync(newStyle);
+                            await _unitOfWork.SaveAsync();
+
+                            user.UserStyles.Add(new UserStyle
+                            {
+                                UserId = userId,
+                                StyleId = newStyle.Id
+                            });
+                        }
+                    }
                 }
             }
 

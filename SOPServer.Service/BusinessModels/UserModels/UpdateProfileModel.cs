@@ -26,6 +26,17 @@ namespace SOPServer.Service.BusinessModels.UserModels
 
         public long? JobId { get; set; }
 
+        /// <summary>
+        /// Custom job name. If provided, a new job will be created and used instead of JobId
+        /// </summary>
+        [MaxLength(100, ErrorMessage = "Other job cannot exceed 100 characters")]
+        public string? OtherJob { get; set; }
+
         public List<long>? StyleIds { get; set; }
+
+        /// <summary>
+        /// Custom style names. New styles will be created for each name provided
+        /// </summary>
+        public List<string>? OtherStyles { get; set; }
     }
 }

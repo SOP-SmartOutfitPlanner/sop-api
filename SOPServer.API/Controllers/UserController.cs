@@ -69,8 +69,12 @@ namespace SOPServer.API.Controllers
         /// - AvoidedColor (List of avoided colors)
         /// - Location
         /// - Bio
-        /// - JobId
+        /// - JobId (ID of existing job)
+        /// - OtherJob (Custom job name - if provided, a new job will be created and used instead of JobId)
         /// - StyleIds (List of style IDs)
+        /// - OtherStyles (List of custom style names - new styles will be created for each)
+        /// 
+        /// **Note:** OtherJob takes priority over JobId. If both StyleIds and OtherStyles are provided, both will be added to the user's profile.
         /// </remarks>
         [Authorize]
         [HttpPut("profile")]

@@ -1141,12 +1141,34 @@ namespace SOPServer.Service.Services.Implements
                 throw new BadRequestException(MessageConstants.OTP_TOO_MANY_ATTEMPTS);
             }
 
-            // Generate and send OTP
-            await _otpService.SendOtpAsync(user.Email, user.DisplayName);
+            // Generate OTP
+            var otp = GenerateOtp();
+            var otpKey = RedisKeyConstants.GetOtpKey(user.Email);
+            
+            await _redisService.SetAsync(
+                otpKey,
+                otp,
+                TimeSpan.FromMinutes(5)
+            );
+
+            // Send OTP email with password change context
+            var emailBody = await _emailTemplateService.GenerateOtpPasswordChangeEmailAsync(new OtpPasswordChangeEmailTemplateModel
+            {
+                DisplayName = user.DisplayName ?? user.Email,
+                Otp = otp,
+                ExpiryMinutes = 5
+            });
+
+            await _mailService.SendEmailAsync(new MailRequest
+            {
+                ToEmail = user.Email,
+                Subject = "SOP - Password Change Verification Code",
+                Body = emailBody
+            });
 
             // Store OTP reference for this user's change password request
-            var otpKey = RedisKeyConstants.GetChangePasswordOtpKey(userId);
-            await _redisService.SetAsync(otpKey, user.Email, TimeSpan.FromMinutes(5));
+            var changePasswordOtpKey = RedisKeyConstants.GetChangePasswordOtpKey(userId);
+            await _redisService.SetAsync(changePasswordOtpKey, user.Email, TimeSpan.FromMinutes(5));
 
             return new BaseResponseModel
             {
@@ -1154,7 +1176,8 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.CHANGE_PASSWORD_OTP_SENT,
                 Data = new
                 {
-                    Email = MaskEmail(user.Email)
+                    Email = MaskEmail(user.Email),
+                    ExpiryMinutes = 5
                 }
             };
         }
@@ -1234,6 +1257,17 @@ namespace SOPServer.Service.Services.Implements
                 return $"{localPart[0]}***@{domain}";
 
             return $"{localPart.Substring(0, 2)}***@{domain}";
+        }
+
+        private string GenerateOtp()
+        {
+            var randomNumber = new byte[4];
+            using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(randomNumber);
+            }
+            var number = BitConverter.ToUInt32(randomNumber, 0);
+            return (number % 1000000).ToString("D6");
         }
     }
 }

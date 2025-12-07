@@ -69,12 +69,16 @@ namespace SOPServer.API.Controllers
         /// - AvoidedColor (List of avoided colors)
         /// - Location
         /// - Bio
+        /// - AvtUrl (Avatar URL - can be set directly or use the dedicated avatar upload endpoint)
         /// - JobId (ID of existing job)
         /// - OtherJob (Custom job name - if provided, a new job will be created and used instead of JobId)
         /// - StyleIds (List of style IDs)
         /// - OtherStyles (List of custom style names - new styles will be created for each)
         /// 
-        /// **Note:** OtherJob takes priority over JobId. If both StyleIds and OtherStyles are provided, both will be added to the user's profile.
+        /// **Note:** 
+        /// - OtherJob takes priority over JobId
+        /// - If both StyleIds and OtherStyles are provided, both will be added to the user's profile
+        /// - For avatar uploads, consider using PATCH /api/v1/user/profile/avatar instead
         /// </remarks>
         [Authorize]
         [HttpPut("profile")]
@@ -170,6 +174,91 @@ namespace SOPServer.API.Controllers
             }
 
             return await ValidateAndExecute(() => _userService.GetStylistProfileByUserIdAsync(userId, currentUserId));
+        }
+
+        /// <summary>
+        /// Change password with current password verification
+        /// </summary>
+        /// <remarks>
+        /// **Auth Required**
+        ///
+        /// **Note:** UserId is extracted from JWT token automatically
+        ///
+        /// **Requirements:**
+        /// - User must be logged in with email/password (not Google OAuth)
+        /// - Must provide current password for verification
+        /// - New password must be at least 6 characters
+        /// - New password and confirm password must match
+        /// 
+        /// **Success:** Password will be changed and confirmation email will be sent
+        /// </remarks>
+        [Authorize]
+        [HttpPut("password/change")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordModel model)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+
+            return await ValidateAndExecute(() => _userService.ChangePasswordAsync(userId, model));
+        }
+
+        /// <summary>
+        /// Initiate password change with OTP verification
+        /// </summary>
+        /// <remarks>
+        /// **Auth Required**
+        ///
+        /// **Note:** UserId is extracted from JWT token automatically
+        ///
+        /// **Use Case:** For users who want to change password without remembering current password
+        ///
+        /// **Process:**
+        /// 1. Call this endpoint to receive OTP via email
+        /// 2. Use the OTP to call the change-password-otp endpoint
+        /// 
+        /// **Requirements:**
+        /// - User must be logged in with email/password (not Google OAuth)
+        /// - OTP will be sent to the user's registered email
+        /// - OTP is valid for 5 minutes
+        /// - Maximum 5 attempts per 15 minutes
+        /// </remarks>
+        [Authorize]
+        [HttpPost("password/change-otp/initiate")]
+        public async Task<IActionResult> InitiateChangePasswordWithOtp()
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+
+            return await ValidateAndExecute(() => _userService.InitiateChangePasswordWithOtpAsync(userId));
+        }
+
+        /// <summary>
+        /// Change password using OTP verification
+        /// </summary>
+        /// <remarks>
+        /// **Auth Required**
+        ///
+        /// **Note:** UserId is extracted from JWT token automatically
+        ///
+        /// **Prerequisites:**
+        /// - Must have called the initiate endpoint first to receive OTP
+        /// - OTP must be valid and not expired
+        ///
+        /// **Requirements:**
+        /// - Valid OTP from email
+        /// - New password must be at least 6 characters
+        /// - New password and confirm password must match
+        /// 
+        /// **Success:** Password will be changed and confirmation email will be sent
+        /// </remarks>
+        [Authorize]
+        [HttpPut("password/change-otp")]
+        public async Task<IActionResult> ChangePasswordWithOtp([FromBody] ChangePasswordWithOtpModel model)
+        {
+            var userIdClaim = User.FindFirst("UserId")?.Value;
+            long.TryParse(userIdClaim, out long userId);
+
+            return await ValidateAndExecute(() => _userService.ChangePasswordWithOtpAsync(userId, model));
         }
     }
 }

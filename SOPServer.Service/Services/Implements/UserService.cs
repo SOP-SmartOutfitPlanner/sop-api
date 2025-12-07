@@ -854,6 +854,12 @@ namespace SOPServer.Service.Services.Implements
                 user.Bio = model.Bio;
             }
 
+            // Update avatar URL if provided
+            if (model.AvtUrl != null)
+            {
+                user.AvtUrl = model.AvtUrl;
+            }
+
             // Handle Job - prioritize OtherJob over JobId
             if (!string.IsNullOrWhiteSpace(model.OtherJob))
             {
@@ -1055,6 +1061,179 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.GET_STYLIST_PROFILE_SUCCESS,
                 Data = stylistProfile
             };
+        }
+
+        public async Task<BaseResponseModel> ChangePasswordAsync(long userId, ChangePasswordModel model)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            if (user.IsLoginWithGoogle)
+            {
+                throw new BadRequestException(MessageConstants.CHANGE_PASSWORD_NOT_ALLOWED_FOR_GOOGLE);
+            }
+
+            // Verify current password
+            if (!PasswordUtils.VerifyPassword(model.CurrentPassword, user.PasswordHash))
+            {
+                throw new BadRequestException(MessageConstants.CURRENT_PASSWORD_INCORRECT);
+            }
+
+            // Validate new password matches confirm password
+            if (model.NewPassword != model.ConfirmPassword)
+            {
+                throw new BadRequestException(MessageConstants.PASSWORD_DOES_NOT_MATCH);
+            }
+
+            // Update password
+            var newPasswordHash = PasswordUtils.HashPassword(model.NewPassword);
+            user.PasswordHash = newPasswordHash;
+            _unitOfWork.UserRepository.UpdateAsync(user);
+            await _unitOfWork.SaveAsync();
+
+            // Send confirmation email
+            var changeTime = DateTime.UtcNow.ToString("MMMM dd, yyyy 'at' HH:mm 'UTC'");
+            var emailBody = await _emailTemplateService.GeneratePasswordChangedEmailAsync(new PasswordChangedEmailTemplateModel
+            {
+                DisplayName = user.DisplayName ?? user.Email,
+                Email = user.Email,
+                ChangedTime = changeTime
+            });
+
+            await _mailService.SendEmailAsync(new MailRequest
+            {
+                ToEmail = user.Email,
+                Subject = MessageConstants.PASSWORD_CHANGE_SUBJECT_MAIL,
+                Body = emailBody
+            });
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.CHANGE_PASSWORD_SUCCESS
+            };
+        }
+
+        public async Task<BaseResponseModel> InitiateChangePasswordWithOtpAsync(long userId)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            if (user.IsLoginWithGoogle)
+            {
+                throw new BadRequestException(MessageConstants.CHANGE_PASSWORD_NOT_ALLOWED_FOR_GOOGLE);
+            }
+
+            // Rate limiting
+            var attemptKey = RedisKeyConstants.GetChangePasswordAttemptKey(userId);
+            var attempts = await _redisService.IncrementAsync(attemptKey, TimeSpan.FromMinutes(15));
+
+            if (attempts > 5)
+            {
+                throw new BadRequestException(MessageConstants.OTP_TOO_MANY_ATTEMPTS);
+            }
+
+            // Generate and send OTP
+            await _otpService.SendOtpAsync(user.Email, user.DisplayName);
+
+            // Store OTP reference for this user's change password request
+            var otpKey = RedisKeyConstants.GetChangePasswordOtpKey(userId);
+            await _redisService.SetAsync(otpKey, user.Email, TimeSpan.FromMinutes(5));
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.CHANGE_PASSWORD_OTP_SENT,
+                Data = new
+                {
+                    Email = MaskEmail(user.Email)
+                }
+            };
+        }
+
+        public async Task<BaseResponseModel> ChangePasswordWithOtpAsync(long userId, ChangePasswordWithOtpModel model)
+        {
+            var user = await _unitOfWork.UserRepository.GetByIdAsync(userId);
+
+            if (user == null)
+            {
+                throw new NotFoundException(MessageConstants.USER_NOT_EXIST);
+            }
+
+            if (user.IsLoginWithGoogle)
+            {
+                throw new BadRequestException(MessageConstants.CHANGE_PASSWORD_NOT_ALLOWED_FOR_GOOGLE);
+            }
+
+            // Verify OTP
+            var otpKey = RedisKeyConstants.GetOtpKey(user.Email);
+            var storedOtp = await _redisService.GetAsync<string>(otpKey);
+
+            if (string.IsNullOrEmpty(storedOtp) || storedOtp != model.Otp)
+            {
+                throw new BadRequestException(MessageConstants.CHANGE_PASSWORD_OTP_INVALID);
+            }
+
+            // Validate passwords match
+            if (model.NewPassword != model.ConfirmPassword)
+            {
+                throw new BadRequestException(MessageConstants.PASSWORD_DOES_NOT_MATCH);
+            }
+
+            // Update password
+            var newPasswordHash = PasswordUtils.HashPassword(model.NewPassword);
+            user.PasswordHash = newPasswordHash;
+            _unitOfWork.UserRepository.UpdateAsync(user);
+            await _unitOfWork.SaveAsync();
+
+            // Clean up OTP and change password request
+            await _redisService.RemoveAsync(otpKey);
+            await _redisService.RemoveAsync(RedisKeyConstants.GetChangePasswordOtpKey(userId));
+
+            // Send confirmation email
+            var changeTime = DateTime.UtcNow.ToString("MMMM dd, yyyy 'at' HH:mm 'UTC'");
+            var emailBody = await _emailTemplateService.GeneratePasswordChangedEmailAsync(new PasswordChangedEmailTemplateModel
+            {
+                DisplayName = user.DisplayName ?? user.Email,
+                Email = user.Email,
+                ChangedTime = changeTime
+            });
+
+            await _mailService.SendEmailAsync(new MailRequest
+            {
+                ToEmail = user.Email,
+                Subject = MessageConstants.PASSWORD_CHANGE_SUBJECT_MAIL,
+                Body = emailBody
+            });
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.CHANGE_PASSWORD_SUCCESS
+            };
+        }
+
+        private string MaskEmail(string email)
+        {
+            if (string.IsNullOrEmpty(email) || !email.Contains("@"))
+                return email;
+
+            var parts = email.Split('@');
+            var localPart = parts[0];
+            var domain = parts[1];
+
+            if (localPart.Length <= 2)
+                return $"{localPart[0]}***@{domain}";
+
+            return $"{localPart.Substring(0, 2)}***@{domain}";
         }
     }
 }

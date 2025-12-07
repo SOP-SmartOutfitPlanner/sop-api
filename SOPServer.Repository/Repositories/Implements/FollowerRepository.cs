@@ -45,5 +45,13 @@ namespace SOPServer.Repository.Repositories.Implements
             return await _context.Followers
                 .AnyAsync(f => f.FollowerId == followerId && f.FollowingId == followingId && !f.IsDeleted);
         }
+
+        public async Task<List<long>> GetFollowerUserIds(long userId)
+        {
+            return await _context.Followers
+                .Where(f => f.FollowingId == userId && !f.IsDeleted)
+                .Select(f => f.FollowerId)
+                .ToListAsync();
+        }
     }
 }

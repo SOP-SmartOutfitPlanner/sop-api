@@ -9,6 +9,7 @@ namespace SOPServer.Service.Services.Interfaces
     {
         // Create
         Task<BaseResponseModel> PushNotificationByUserId(long userId, NotificationRequestModel model);
+        Task<BaseResponseModel> PushSystemNotificationToUserAsync(long userId, NotificationRequestModel model);
         Task<BaseResponseModel> PushNotification(NotificationRequestModel model);
         // Read
         Task<BaseResponseModel> GetNotificationById(long id);

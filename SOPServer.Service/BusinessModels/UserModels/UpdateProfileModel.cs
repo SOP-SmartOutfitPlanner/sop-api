@@ -24,8 +24,25 @@ namespace SOPServer.Service.BusinessModels.UserModels
         [MaxLength(500, ErrorMessage = "Bio cannot exceed 500 characters")]
         public string? Bio { get; set; }
 
+        /// <summary>
+        /// Avatar URL. Can be updated directly or use the dedicated avatar upload endpoint
+        /// </summary>
+        [MaxLength(500, ErrorMessage = "Avatar URL cannot exceed 500 characters")]
+        public string? AvtUrl { get; set; }
+
         public long? JobId { get; set; }
 
+        /// <summary>
+        /// Custom job name. If provided, a new job will be created and used instead of JobId
+        /// </summary>
+        [MaxLength(100, ErrorMessage = "Other job cannot exceed 100 characters")]
+        public string? OtherJob { get; set; }
+
         public List<long>? StyleIds { get; set; }
+
+        /// <summary>
+        /// Custom style names. New styles will be created for each name provided
+        /// </summary>
+        public List<string>? OtherStyles { get; set; }
     }
 }

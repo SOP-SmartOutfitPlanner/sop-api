@@ -46,6 +46,18 @@ namespace SOPServer.Service.Services.Implements
             return body;
         }
 
+        public async Task<string> GeneratePasswordChangedEmailAsync(PasswordChangedEmailTemplateModel model)
+        {
+            var template = await LoadTemplateAsync("PasswordChangedEmail.html");
+
+            var body = template
+                .Replace("{{DisplayName}}", model.DisplayName)
+                .Replace("{{Email}}", model.Email)
+                .Replace("{{ChangedTime}}", model.ChangedTime);
+
+            return body;
+        }
+
         private async Task<string> LoadTemplateAsync(string templateName)
         {
             try

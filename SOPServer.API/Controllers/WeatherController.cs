@@ -27,5 +27,11 @@ namespace SOPServer.API.Controllers
         {
             return ValidateAndExecute(async () => await _weatherService.GetWeatherByCoordinates(latitude, longitude, cnt));
         }
+        
+        [HttpGet("details-by-coordinates")]
+        public Task<IActionResult> GetWeatherDetailsByCoordinates([FromQuery] double latitude, [FromQuery] double longitude, [FromQuery] DateTime time)
+        {
+            return ValidateAndExecute(async () => await _weatherService.GetWeatherDetailsByCoordinates(latitude, longitude, time));
+        }
     }
 }

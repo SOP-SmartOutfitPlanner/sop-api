@@ -256,6 +256,202 @@ namespace SOPServer.Service.Services.Implements
             }
         }
 
+        public async Task<BaseResponseModel> GetWeatherDetailsByCoordinates(double latitude, double longitude, DateTime time)
+        {
+            // OpenWeatherMap 5-day forecast API provides data from now up to 5 days in the future
+            // It also includes some recent past data (typically 3-6 hours)
+            var maxTime = DateTime.Now.AddDays(5);
+            if (time > maxTime)
+            {
+                throw new BadRequestException($"Time cannot exceed {maxTime:yyyy-MM-dd HH:mm:ss}. OpenWeatherMap 5-day forecast API limitation.");
+            }
+
+
+            var client = _httpClientFactory.CreateClient("OpenWeatherMap");
+
+            string latStr = latitude.ToString(CultureInfo.InvariantCulture);
+            string lonStr = longitude.ToString(CultureInfo.InvariantCulture);
+
+            // Get city name from coordinates
+            string reverseGeoUri =
+                $"geo/1.0/reverse?lat={latStr}&lon={lonStr}&limit=1&appid={_openWeatherMapSettings.APIKey}";
+
+            string cityDisplayName = "Unknown Location";
+
+            using (var reverseGeoResponse = await client.GetAsync(reverseGeoUri))
+            {
+                if (reverseGeoResponse.IsSuccessStatusCode)
+                {
+                    var reverseGeoContent = await reverseGeoResponse.Content.ReadAsStringAsync();
+                    var reverseGeoJson = JArray.Parse(reverseGeoContent);
+
+                    if (reverseGeoJson.Any())
+                    {
+                        var locationInfo = reverseGeoJson[0];
+
+                        string? englishName = (string?)locationInfo["local_names"]?["en"];
+                        string? defaultName = (string?)locationInfo["name"];
+                        string? stateName = (string?)locationInfo["state"];
+                        string? countryCode = (string?)locationInfo["country"];
+
+                        string city = englishName ?? defaultName ?? stateName ?? "Unknown";
+
+                        var parts = new List<string>();
+                        if (!string.IsNullOrWhiteSpace(city))
+                            parts.Add(city);
+                        if (!string.IsNullOrWhiteSpace(stateName))
+                            parts.Add(stateName);
+                        if (!string.IsNullOrWhiteSpace(countryCode))
+                            parts.Add(countryCode);
+
+                        cityDisplayName = string.Join(", ", parts);
+                    }
+                }
+            }
+
+            // Call 5-day/3-hour forecast API
+            string forecastUri =
+                $"data/2.5/forecast?lat={latStr}&lon={lonStr}&units=metric&lang=en&appid={_openWeatherMapSettings.APIKey}";
+
+            using (var response = await client.GetAsync(forecastUri))
+            {
+                if (!response.IsSuccessStatusCode)
+                {
+                    string parsedMessage = await BuildOpenWeatherErrorMessageAsync(
+                        response,
+                        $"OpenWeatherMap request failed ({(int)response.StatusCode})."
+                    );
+
+                    if (response.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        throw new NotFoundException($"Weather forecast for coordinates ({latitude}, {longitude}) not found.");
+                    }
+
+                    throw new BaseErrorResponseException(parsedMessage, (int)response.StatusCode);
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var json = JObject.Parse(content);
+
+                var list = json["list"] as JArray;
+                if (list == null || !list.Any())
+                {
+                    throw new NotFoundException($"No weather data available for the specified time.");
+                }
+
+                // Find the closest weather data to the requested time
+                HourlyWeather? closestWeather = null;
+                TimeSpan minTimeDiff = TimeSpan.MaxValue;
+
+                foreach (var item in list)
+                {
+                    var dtToken = item["dt"];
+                    if (dtToken == null)
+                        continue;
+
+                    long dt = (long)dtToken;
+                    var dateTime = DateTimeOffset.FromUnixTimeSeconds(dt).ToLocalTime().DateTime;
+
+                    // Calculate time difference
+                    var timeDiff = (dateTime - time).Duration();
+
+                    // Find closest match (within 3 hours window)
+                    if (timeDiff < minTimeDiff)
+                    {
+                        minTimeDiff = timeDiff;
+
+                        var mainToken = item["main"];
+                        var weatherArray = item["weather"] as JArray;
+
+                        if (mainToken == null || weatherArray == null || !weatherArray.Any())
+                            continue;
+
+                        // Temperature data
+                        double temp = mainToken["temp"]?.Value<double>() ?? 0;
+                        double feelsLike = mainToken["feels_like"]?.Value<double>() ?? temp;
+                        double tempMin = mainToken["temp_min"]?.Value<double>() ?? temp;
+                        double tempMax = mainToken["temp_max"]?.Value<double>() ?? temp;
+
+                        // Pressure and humidity
+                        double pressure = mainToken["pressure"]?.Value<double>() ?? 0;
+                        int humidity = mainToken["humidity"]?.Value<int>() ?? 0;
+
+                        // Weather description
+                        string desc = (string?)weatherArray[0]["description"] ?? "Unknown";
+                        string icon = (string?)weatherArray[0]["icon"] ?? "";
+
+                        // Wind data
+                        double windSpeed = item["wind"]?["speed"]?.Value<double>() ?? 0;
+                        int windDeg = item["wind"]?["deg"]?.Value<int>() ?? 0;
+
+                        var windInfo = new WindInfo
+                        {
+                            Speed = new WindSpeed
+                            {
+                                Value = windSpeed,
+                                Unit = "m/s",
+                                Name = GetWindSpeedName(windSpeed)
+                            },
+                            Direction = new WindDirection
+                            {
+                                Value = windDeg,
+                                Code = GetWindDirectionCode(windDeg),
+                                Name = GetWindDirectionName(windDeg)
+                            }
+                        };
+
+                        // Cloud coverage
+                        int cloudCoverage = item["clouds"]?["all"]?.Value<int>() ?? 0;
+
+                        // Visibility
+                        int visibility = item["visibility"]?.Value<int>() ?? 0;
+
+                        // Rain (precipitation in mm for 3 hours)
+                        double? rain = item["rain"]?["3h"]?.Value<double?>();
+
+                        // Snow (precipitation in mm for 3 hours)
+                        double? snow = item["snow"]?["3h"]?.Value<double?>();
+
+                        closestWeather = new HourlyWeather
+                        {
+                            DateTime = dateTime,
+                            Temperature = temp,
+                            FeelsLike = feelsLike,
+                            MinTemperature = tempMin,
+                            MaxTemperature = tempMax,
+                            Pressure = pressure,
+                            Humidity = humidity,
+                            Description = desc,
+                            Icon = icon,
+                            Wind = windInfo,
+                            CloudCoverage = cloudCoverage,
+                            Visibility = visibility,
+                            Rain = rain,
+                            Snow = snow
+                        };
+                    }
+                }
+
+                if (closestWeather == null)
+                {
+                    throw new NotFoundException($"No weather data available for time: {time:yyyy-MM-dd HH:mm:ss}");
+                }
+
+                var result = new WeatherDetailsResponse
+                {
+                    CityName = cityDisplayName
+                };
+                result.HourlyForecasts.Add(closestWeather);
+
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = MessageConstants.GET_WEATHER_INFO_SUCCESS,
+                    Data = result
+                };
+            }
+        }
+
         /// <summary>
         /// Parse error response từ OpenWeatherMap thành message thân thiện.
         /// </summary>

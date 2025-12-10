@@ -219,6 +219,50 @@ namespace SOPServer.Service.Services.Implements
                 }
             }
 
+            // Check if date/time changes require usage history update
+            bool dateTimeChanged = (model.StartTime.HasValue && model.StartTime != userOccasion.StartTime) ||
+                                 (model.DateOccasion.HasValue && model.DateOccasion.Value != userOccasion.DateOccasion);
+
+            DateTime? oldWornAtDateTime = null;
+            DateTime? newWornAtDateTime = null;
+
+            if (dateTimeChanged)
+            {
+                // Store old worn at time
+                oldWornAtDateTime = userOccasion.StartTime ?? userOccasion.DateOccasion;
+
+                // Calculate new worn at time
+                var tempStartTime = model.StartTime ?? userOccasion.StartTime;
+                var tempDateOccasion = model.DateOccasion ?? userOccasion.DateOccasion;
+                newWornAtDateTime = tempStartTime ?? tempDateOccasion;
+
+                // Get all outfit usage history records for this occasion
+                var outfitUsageHistories = await _unitOfWork.OutfitUsageHistoryRepository.GetQueryable()
+                    .Include(ouh => ouh.Outfit)
+                        .ThenInclude(o => o.OutfitItems)
+                    .Where(ouh => ouh.UserOccassionId == id && !ouh.IsDeleted)
+                    .ToListAsync();
+
+                // Collect all unique items from all outfits
+                var allItemsToUpdate = new HashSet<long>();
+                foreach (var usageHistory in outfitUsageHistories)
+                {
+                    if (usageHistory.Outfit?.OutfitItems != null)
+                    {
+                        foreach (var outfitItem in usageHistory.Outfit.OutfitItems.Where(oi => oi.ItemId.HasValue && !oi.IsDeleted))
+                        {
+                            allItemsToUpdate.Add(outfitItem.ItemId.Value);
+                        }
+                    }
+                }
+
+                // Update item usage tracking with new date
+                if (allItemsToUpdate.Count > 0 && oldWornAtDateTime.HasValue && newWornAtDateTime.HasValue)
+                {
+                    await UpdateItemWornAtHistoryAsync(allItemsToUpdate, oldWornAtDateTime.Value, newWornAtDateTime.Value);
+                }
+            }
+
             if (!string.IsNullOrEmpty(model.Name))
                 userOccasion.Name = model.Name;
 
@@ -352,6 +396,41 @@ namespace SOPServer.Service.Services.Implements
                     }
 
                     // Update LastWornAt to the most recent date from history, or null if no history
+                    var latestWornAt = await _unitOfWork.ItemWornAtHistoryRepository
+                        .GetQueryable()
+                        .Where(w => w.ItemId == item.Id && !w.IsDeleted)
+                        .OrderByDescending(w => w.WornAt)
+                        .Select(w => (DateTime?)w.WornAt)
+                        .FirstOrDefaultAsync();
+
+                    item.LastWornAt = latestWornAt;
+
+                    _unitOfWork.ItemRepository.UpdateAsync(item);
+                }
+            }
+            await _unitOfWork.SaveAsync();
+        }
+
+        private async Task UpdateItemWornAtHistoryAsync(HashSet<long> itemIds, DateTime oldWornAtDateTime, DateTime newWornAtDateTime)
+        {
+            foreach (var itemId in itemIds)
+            {
+                var item = await _unitOfWork.ItemRepository.GetByIdAsync(itemId);
+                if (item != null && item.ItemType != ItemType.SYSTEM)
+                {
+                    // Find the worn at history entry with old date
+                    var wornAtHistoryToUpdate = await _unitOfWork.ItemWornAtHistoryRepository
+                        .GetQueryable()
+                        .FirstOrDefaultAsync(w => w.ItemId == item.Id && w.WornAt == oldWornAtDateTime && !w.IsDeleted);
+
+                    if (wornAtHistoryToUpdate != null)
+                    {
+                        // Update the worn at date
+                        wornAtHistoryToUpdate.WornAt = newWornAtDateTime;
+                        _unitOfWork.ItemWornAtHistoryRepository.UpdateAsync(wornAtHistoryToUpdate);
+                    }
+
+                    // Update LastWornAt to the most recent date from history
                     var latestWornAt = await _unitOfWork.ItemWornAtHistoryRepository
                         .GetQueryable()
                         .Where(w => w.ItemId == item.Id && !w.IsDeleted)

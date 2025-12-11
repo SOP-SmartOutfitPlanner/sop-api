@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SOPServer.Repository.DBContext;
 using SOPServer.Repository.Entities;
-using SOPServer.Repository.Entities.Filter;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.Repositories.Generic;
 using SOPServer.Repository.Repositories.Interfaces;

@@ -546,7 +546,7 @@ Parse this compact format to make outfit decisions." }
 
             var systemFormatParts = new List<Part>
             {
-                new Part { Text = @"Based on user characteristic and/or occasion, determine what we expected item should have based on provide data. Not creative, **MUST USE PROVIDE DATA** (min 1 id, max 3 ids)" }
+                new Part { Text = @"Based on user characteristic and/or occasion, determine what we expected item should have based on provide data. Not creative, **MUST USE PROVIDE DATA** (min 2 id, max 4 ids)" }
             };
 
             requestJsonMode.SystemInstruction = new Content

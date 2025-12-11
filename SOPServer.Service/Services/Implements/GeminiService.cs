@@ -633,13 +633,13 @@ Parse this compact format to make outfit decisions." }
 
                     var requestJsonMode = new GenerateContentRequest();
                     requestJsonMode.UseJsonMode<OutfitSelectionModel>();
-                    requestJsonMode.GenerationConfig = new GenerationConfig
-                    {
-                        MaxOutputTokens = 2000,
-                        Temperature = 1.3f,  // Tăng lên để tăng tính ngẫu nhiên
-                        TopP = 0.95f,
-                        TopK = 50
-                    };
+                    //requestJsonMode.GenerationConfig = new GenerationConfig
+                    //{
+                    //    MaxOutputTokens = 2000,
+                    //    Temperature = 1.3f,  // Tăng lên để tăng tính ngẫu nhiên
+                    //    TopP = 0.95f,
+                    //    TopK = 50
+                    //};
 
                     var systemParts = new List<Part>
             {

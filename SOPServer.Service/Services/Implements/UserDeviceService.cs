@@ -66,11 +66,7 @@ namespace SOPServer.Service.Services.Implements
             var userDevice = await _unitOfWork.UserDeviceRepository.GetByTokenDevice(token);
             if (userDevice == null)
             {
-                return new BaseResponseModel
-                {
-                    StatusCode = StatusCodes.Status404NotFound,
-                    Message = MessageConstants.DEVICE_TOKEN_NOT_EXIST,
-                };
+                throw new NotFoundException(MessageConstants.DEVICE_TOKEN_NOT_EXIST);
             }
 
             _unitOfWork.UserDeviceRepository.SoftDeleteAsync(userDevice);

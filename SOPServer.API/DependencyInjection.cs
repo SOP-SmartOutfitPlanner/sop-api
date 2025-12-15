@@ -70,6 +70,9 @@ namespace SOPServer.API
             // ========== STYLIST DASHBOARD ==========
             services.AddScoped<IStylistDashboardService, StylistDashboardService>();
 
+            // ========== ADMIN DASHBOARD ==========
+            services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+
             // ========== LIKE & SAVE COLLECTION ==========
             services.AddScoped<ILikeCollectionRepository, LikeCollectionRepository>();
             services.AddScoped<ILikeCollectionService, LikeCollectionService>();

@@ -430,5 +430,8 @@ namespace SOPServer.Service.Constants
         public const string OUTFIT_SAVED_FROM_COLLECTION_SUCCESS = "Outfit saved from collection successfully";
         public const string OUTFIT_UNSAVED_FROM_COLLECTION_SUCCESS = "Outfit unsaved from collection successfully";
         public const string GET_SAVED_OUTFITS_FROM_COLLECTION_SUCCESS = "Saved outfits from collections retrieved successfully";
+
+        // Admin Dashboard related messages
+        public const string GET_REVENUE_STATISTICS_SUCCESS = "Revenue statistics retrieved successfully";
     }
 }

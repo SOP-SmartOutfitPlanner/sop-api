@@ -26,6 +26,8 @@ public partial class User : BaseEntity
 
     public string? AvtUrl { get; set; }
 
+    public string? TryOnImageUrl { get; set; }
+
     public DateOnly? Dob { get; set; }
 
     public Gender Gender { get; set; }

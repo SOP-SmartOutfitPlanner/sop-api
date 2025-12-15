@@ -248,7 +248,7 @@ namespace SOPServer.API.Controllers
         /// - Valid OTP from email
         /// - New password must be at least 6 characters
         /// - New password and confirm password must match
-        /// 
+        ///
         /// **Success:** Password will be changed and confirmation email will be sent
         /// </remarks>
         [Authorize]
@@ -259,6 +259,29 @@ namespace SOPServer.API.Controllers
             long.TryParse(userIdClaim, out long userId);
 
             return await ValidateAndExecute(() => _userService.ChangePasswordWithOtpAsync(userId, model));
+        }
+
+        /// <summary>
+        /// Validate if an image is a full body image for virtual try-on
+        /// </summary>
+        /// <remarks>
+        /// **Public Endpoint** - No authentication required
+        ///
+        /// **Purpose:** Validates whether the provided image URL contains a full body image
+        /// suitable for virtual try-on feature.
+        ///
+        /// **Requirements:**
+        /// - Image must be a valid URL pointing to an accessible image
+        /// - Supported formats: .jpg, .jpeg, .png, .webp, .gif
+        ///
+        /// **Response:**
+        /// - isValid: true if image is a valid full body image
+        /// - message: Explanation of validation result
+        /// </remarks>
+        [HttpPost("validate-fullbody-image")]
+        public async Task<IActionResult> ValidateFullBodyImage([FromBody] ValidateFullBodyImageRequest request)
+        {
+            return await ValidateAndExecute(() => _userService.ValidateFullBodyImageAsync(request.ImageUrl));
         }
     }
 }

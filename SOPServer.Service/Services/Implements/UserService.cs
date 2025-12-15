@@ -34,6 +34,8 @@ namespace SOPServer.Service.Services.Implements
         private readonly IRedisService _redisService;
         private readonly IEmailTemplateService _emailTemplateService;
         private readonly IMinioService _minioService;
+        private readonly IGeminiService _geminiService;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public UserService(
             IUnitOfWork unitOfWork,
@@ -43,7 +45,9 @@ namespace SOPServer.Service.Services.Implements
             IOtpService otpService,
             IRedisService redisService,
             IEmailTemplateService emailTemplateService,
-            IMinioService minioService)
+            IMinioService minioService,
+            IGeminiService geminiService,
+            IHttpClientFactory httpClientFactory)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -53,6 +57,8 @@ namespace SOPServer.Service.Services.Implements
             _redisService = redisService;
             _emailTemplateService = emailTemplateService;
             _minioService = minioService;
+            _geminiService = geminiService;
+            _httpClientFactory = httpClientFactory;
         }
 
         public async Task<BaseResponseModel> LoginWithGoogleOAuth(string credential)
@@ -860,6 +866,12 @@ namespace SOPServer.Service.Services.Implements
                 user.AvtUrl = model.AvtUrl;
             }
 
+            // Update try-on image URL if provided
+            if (model.TryOnImageUrl != null)
+            {
+                user.TryOnImageUrl = model.TryOnImageUrl;
+            }
+
             // Handle Job - prioritize OtherJob over JobId
             if (!string.IsNullOrWhiteSpace(model.OtherJob))
             {
@@ -1241,6 +1253,28 @@ namespace SOPServer.Service.Services.Implements
             {
                 StatusCode = StatusCodes.Status200OK,
                 Message = MessageConstants.CHANGE_PASSWORD_SUCCESS
+            };
+        }
+
+        public async Task<BaseResponseModel> ValidateFullBodyImageAsync(string imageUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl))
+            {
+                throw new BadRequestException("Image URL is required");
+            }
+
+            // Download image and convert to base64
+            var httpClient = _httpClientFactory.CreateClient();
+            var (base64Image, mimeType) = await ImageUtils.ConvertToBase64Async(imageUrl, httpClient);
+
+            // Validate using Gemini AI
+            var validationResult = await _geminiService.ValidateFullBodyImage(base64Image, mimeType);
+
+            return new BaseResponseModel
+            {
+                StatusCode = StatusCodes.Status200OK,
+                Message = MessageConstants.FULLBODY_IMAGE_VALIDATION_SUCCESS,
+                Data = validationResult
             };
         }
 

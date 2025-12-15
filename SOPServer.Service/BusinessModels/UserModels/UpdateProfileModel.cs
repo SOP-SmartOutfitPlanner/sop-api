@@ -30,6 +30,12 @@ namespace SOPServer.Service.BusinessModels.UserModels
         [MaxLength(500, ErrorMessage = "Avatar URL cannot exceed 500 characters")]
         public string? AvtUrl { get; set; }
 
+        /// <summary>
+        /// Full body image URL for virtual try-on feature
+        /// </summary>
+        [MaxLength(500, ErrorMessage = "Try-on image URL cannot exceed 500 characters")]
+        public string? TryOnImageUrl { get; set; }
+
         public long? JobId { get; set; }
 
         /// <summary>

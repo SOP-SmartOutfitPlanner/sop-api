@@ -2165,5 +2165,123 @@ namespace SOPServer.Service.Services.Implements
 
             return contextParts.Any() ? string.Join("; ", contextParts) : "Daily Home Wear";
         }
+
+        public async Task<BaseResponseModel> BatchVirtualTryOn(BusinessModels.VirtualTryOnModels.BatchVirtualTryOnRequest request)
+        {
+            var overallStopwatch = Stopwatch.StartNew();
+            Console.WriteLine($"[BATCH-TRYON] Starting batch virtual try-on with {request.Items.Count} items");
+
+            if (request.Items == null || request.Items.Count == 0)
+            {
+                throw new BadRequestException("Items list cannot be empty");
+            }
+
+            var client = _httpClientFactory.CreateClient("SplitItem");
+            var requestUrl = "be/api/v1/virtual-tryon/batch-try-on";
+
+            // Prepare the batch request payload with snake_case naming
+            var payload = new
+            {
+                items = request.Items.Select(item => new
+                {
+                    uuid = item.Uuid,
+                    human_image_url = item.HumanImageUrl,
+                    clothing_urls = item.ClothingUrls
+                }).ToList()
+            };
+
+            var serializerOptions = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true
+            };
+
+            var jsonContent = new StringContent(
+                JsonSerializer.Serialize(payload),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            Console.WriteLine($"[BATCH-TRYON] Sending batch request to external service");
+
+            try
+            {
+                var response = await client.PostAsync(requestUrl, jsonContent);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    overallStopwatch.Stop();
+                    Console.WriteLine($"[BATCH-TRYON][ERROR] Batch request failed: {errorContent} (Time: {overallStopwatch.ElapsedMilliseconds}ms)");
+                    throw new BadRequestException($"Batch virtual try-on failed: {errorContent}");
+                }
+
+                var responseBody = await response.Content.ReadAsStringAsync();
+                
+                // Deserialize the batch response from external service
+                var externalResponse = JsonSerializer.Deserialize<ExternalBatchTryOnResponse>(responseBody, serializerOptions);
+
+                overallStopwatch.Stop();
+                var totalTimeStr = $"{overallStopwatch.ElapsedMilliseconds}ms";
+
+                if (externalResponse == null)
+                {
+                    Console.WriteLine($"[BATCH-TRYON][ERROR] External service returned null response (Time: {totalTimeStr})");
+                    throw new BadRequestException("Batch virtual try-on service returned invalid response");
+                }
+
+                // Log results
+                var successCount = externalResponse.Results?.Count(r => r.Success) ?? 0;
+                var failCount = externalResponse.Results?.Count(r => !r.Success) ?? 0;
+                Console.WriteLine($"[BATCH-TRYON] *** TOTAL: {externalResponse.TotalTime ?? totalTimeStr} | Success: {successCount} | Failed: {failCount} ***");
+
+                // Log individual item results
+                if (externalResponse.Results != null)
+                {
+                    foreach (var result in externalResponse.Results)
+                    {
+                        if (result.Success)
+                        {
+                            Console.WriteLine($"[BATCH-TRYON] UUID {result.Uuid} completed successfully (Time: {result.Time})");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[BATCH-TRYON][ERROR] UUID {result.Uuid} failed: {result.Error} (Time: {result.Time})");
+                        }
+                    }
+                }
+
+                var batchResponse = new BusinessModels.VirtualTryOnModels.BatchVirtualTryOnResponse
+                {
+                    TotalTime = externalResponse.TotalTime ?? totalTimeStr,
+                    Results = externalResponse.Results?.Select(r => new BusinessModels.VirtualTryOnModels.BatchTryOnResult
+                    {
+                        Uuid = r.Uuid,
+                        Success = r.Success,
+                        Url = r.Url,
+                        Error = r.Error,
+                        Time = r.Time
+                    }).OrderBy(r => r.Uuid).ToList() ?? new List<BusinessModels.VirtualTryOnModels.BatchTryOnResult>()
+                };
+
+                return new BaseResponseModel
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = MessageConstants.BATCH_VIRTUAL_TRY_ON_SUCCESS,
+                    Data = batchResponse
+                };
+            }
+            catch (HttpRequestException ex)
+            {
+                overallStopwatch.Stop();
+                Console.WriteLine($"[BATCH-TRYON][ERROR] HTTP request exception: {ex.Message} (Time: {overallStopwatch.ElapsedMilliseconds}ms)");
+                throw new BadRequestException($"Failed to connect to virtual try-on service: {ex.Message}");
+            }
+            catch (TaskCanceledException ex)
+            {
+                overallStopwatch.Stop();
+                Console.WriteLine($"[BATCH-TRYON][ERROR] Request timeout: {ex.Message} (Time: {overallStopwatch.ElapsedMilliseconds}ms)");
+                throw new BadRequestException("Virtual try-on service request timed out");
+            }
+        }
     }
 }

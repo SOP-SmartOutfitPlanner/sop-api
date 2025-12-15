@@ -299,6 +299,7 @@ namespace SOPServer.Service.Constants
         // Virtual Try-On related messages
         public const string VIRTUAL_TRY_ON_SUCCESS = "Virtual try-on generated successfully";
         public const string VIRTUAL_TRY_ON_FAILED = "Failed to generate virtual try-on";
+        public const string BATCH_VIRTUAL_TRY_ON_SUCCESS = "Batch virtual try-on completed";
 
         public static string GET_USER_STATS_SUCCESS = "Get user stats successfully";
 

@@ -91,8 +91,15 @@ namespace SOPServer.Service.Services.Implements
                 .ThenBy(m => m.Month)
                 .ToList();
 
-            var revenueByPlan = await _unitOfWork.SubscriptionPlanRepository.GetQueryable()
-                .Where(sp => !sp.IsDeleted && sp.Price > 0)
+            // Load all subscription plans with their subscriptions first
+            var allSubscriptionPlansQuery = _unitOfWork.SubscriptionPlanRepository.GetQueryable()
+                .Include(sp => sp.UserSubscriptions.Where(us => !us.IsDeleted))
+                .Where(sp => !sp.IsDeleted && sp.Price > 0);
+
+            var allSubscriptionPlans = await allSubscriptionPlansQuery.ToListAsync();
+
+            // Now calculate revenue by plan in memory
+            var revenueByPlan = allSubscriptionPlans
                 .Select(sp => new SubscriptionPlanRevenueModel
                 {
                     SubscriptionPlanId = sp.Id,
@@ -101,12 +108,12 @@ namespace SOPServer.Service.Services.Implements
                     TotalRevenue = completedTransactions
                         .Where(t => t.UserSubscription.SubscriptionPlanId == sp.Id)
                         .Sum(t => t.Price),
-                    TotalSubscriptions = sp.UserSubscriptions.Count(us => !us.IsDeleted),
-                    ActiveSubscriptions = sp.UserSubscriptions.Count(us => !us.IsDeleted && us.IsActive && us.DateExp > DateTime.UtcNow)
+                    TotalSubscriptions = sp.UserSubscriptions.Count,
+                    ActiveSubscriptions = sp.UserSubscriptions.Count(us => us.IsActive && us.DateExp > DateTime.UtcNow)
                 })
                 .Where(r => r.TotalRevenue > 0 || r.TotalSubscriptions > 0)
                 .OrderByDescending(r => r.TotalRevenue)
-                .ToListAsync();
+                .ToList();
 
             var recentTransactions = transactions
                 .OrderByDescending(t => t.CreatedDate)

@@ -70,7 +70,12 @@ jobs:
       # Run EF Core migrations on VPS before deploying new container
       - name: Run Database Migrations
         run: |
-          dotnet tool install --global dotnet-ef || dotnet tool update --global dotnet-ef
+          # Clear NuGet cache and reinstall dotnet-ef tool
+          dotnet nuget locals all --clear
+          dotnet tool uninstall --global dotnet-ef 2>/dev/null || true
+          dotnet tool install --global dotnet-ef --version 8.0.* 
+          
+          # Run migrations
           dotnet ef database update --project SOPServer.Repository/SOPServer.Repository.csproj --startup-project SOPServer.API/SOPServer.API.csproj --connection "${{ secrets.CONNECTION_STRING }}"
         continue-on-error: false
 

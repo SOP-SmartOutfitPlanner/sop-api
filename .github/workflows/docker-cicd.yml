@@ -48,6 +48,14 @@ jobs:
         with:
           clean: false
 
+      # Run EF Core migrations on VPS before deploying new container
+      - name: Run Database Migrations
+        run: |
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet tool install --global dotnet-ef 2>/dev/null || dotnet tool update --global dotnet-ef
+          dotnet ef database update --project SOPServer.Repository/SOPServer.Repository.csproj --startup-project SOPServer.API/SOPServer.API.csproj
+        continue-on-error: false
+
       - name: Clean up old Docker resources
         run: |
           docker stop sop-server || true

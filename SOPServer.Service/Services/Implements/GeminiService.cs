@@ -203,6 +203,54 @@ namespace SOPServer.Service.Services.Implements
             throw new BadRequestException(MessageConstants.IMAGE_VALIDATION_FAILED);
         }
 
+        public async Task<ImageValidation> ValidateFullBodyImage(string base64Image, string mimeType)
+        {
+            if (string.IsNullOrWhiteSpace(mimeType) || !_allowedMime.Contains(mimeType))
+            {
+                throw new NotFoundException(MessageConstants.MIMETYPE_NOT_VALID);
+            }
+
+            // Get model and prompt settings
+            var modelSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.MODEL_FULLBODY_VALIDATION);
+            var validatePromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.VALIDATE_FULLBODY_PROMPT);
+
+            // Create model for full body validation (uses same API key as suggestion)
+            var apiKey = GetAiSettingValue(AISettingType.API_SUGGESTION);
+            var fullBodyValidationClient = new GoogleAi(apiKey);
+            var fullBodyModel = fullBodyValidationClient.CreateGenerativeModel(modelSetting.Value);
+
+            var generateRequest = new GenerateContentRequest();
+            generateRequest.AddText(validatePromptSetting.Value);
+            generateRequest.AddInlineData(base64Image, mimeType);
+            generateRequest.UseJsonMode<ImageValidation>();
+
+            const int maxRetryAttempts = 5;
+
+            for (int attempt = 1; attempt <= maxRetryAttempts; attempt++)
+            {
+                try
+                {
+                    _logger.LogInformation("ValidateFullBodyImage: Attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    var result = await fullBodyModel.GenerateObjectAsync<ImageValidation>(generateRequest);
+
+                    _logger.LogInformation("ValidateFullBodyImage: Successfully validated on attempt {Attempt}. IsValid: {IsValid}", attempt, result?.IsValid);
+                    return result;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "ValidateFullBodyImage: Error on attempt {Attempt} of {MaxAttempts}", attempt, maxRetryAttempts);
+
+                    if (attempt == maxRetryAttempts)
+                    {
+                        throw new BadRequestException($"{MessageConstants.FULLBODY_IMAGE_VALIDATION_FAILED}: {ex.Message}");
+                    }
+                }
+            }
+
+            throw new BadRequestException(MessageConstants.FULLBODY_IMAGE_VALIDATION_FAILED);
+        }
+
         public async Task<List<float>?> EmbeddingText(string textEmbeeding)
         {
             var request = new EmbedContentRequest

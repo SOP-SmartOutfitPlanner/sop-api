@@ -21,6 +21,7 @@ namespace SOPServer.Service.Services.Interfaces
     public interface IGeminiService
     {
         Task<ImageValidation> ImageValidation(string base64Image, string mimeType);
+        Task<ImageValidation> ValidateFullBodyImage(string base64Image, string mimeType);
         Task<ItemModelAI?> ImageGenerateContent(string base64Image, string mimeType, string prompt);
         Task<List<float>?> EmbeddingText(string textEmbeeding);
         Task<CategoryItemAnalysisModel?> AnalyzingCategory(string base64Image, string mimeType, string finalPrompt);

@@ -10,6 +10,7 @@ namespace SOPServer.Service.BusinessModels.UserModels
         public string Email { get; set; }
         public string DisplayName { get; set; }
         public string? AvtUrl { get; set; }
+        public string? TryOnImageUrl { get; set; }
         public DateOnly? Dob { get; set; }
         public Gender Gender { get; set; }
         public List<string>? PreferedColor { get; set; }

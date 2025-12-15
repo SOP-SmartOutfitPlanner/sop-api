@@ -29,6 +29,11 @@ namespace SOPServer.Service.BusinessModels.OnboardingModels
         public List<long>? StyleIds { get; set; }
         /// <example>["Minimalist", "Bohemian"]</example>
         public List<string>? OtherStyles { get; set; }
+        /// <summary>
+        /// Full body image URL for virtual try-on feature
+        /// </summary>
+        /// <example>https://example.com/images/full-body.jpg</example>
+        public string? TryOnImageUrl { get; set; }
 
     }
 }

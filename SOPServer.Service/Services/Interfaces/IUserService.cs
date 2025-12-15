@@ -39,5 +39,6 @@ namespace SOPServer.Service.Services.Interfaces
         Task<BaseResponseModel> ChangePasswordAsync(long userId, ChangePasswordModel model);
         Task<BaseResponseModel> InitiateChangePasswordWithOtpAsync(long userId);
         Task<BaseResponseModel> ChangePasswordWithOtpAsync(long userId, ChangePasswordWithOtpModel model);
+        Task<BaseResponseModel> ValidateFullBodyImageAsync(string imageUrl);
     }
 }

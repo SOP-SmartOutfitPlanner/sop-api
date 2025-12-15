@@ -303,6 +303,9 @@ public partial class SOPServerContext : DbContext
             entity.Property(e => e.AvtUrl)
                 .HasMaxLength(255)
                 .IsUnicode(true);
+            entity.Property(e => e.TryOnImageUrl)
+                .HasMaxLength(500)
+                .IsUnicode(true);
             entity.Property(e => e.Bio)
                 .HasMaxLength(255)
                 .IsUnicode(true);

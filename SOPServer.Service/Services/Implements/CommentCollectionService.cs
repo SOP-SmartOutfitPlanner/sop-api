@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SOPServer.Repository.Commons;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.CommentCollectionModels;
+using SOPServer.Service.BusinessModels.NotificationModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Constants;
 using SOPServer.Service.Exceptions;
@@ -16,11 +18,19 @@ namespace SOPServer.Service.Services.Implements
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly INotificationService _notificationService;
+        private readonly ILogger<CommentCollectionService> _logger;
 
-        public CommentCollectionService(IUnitOfWork unitOfWork, IMapper mapper)
+        public CommentCollectionService(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            INotificationService notificationService,
+            ILogger<CommentCollectionService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _notificationService = notificationService;
+            _logger = logger;
         }
 
         public async Task<BaseResponseModel> CreateCommentCollection(CreateCommentCollectionModel model)
@@ -43,6 +53,9 @@ namespace SOPServer.Service.Services.Implements
             await _unitOfWork.CommentCollectionRepository.AddAsync(commentCollection);
             await _unitOfWork.SaveAsync();
 
+            // Send notification to collection owner
+            await NotifyCollectionOwnerAboutCommentAsync(collection, model.UserId, model.Comment);
+
             // Retrieve comment with user info
             var createdComment = await _unitOfWork.CommentCollectionRepository.GetByIdIncludeAsync(
                 commentCollection.Id,
@@ -55,6 +68,62 @@ namespace SOPServer.Service.Services.Implements
                 Message = MessageConstants.COMMENT_CREATE_SUCCESS,
                 Data = _mapper.Map<CommentCollectionModel>(createdComment)
             };
+        }
+
+        private async Task NotifyCollectionOwnerAboutCommentAsync(Collection collection, long commenterId, string? commentText)
+        {
+            try
+            {
+                if (collection.UserId == null || collection.UserId == commenterId)
+                {
+                    // Don't notify if no collection owner or if commenter is the owner
+                    return;
+                }
+
+                var commenter = await _unitOfWork.UserRepository.GetByIdAsync(commenterId);
+                var commenterName = commenter?.DisplayName ?? "Someone";
+                var truncatedCollectionTitle = TruncateText(collection.Title, 30);
+                var truncatedComment = TruncateText(commentText, 100);
+
+                var title = string.IsNullOrWhiteSpace(truncatedCollectionTitle)
+                    ? "New comment on your collection"
+                    : $"New comment on collection: {truncatedCollectionTitle}";
+
+                var message = string.IsNullOrWhiteSpace(truncatedComment)
+                    ? $"<b>{commenterName}</b> commented on your collection"
+                    : $"<b>{commenterName}</b> commented: {truncatedComment}";
+
+                var notificationModel = new NotificationRequestModel
+                {
+                    Title = title,
+                    Message = message,
+                    Href = $"/collections/{collection.Id}",
+                    ImageUrl = commenter?.AvtUrl,
+                    ActorUserId = commenterId
+                };
+
+                await _notificationService.PushNotificationByUserId(collection.UserId.Value, notificationModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send comment notification for collection {CollectionId}", collection.Id);
+            }
+        }
+
+        private static string? TruncateText(string? text, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return null;
+            }
+
+            var trimmed = text.Trim();
+            if (trimmed.Length <= maxLength)
+            {
+                return trimmed;
+            }
+
+            return trimmed.Substring(0, maxLength) + "...";
         }
 
         public async Task<BaseResponseModel> UpdateCommentCollection(long id, UpdateCommentCollectionModel model)

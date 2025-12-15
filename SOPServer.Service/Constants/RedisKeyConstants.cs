@@ -17,6 +17,10 @@ namespace SOPServer.Service.Constants
         public static string GetResetPasswordAttemptKey(string email) => $"reset_password_attempt:{email}";
         public static string GetResetTokenKey(string email) => $"reset_token:{email}";
         public static string GetUsedResetTokenKey(string resetToken) => $"used_reset_token:{resetToken}";
+        
+        // Change Password OTP keys
+        public static string GetChangePasswordOtpKey(long userId) => $"change_password_otp:{userId}";
+        public static string GetChangePasswordAttemptKey(long userId) => $"change_password_attempt:{userId}";
 
         // Newsfeed cache keys
         public static string GetNewsfeedCacheKey(long userId, string sessionId) => $"newsfeed:cache:{userId}:{sessionId}";

@@ -163,6 +163,15 @@ namespace SOPServer.Service.Constants
         public const string USER_MUST_USE_GOOGLE_LOGIN = "This account uses Google login. Password reset is not available";
         public const string PASSWORD_RESET_SUBJECT_MAIL = "Password Reset Successful - SOP";
 
+        // Change Password related messages
+        public const string CURRENT_PASSWORD_INCORRECT = "Current password is incorrect";
+        public const string CHANGE_PASSWORD_SUCCESS = "Password changed successfully";
+        public const string CHANGE_PASSWORD_OTP_SENT = "OTP has been sent to your email for password change verification";
+        public const string CHANGE_PASSWORD_NOT_ALLOWED_FOR_GOOGLE = "Password change is not available for Google login accounts";
+        public const string PASSWORD_CHANGE_SUBJECT_MAIL = "Password Changed Successfully - SOP";
+        public const string CHANGE_PASSWORD_OTP_INVALID = "OTP is invalid or expired for password change";
+        public const string CHANGE_PASSWORD_OTP_VERIFIED = "OTP verified. Please proceed to change your password";
+
         // User Profile related messages
         public const string GET_USER_PROFILE_SUCCESS = "Get user profile successfully";
         public const string GET_USER_BY_ID_SUCCESS = "Get user by id successfully";

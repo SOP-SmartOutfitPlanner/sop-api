@@ -400,6 +400,8 @@ namespace SOPServer.Repository.Repositories.Implements
 
         public async Task<List<Item>> GetItemsBySeasonIdsAsync(List<long> seasonIds, List<long> excludeIds, long? userId, int? gapDay, DateTime? targetDate)
         {
+            Console.WriteLine($"[GetItemsBySeasonIdsAsync] Input - seasonIds: [{string.Join(", ", seasonIds ?? new List<long>())}], excludeIds: [{string.Join(", ", excludeIds ?? new List<long>())}], userId: {userId}, gapDay: {gapDay}, targetDate: {targetDate}");
+            
             if (seasonIds == null || !seasonIds.Any())
                 return new List<Item>();
 
@@ -424,6 +426,8 @@ namespace SOPServer.Repository.Repositories.Implements
                     var startDate = referenceDate.AddDays(-gapDay.Value);
                     var endDate = referenceDate.AddDays(gapDay.Value);
 
+                    Console.WriteLine($"[GetItemsBySeasonIdsAsync] GapDay filter - startDate: {startDate}, endDate: {endDate}");
+
                     // Exclude user items that have been worn within the gap day range
                     // This translates to SQL NOT EXISTS - efficient on database
                     userItemsQuery = userItemsQuery.Where(x => 
@@ -436,14 +440,12 @@ namespace SOPServer.Repository.Repositories.Implements
                     );
                 }
 
-                // Get up to 15 user items with database-level random ordering
-                // Use EF.Functions.Random() for SQL-level randomization to avoid loading all items into memory
-                var userItems = await userItemsQuery
-                    .OrderBy(x => EF.Functions.Random())
-                    .Take(15)
-                    .ToListAsync();
+                // Get up to 15 user items with in-memory random ordering
+                var userItems = await userItemsQuery.ToListAsync();
+                var userItemsToTake = userItems.OrderBy(x => Guid.NewGuid()).Take(15).ToList();
 
-                items.AddRange(userItems);
+                Console.WriteLine($"[GetItemsBySeasonIdsAsync] Retrieved {userItemsToTake.Count} user items - IDs: [{string.Join(", ", userItemsToTake.Select(i => i.Id))}]");
+                items.AddRange(userItemsToTake);
 
                 // Get system items only to fill remaining slots (if user items < 15)
                 // System items are NOT affected by gapDay filter
@@ -453,27 +455,30 @@ namespace SOPServer.Repository.Repositories.Implements
                     var takenIds = items.Select(i => i.Id).ToList();
                     var systemItems = await baseQuery
                         .Where(x => x.ItemType == ItemType.SYSTEM && !takenIds.Contains(x.Id))
-                        .OrderBy(x => EF.Functions.Random())
-                        .Take(systemItemsNeeded)
                         .ToListAsync();
 
-                    items.AddRange(systemItems);
+                    var systemItemsToTake = systemItems.OrderBy(x => Guid.NewGuid()).Take(systemItemsNeeded).ToList();
+                    Console.WriteLine($"[GetItemsBySeasonIdsAsync] Retrieved {systemItemsToTake.Count} system items - IDs: [{string.Join(", ", systemItemsToTake.Select(i => i.Id))}]");
+                    items.AddRange(systemItemsToTake);
                 }
             }
             else
             {
-                // If no userId provided, get all available items with database-level random
-                items = await baseQuery
-                    .OrderBy(x => EF.Functions.Random())
-                    .Take(15)
-                    .ToListAsync();
+                // If no userId provided, get all available items with in-memory random
+                var allItems = await baseQuery.ToListAsync();
+                items = allItems.OrderBy(x => Guid.NewGuid()).Take(15).ToList();
+                
+                Console.WriteLine($"[GetItemsBySeasonIdsAsync] No userId - Retrieved {items.Count} items - IDs: [{string.Join(", ", items.Select(i => i.Id))}]");
             }
 
+            Console.WriteLine($"[GetItemsBySeasonIdsAsync] Output - Total items: {items.Count}, IDs: [{string.Join(", ", items.Select(i => i.Id))}]");
             return items;
         }
 
         public async Task<List<Item>> GetItemsByOccasionIdsAsync(List<long> occasionIds, List<long> excludeIds, long? userId, int? gapDay, DateTime? targetDate)
         {
+            Console.WriteLine($"[GetItemsByOccasionIdsAsync] Input - occasionIds: [{string.Join(", ", occasionIds ?? new List<long>())}], excludeIds: [{string.Join(", ", excludeIds ?? new List<long>())}], userId: {userId}, gapDay: {gapDay}, targetDate: {targetDate}");
+            
             if (occasionIds == null || !occasionIds.Any())
                 return new List<Item>();
 
@@ -498,6 +503,8 @@ namespace SOPServer.Repository.Repositories.Implements
                     var startDate = referenceDate.AddDays(-gapDay.Value);
                     var endDate = referenceDate.AddDays(gapDay.Value);
 
+                    Console.WriteLine($"[GetItemsByOccasionIdsAsync] GapDay filter - startDate: {startDate}, endDate: {endDate}");
+
                     // Exclude user items that have been worn within the gap day range
                     // This translates to SQL NOT EXISTS - efficient on database
                     userItemsQuery = userItemsQuery.Where(x => 
@@ -510,14 +517,12 @@ namespace SOPServer.Repository.Repositories.Implements
                     );
                 }
 
-                // Get up to 15 user items with database-level random ordering
-                // Use EF.Functions.Random() for SQL-level randomization to avoid loading all items into memory
-                var userItems = await userItemsQuery
-                    .OrderBy(x => EF.Functions.Random())
-                    .Take(15)
-                    .ToListAsync();
+                // Get up to 15 user items with in-memory random ordering
+                var userItems = await userItemsQuery.ToListAsync();
+                var userItemsToTake = userItems.OrderBy(x => Guid.NewGuid()).Take(15).ToList();
 
-                items.AddRange(userItems);
+                Console.WriteLine($"[GetItemsByOccasionIdsAsync] Retrieved {userItemsToTake.Count} user items - IDs: [{string.Join(", ", userItemsToTake.Select(i => i.Id))}]");
+                items.AddRange(userItemsToTake);
 
                 // Get system items only to fill remaining slots (if user items < 15)
                 // System items are NOT affected by gapDay filter
@@ -527,27 +532,30 @@ namespace SOPServer.Repository.Repositories.Implements
                     var takenIds = items.Select(i => i.Id).ToList();
                     var systemItems = await baseQuery
                         .Where(x => x.ItemType == ItemType.SYSTEM && !takenIds.Contains(x.Id))
-                        .OrderBy(x => EF.Functions.Random())
-                        .Take(systemItemsNeeded)
                         .ToListAsync();
 
-                    items.AddRange(systemItems);
+                    var systemItemsToTake = systemItems.OrderBy(x => Guid.NewGuid()).Take(systemItemsNeeded).ToList();
+                    Console.WriteLine($"[GetItemsByOccasionIdsAsync] Retrieved {systemItemsToTake.Count} system items - IDs: [{string.Join(", ", systemItemsToTake.Select(i => i.Id))}]");
+                    items.AddRange(systemItemsToTake);
                 }
             }
             else
             {
-                // If no userId provided, get all available items with database-level random
-                items = await baseQuery
-                    .OrderBy(x => EF.Functions.Random())
-                    .Take(15)
-                    .ToListAsync();
+                // If no userId provided, get all available items with in-memory random
+                var allItems = await baseQuery.ToListAsync();
+                items = allItems.OrderBy(x => Guid.NewGuid()).Take(15).ToList();
+                
+                Console.WriteLine($"[GetItemsByOccasionIdsAsync] No userId - Retrieved {items.Count} items - IDs: [{string.Join(", ", items.Select(i => i.Id))}]");
             }
 
+            Console.WriteLine($"[GetItemsByOccasionIdsAsync] Output - Total items: {items.Count}, IDs: [{string.Join(", ", items.Select(i => i.Id))}]");
             return items;
         }
 
         public async Task<List<Item>> GetItemsByStyleIdsAsync(List<long> styleIds, List<long> excludeIds, long? userId, int? gapDay, DateTime? targetDate)
         {
+            Console.WriteLine($"[GetItemsByStyleIdsAsync] Input - styleIds: [{string.Join(", ", styleIds ?? new List<long>())}], excludeIds: [{string.Join(", ", excludeIds ?? new List<long>())}], userId: {userId}, gapDay: {gapDay}, targetDate: {targetDate}");
+            
             if (styleIds == null || !styleIds.Any())
                 return new List<Item>();
 
@@ -572,6 +580,8 @@ namespace SOPServer.Repository.Repositories.Implements
                     var startDate = referenceDate.AddDays(-gapDay.Value);
                     var endDate = referenceDate.AddDays(gapDay.Value);
 
+                    Console.WriteLine($"[GetItemsByStyleIdsAsync] GapDay filter - startDate: {startDate}, endDate: {endDate}");
+
                     // Exclude user items that have been worn within the gap day range
                     // This translates to SQL NOT EXISTS - efficient on database
                     userItemsQuery = userItemsQuery.Where(x => 
@@ -584,14 +594,12 @@ namespace SOPServer.Repository.Repositories.Implements
                     );
                 }
 
-                // Get up to 15 user items with database-level random ordering
-                // Use EF.Functions.Random() for SQL-level randomization to avoid loading all items into memory
-                var userItems = await userItemsQuery
-                    .OrderBy(x => EF.Functions.Random())
-                    .Take(15)
-                    .ToListAsync();
+                // Get up to 15 user items with in-memory random ordering
+                var userItems = await userItemsQuery.ToListAsync();
+                var userItemsToTake = userItems.OrderBy(x => Guid.NewGuid()).Take(15).ToList();
 
-                items.AddRange(userItems);
+                Console.WriteLine($"[GetItemsByStyleIdsAsync] Retrieved {userItemsToTake.Count} user items - IDs: [{string.Join(", ", userItemsToTake.Select(i => i.Id))}]");
+                items.AddRange(userItemsToTake);
 
                 // Get system items only to fill remaining slots (if user items < 15)
                 // System items are NOT affected by gapDay filter
@@ -601,22 +609,23 @@ namespace SOPServer.Repository.Repositories.Implements
                     var takenIds = items.Select(i => i.Id).ToList();
                     var systemItems = await baseQuery
                         .Where(x => x.ItemType == ItemType.SYSTEM && !takenIds.Contains(x.Id))
-                        .OrderBy(x => EF.Functions.Random())
-                        .Take(systemItemsNeeded)
                         .ToListAsync();
 
-                    items.AddRange(systemItems);
+                    var systemItemsToTake = systemItems.OrderBy(x => Guid.NewGuid()).Take(systemItemsNeeded).ToList();
+                    Console.WriteLine($"[GetItemsByStyleIdsAsync] Retrieved {systemItemsToTake.Count} system items - IDs: [{string.Join(", ", systemItemsToTake.Select(i => i.Id))}]");
+                    items.AddRange(systemItemsToTake);
                 }
             }
             else
             {
-                // If no userId provided, get all available items with database-level random
-                items = await baseQuery
-                    .OrderBy(x => EF.Functions.Random())
-                    .Take(15)
-                    .ToListAsync();
+                // If no userId provided, get all available items with in-memory random
+                var allItems = await baseQuery.ToListAsync();
+                items = allItems.OrderBy(x => Guid.NewGuid()).Take(15).ToList();
+                
+                Console.WriteLine($"[GetItemsByStyleIdsAsync] No userId - Retrieved {items.Count} items - IDs: [{string.Join(", ", items.Select(i => i.Id))}]");
             }
 
+            Console.WriteLine($"[GetItemsByStyleIdsAsync] Output - Total items: {items.Count}, IDs: [{string.Join(", ", items.Select(i => i.Id))}]");
             return items;
         }
     }

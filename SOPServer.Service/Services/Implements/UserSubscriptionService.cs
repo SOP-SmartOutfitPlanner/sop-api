@@ -1,10 +1,12 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SOPServer.Repository.Entities;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Repository.Utils;
+using SOPServer.Service.BusinessModels.NotificationModels;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.BusinessModels.SubscriptionLimitModels;
 using SOPServer.Service.BusinessModels.SubscriptionPlanModels;
@@ -22,13 +24,23 @@ namespace SOPServer.Service.Services.Implements
         private readonly IMapper _mapper;
         private readonly IPayOSService _payOSService;
         private readonly IRedisService _redisService;
+        private readonly INotificationService _notificationService;
+        private readonly ILogger<UserSubscriptionService> _logger;
 
-        public UserSubscriptionService(IUnitOfWork unitOfWork, IMapper mapper, IPayOSService payOSService, IRedisService redisService)
+        public UserSubscriptionService(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            IPayOSService payOSService,
+            IRedisService redisService,
+            INotificationService notificationService,
+            ILogger<UserSubscriptionService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _payOSService = payOSService;
             _redisService = redisService;
+            _notificationService = notificationService;
+            _logger = logger;
         }
 
         public async Task<BaseResponseModel> PurchaseSubscriptionAsync(long userId, PurchaseSubscriptionRequestModel model)
@@ -390,6 +402,12 @@ namespace SOPServer.Service.Services.Implements
                 var purchaseCacheKey = $"purchase_subscription_pending:{transaction.UserSubscription.UserId}";
                 await _redisService.RemoveAsync(purchaseCacheKey);
 
+                // Send notification for successful subscription purchase
+                await SendSubscriptionPurchaseNotificationAsync(
+                    transaction.UserSubscription.UserId,
+                    transaction.UserSubscription.SubscriptionPlan.Name,
+                    transaction.UserSubscription.DateExp);
+
                 return new BaseResponseModel
                 {
                     StatusCode = StatusCodes.Status200OK,
@@ -629,6 +647,24 @@ namespace SOPServer.Service.Services.Implements
             int randomComponent = random.Next(100, 999);
             int transactionCode = Math.Abs((timestamp * 1000 + randomComponent) % int.MaxValue);
             return transactionCode;
+        }
+
+        private async Task SendSubscriptionPurchaseNotificationAsync(long userId, string planName, DateTime expirationDate)
+        {
+            try
+            {
+                var notificationModel = new NotificationRequestModel
+                {
+                    Title = "Subscription Activated",
+                    Message = $"Your <b>{planName}</b> subscription is now active! Valid until {expirationDate:dd/MM/yyyy}. Enjoy your premium features!"
+                };
+
+                await _notificationService.PushSystemNotificationToUserAsync(userId, notificationModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send subscription purchase notification to user {UserId}", userId);
+            }
         }
     }
 }

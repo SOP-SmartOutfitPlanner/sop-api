@@ -546,7 +546,7 @@ Parse this compact format to make outfit decisions." }
 
             var systemFormatParts = new List<Part>
             {
-                new Part { Text = @"Based on user characteristic and/or occasion, determine what we expected item should have based on provide data. Not creative, **MUST USE PROVIDE DATA** (min 1 id, max 3 ids)" }
+                new Part { Text = @"Based on user characteristic and/or occasion, determine what we expected item should have based on provide data. Not creative, **MUST USE PROVIDE DATA** (min 2 id, max 4 ids)" }
             };
 
             requestJsonMode.SystemInstruction = new Content
@@ -633,13 +633,13 @@ Parse this compact format to make outfit decisions." }
 
                     var requestJsonMode = new GenerateContentRequest();
                     requestJsonMode.UseJsonMode<OutfitSelectionModel>();
-                    requestJsonMode.GenerationConfig = new GenerationConfig
-                    {
-                        MaxOutputTokens = 2000,
-                        Temperature = 1.3f,  // Tăng lên để tăng tính ngẫu nhiên
-                        TopP = 0.95f,
-                        TopK = 50
-                    };
+                    //requestJsonMode.GenerationConfig = new GenerationConfig
+                    //{
+                    //    MaxOutputTokens = 2000,
+                    //    Temperature = 1.3f,  // Tăng lên để tăng tính ngẫu nhiên
+                    //    TopP = 0.95f,
+                    //    TopK = 50
+                    //};
 
                     var systemParts = new List<Part>
             {
@@ -649,7 +649,7 @@ You are an expert fashion stylist AI. Your task is to select a complete outfit f
 IMPORTANT RULES:
 1. Return ONLY valid JSON in English. Do not include Vietnamese text.
 2. Do not output any explanations outside the JSON object.
-3. Prioritize selecting items where ""itemType"" is null or ""itemType"" is ""0"". After using those, only then consider items with ""itemType"" = ""1"".
+3. Prioritize selecting items ""itemType"" is ""0"".Beside that, consider items with ""itemType"" = ""1"".
 4. Select items that form a COMPLETE outfit (typically **3-5 items** covering: top, bottom, shoes, and optional accessories)
 5. **CRITICAL - MAXIMIZE DIVERSITY AND CREATIVITY**: 
    - Generate UNIQUE and UNEXPECTED outfit combinations each time

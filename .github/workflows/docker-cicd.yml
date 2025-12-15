@@ -75,8 +75,23 @@ jobs:
           dotnet tool uninstall --global dotnet-ef 2>/dev/null || true
           dotnet tool install --global dotnet-ef --version 8.0.* 
           
+          # Create temporary appsettings for migrations
+          cat > SOPServer.API/appsettings.json << EOF
+          {
+            "ConnectionStrings": {
+              "SOPServerLocal": "${{ secrets.CONNECTION_STRING }}"
+            }
+          }
+          EOF
+          
+          # Create firebase-adminsdk.json from secret
+          echo '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > SOPServer.API/firebase-adminsdk.json
+          
           # Run migrations
-          dotnet ef database update --project SOPServer.Repository/SOPServer.Repository.csproj --startup-project SOPServer.API/SOPServer.API.csproj --connection "${{ secrets.CONNECTION_STRING }}"
+          dotnet ef database update --project SOPServer.Repository/SOPServer.Repository.csproj --startup-project SOPServer.API/SOPServer.API.csproj
+          
+          # Clean up temporary files
+          rm -f SOPServer.API/appsettings.json SOPServer.API/firebase-adminsdk.json
         continue-on-error: false
 
       - name: Clean up old Docker resources

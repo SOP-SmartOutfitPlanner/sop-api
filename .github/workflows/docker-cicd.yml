@@ -48,6 +48,23 @@ jobs:
         with:
           clean: false
 
+      # Install .NET SDK for EF Core tools
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      # Install EF Core tools
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef || dotnet tool update --global dotnet-ef
+
+      # Run EF Core migrations
+      - name: Update Database with EF Core Migrations
+        run: |
+          dotnet ef database update --project SOPServer.Repository/SOPServer.Repository.csproj --startup-project SOPServer.API/SOPServer.API.csproj --connection "${{ secrets.CONNECTION_STRING }}"
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+
       - name: Clean up old Docker resources
         run: |
           docker stop sop-server || true

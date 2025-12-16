@@ -33,14 +33,17 @@ namespace SOPServer.API.Controllers
         /// - Recent transactions with user details
         /// 
         /// **Query Parameters:**
-        /// - `year` (optional): Filter by specific year
-        /// - `month` (optional): Filter by specific month (1-12)
-        /// - `startDate` (optional): Filter from this date
-        /// - `endDate` (optional): Filter to this date
-        /// - `subscriptionPlanId` (optional): Filter by subscription plan
+        /// - `year` (optional): Filter total statistics by specific year (does NOT affect monthly breakdown)
+        /// - `month` (optional): Filter total statistics by specific month 1-12 (does NOT affect monthly breakdown)
+        /// - `startDate` (optional): Filter from this date (applies to all sections including monthly breakdown)
+        /// - `endDate` (optional): Filter to this date (applies to all sections including monthly breakdown)
+        /// - `subscriptionPlanId` (optional): Filter by subscription plan (applies to all sections)
         /// - `recentTransactionLimit` (optional): Number of recent transactions to return (default: 10, max: 100)
         /// 
-        /// **Note:** Only counts transactions with subscription plans that have price > 0 (excludes free plans)
+        /// **Important Notes:**
+        /// - Monthly revenue breakdown always shows all months within the date range, ignoring year/month filters
+        /// - Year/month filters only affect total statistics (TotalRevenue, TotalTransactions, etc.)
+        /// - Only counts transactions with subscription plans that have price > 0 (excludes free plans)
         /// </remarks>
         /// <response code="200">Revenue statistics retrieved successfully</response>
         /// <response code="400">Invalid filter parameters</response>

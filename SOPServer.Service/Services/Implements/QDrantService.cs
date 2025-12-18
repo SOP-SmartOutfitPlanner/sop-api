@@ -86,270 +86,274 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<List<QDrantSearchModels>> SearchSimilarityByUserId(string descriptionItem, long userId, CancellationToken cancellationToken = default)
         {
-            Console.WriteLine("SearchSimilarityByUserId");
-            Stopwatch sw = Stopwatch.StartNew();
-            sw.Start();
-            var embedding = await _geminiService.EmbeddingText(descriptionItem);
-            var searchResult = await _client.SearchAsync(
-                collectionName: _qdrantSettings.Collection,
-                vector: embedding.ToArray(),
-                filter: new Filter
-                {
-                    Must =
-                    {
-                        new Condition
-                        {
-                            Field = new FieldCondition
-                            {
-                                Key = "UserId",
-                                Match = new Match
-                                {
-                                    Integer = userId
-                                }
-                            }
-                        }
-                    }
-                },
-                limit: 2,
-                scoreThreshold: 0.6f
-            );
-
-            var result = new List<QDrantSearchModels>();
-
-            foreach (var searchItem in searchResult)
-            {
-
-                var itemId = long.Parse(searchItem.Id.Num.ToString());
-
-                // Get item directly from repository with includes
-                var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(itemId,
-                    include: query => query.Include(x => x.Category)
-                                          .Include(x => x.User)
-                                          .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
-                                          .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
-                                          .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
-
-                if (item != null)
-                {
-                    var itemModel = _mapper.Map<ItemModel>(item);
-                    var mappedItem = _mapper.Map<QDrantSearchModels>(itemModel);
-                    mappedItem.Score = searchItem.Score;
-                    result.Add(mappedItem);
-                }
-            }
-            sw.Stop();
-            Console.WriteLine("SearchSimilarityByUserId " + sw.ElapsedMilliseconds + "ms");
-            return result;
+            // Console.WriteLine("SearchSimilarityByUserId");
+            // Stopwatch sw = Stopwatch.StartNew();
+            // sw.Start();
+            // var embedding = await _geminiService.EmbeddingText(descriptionItem);
+            // var searchResult = await _client.SearchAsync(
+            //     collectionName: _qdrantSettings.Collection,
+            //     vector: embedding.ToArray(),
+            //     filter: new Filter
+            //     {
+            //         Must =
+            //         {
+            //             new Condition
+            //             {
+            //                 Field = new FieldCondition
+            //                 {
+            //                     Key = "UserId",
+            //                     Match = new Match
+            //                     {
+            //                         Integer = userId
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //     },
+            //     limit: 2,
+            //     scoreThreshold: 0.6f
+            // );
+            //
+            // var result = new List<QDrantSearchModels>();
+            //
+            // foreach (var searchItem in searchResult)
+            // {
+            //
+            //     var itemId = long.Parse(searchItem.Id.Num.ToString());
+            //
+            //     // Get item directly from repository with includes
+            //     var item = await _unitOfWork.ItemRepository.GetByIdIncludeAsync(itemId,
+            //         include: query => query.Include(x => x.Category)
+            //                               .Include(x => x.User)
+            //                               .Include(x => x.ItemOccasions).ThenInclude(x => x.Occasion)
+            //                               .Include(x => x.ItemSeasons).ThenInclude(x => x.Season)
+            //                               .Include(x => x.ItemStyles).ThenInclude(x => x.Style));
+            //
+            //     if (item != null)
+            //     {
+            //         var itemModel = _mapper.Map<ItemModel>(item);
+            //         var mappedItem = _mapper.Map<QDrantSearchModels>(itemModel);
+            //         mappedItem.Score = searchItem.Score;
+            //         result.Add(mappedItem);
+            //     }
+            // }
+            // sw.Stop();
+            // Console.WriteLine("SearchSimilarityByUserId " + sw.ElapsedMilliseconds + "ms");
+            // return result;
+            throw new NotImplementedException();
         }
 
         public async Task<List<string>> SearchSimilarityItemSystem(List<string> descriptionItems, CancellationToken cancellationToken = default)
         {
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            Console.WriteLine($"SearchSimilarityItemSystem - Processing {descriptionItems.Count} descriptions");
+            // Stopwatch stopwatch = Stopwatch.StartNew();
+            // Console.WriteLine($"SearchSimilarityItemSystem - Processing {descriptionItems.Count} descriptions");
+            //
+            // // Process embedding and search in pipeline
+            // var searchTasks = descriptionItems.Select(async descriptionItem =>
+            // {
+            //     var embeddingSw = Stopwatch.StartNew();
+            //     var embedding = await _geminiService.EmbeddingText(descriptionItem);
+            //     embeddingSw.Stop();
+            //     Console.WriteLine($"Embedding generated for '{descriptionItem}' in {embeddingSw.ElapsedMilliseconds}ms");
+            //
+            //     var searchSw = Stopwatch.StartNew();
+            //     var searchResult = await _client.SearchAsync(
+            //         collectionName: _qdrantSettings.Collection,
+            //         vector: embedding.ToArray(),
+            //         filter: new Filter
+            //         {
+            //             Must =
+            //             {
+            //         new Condition
+            //         {
+            //             Field = new FieldCondition
+            //             {
+            //                 Key = "ItemType",
+            //                 Match = new Match
+            //                 {
+            //                     Integer = 1
+            //                 }
+            //             }
+            //         }
+            //             }
+            //         },
+            //         limit: 2
+            //     );
+            //     searchSw.Stop();
+            //     Console.WriteLine($"Search completed for '{descriptionItem}' in {searchSw.ElapsedMilliseconds}ms - Found {searchResult.Count} items");
+            //     return searchResult;
+            // }).ToList();
+            //
+            // var allSearchResults = await Task.WhenAll(searchTasks);
+            //
+            // // Flatten results and remove duplicates (keep highest score)
+            // var itemScoreDict = new Dictionary<long, float>();
+            //
+            // foreach (var searchResult in allSearchResults)
+            // {
+            //     foreach (var searchItem in searchResult)
+            //     {
+            //         var itemId = long.Parse(searchItem.Id.Num.ToString());
+            //
+            //         if (!itemScoreDict.ContainsKey(itemId) || itemScoreDict[itemId] < searchItem.Score)
+            //         {
+            //             itemScoreDict[itemId] = searchItem.Score;
+            //         }
+            //     }
+            // }
+            //
+            // // Fetch all items in ONE query instead of parallel queries
+            // var itemIds = itemScoreDict.Keys.ToList();
+            //
+            // var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(itemIds);
+            //
+            // // Map results to concise string format for AI
+            // var result = items
+            //     .Select(item =>
+            //     {
+            //         var itemModel = _mapper.Map<ItemModel>(item);
+            //
+            //         // Simplified color extraction (just first 2 colors)
+            //         var colors = "none";
+            //         if (!string.IsNullOrEmpty(itemModel.Color))
+            //         {
+            //             var colorList = System.Text.Json.JsonSerializer.Deserialize<List<ColorModel>>(itemModel.Color);
+            //             if (colorList?.Any() == true)
+            //             {
+            //                 colors = string.Join(",", colorList.Take(2).Select(c => c.Name));
+            //             }
+            //         }
+            //
+            //         // Just first 2 of each attribute
+            //         var styles = itemModel.Styles?.Any() == true
+            //             ? string.Join(",", itemModel.Styles.Take(2).Select(s => s.Name))
+            //             : "none";
+            //         var occasions = itemModel.Occasions?.Any() == true
+            //             ? string.Join(",", itemModel.Occasions.Take(2).Select(o => o.Name))
+            //             : "none";
+            //         var seasons = itemModel.Seasons?.Any() == true
+            //             ? string.Join(",", itemModel.Seasons.Take(2).Select(s => s.Name))
+            //             : "none";
+            //
+            //         var category = itemModel.CategoryName ?? "none";
+            //
+            //         // Ultra compact format: ID|Cat|Color|Style|Occ|Season
+            //         return $"{item.Id}|{category}|{colors}|{styles}|{occasions}|{seasons}";
+            //     })
+            //     .ToList();
+            //
+            // stopwatch.Stop();
+            // Console.WriteLine($"SearchSimilarityItemSystem completed in {stopwatch.ElapsedMilliseconds}ms - Total unique items found: {result.Count}");
+            //
+            // foreach (var res in result)
+            // {
+            //     Console.WriteLine($"Found: {res}");
+            // }
 
-            // Process embedding and search in pipeline
-            var searchTasks = descriptionItems.Select(async descriptionItem =>
-            {
-                var embeddingSw = Stopwatch.StartNew();
-                var embedding = await _geminiService.EmbeddingText(descriptionItem);
-                embeddingSw.Stop();
-                Console.WriteLine($"Embedding generated for '{descriptionItem}' in {embeddingSw.ElapsedMilliseconds}ms");
-
-                var searchSw = Stopwatch.StartNew();
-                var searchResult = await _client.SearchAsync(
-                    collectionName: _qdrantSettings.Collection,
-                    vector: embedding.ToArray(),
-                    filter: new Filter
-                    {
-                        Must =
-                        {
-                    new Condition
-                    {
-                        Field = new FieldCondition
-                        {
-                            Key = "ItemType",
-                            Match = new Match
-                            {
-                                Integer = 1
-                            }
-                        }
-                    }
-                        }
-                    },
-                    limit: 2
-                );
-                searchSw.Stop();
-                Console.WriteLine($"Search completed for '{descriptionItem}' in {searchSw.ElapsedMilliseconds}ms - Found {searchResult.Count} items");
-                return searchResult;
-            }).ToList();
-
-            var allSearchResults = await Task.WhenAll(searchTasks);
-
-            // Flatten results and remove duplicates (keep highest score)
-            var itemScoreDict = new Dictionary<long, float>();
-
-            foreach (var searchResult in allSearchResults)
-            {
-                foreach (var searchItem in searchResult)
-                {
-                    var itemId = long.Parse(searchItem.Id.Num.ToString());
-
-                    if (!itemScoreDict.ContainsKey(itemId) || itemScoreDict[itemId] < searchItem.Score)
-                    {
-                        itemScoreDict[itemId] = searchItem.Score;
-                    }
-                }
-            }
-
-            // Fetch all items in ONE query instead of parallel queries
-            var itemIds = itemScoreDict.Keys.ToList();
-
-            var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(itemIds);
-
-            // Map results to concise string format for AI
-            var result = items
-                .Select(item =>
-                {
-                    var itemModel = _mapper.Map<ItemModel>(item);
-
-                    // Simplified color extraction (just first 2 colors)
-                    var colors = "none";
-                    if (!string.IsNullOrEmpty(itemModel.Color))
-                    {
-                        var colorList = System.Text.Json.JsonSerializer.Deserialize<List<ColorModel>>(itemModel.Color);
-                        if (colorList?.Any() == true)
-                        {
-                            colors = string.Join(",", colorList.Take(2).Select(c => c.Name));
-                        }
-                    }
-
-                    // Just first 2 of each attribute
-                    var styles = itemModel.Styles?.Any() == true
-                        ? string.Join(",", itemModel.Styles.Take(2).Select(s => s.Name))
-                        : "none";
-                    var occasions = itemModel.Occasions?.Any() == true
-                        ? string.Join(",", itemModel.Occasions.Take(2).Select(o => o.Name))
-                        : "none";
-                    var seasons = itemModel.Seasons?.Any() == true
-                        ? string.Join(",", itemModel.Seasons.Take(2).Select(s => s.Name))
-                        : "none";
-
-                    var category = itemModel.CategoryName ?? "none";
-
-                    // Ultra compact format: ID|Cat|Color|Style|Occ|Season
-                    return $"{item.Id}|{category}|{colors}|{styles}|{occasions}|{seasons}";
-                })
-                .ToList();
-
-            stopwatch.Stop();
-            Console.WriteLine($"SearchSimilarityItemSystem completed in {stopwatch.ElapsedMilliseconds}ms - Total unique items found: {result.Count}");
-
-            foreach (var res in result)
-            {
-                Console.WriteLine($"Found: {res}");
-            }
-
-            return result;
+            throw new NotImplementedException();
         }
 
         public async Task<List<string>> SearchItemIdsByUserId(List<string> descriptionItems, long userId, CancellationToken cancellationToken = default)
         {
-            Console.WriteLine($"SearchItemIdsByUserId - Processing {descriptionItems.Count} descriptions");
-            var sw = Stopwatch.StartNew();
+            // Console.WriteLine($"SearchItemIdsByUserId - Processing {descriptionItems.Count} descriptions");
+            // var sw = Stopwatch.StartNew();
+            //
+            // // Process embedding and search in pipeline
+            // var searchTasks = descriptionItems.Select(async descriptionItem =>
+            // {
+            //     var embedding = await _geminiService.EmbeddingText(descriptionItem);
+            //     var searchResult = await _client.SearchAsync(
+            //         collectionName: _qdrantSettings.Collection,
+            //         vector: embedding.ToArray(),
+            //         filter: new Filter
+            //         {
+            //             Must =
+            //             {
+            //                 new Condition
+            //                 {
+            //                     Field = new FieldCondition
+            //                     {
+            //                         Key = "UserId",
+            //                         Match = new Match
+            //                         {
+            //                             Integer = userId
+            //                         }
+            //                     }
+            //                 }
+            //             }
+            //         },
+            //         limit: 2 // Tăng từ 2 lên 3 để có nhiều lựa chọn hơn
+            //     );
+            //     return searchResult;
+            // }).ToList();
+            //
+            // var allSearchResults = await Task.WhenAll(searchTasks);
+            //
+            // // Flatten results and remove duplicates (keep highest score)
+            // var itemScoreDict = new Dictionary<long, float>();
+            //
+            // foreach (var searchResult in allSearchResults)
+            // {
+            //     if (searchResult != null && searchResult.Any())
+            //     {
+            //         foreach (var searchItem in searchResult)
+            //         {
+            //             var itemId = long.Parse(searchItem.Id.Num.ToString());
+            //
+            //             if (!itemScoreDict.ContainsKey(itemId) || itemScoreDict[itemId] < searchItem.Score)
+            //             {
+            //                 itemScoreDict[itemId] = searchItem.Score;
+            //             }
+            //         }
+            //     }
+            // }
+            //
+            // // Fetch all items in ONE query
+            // var itemIds = itemScoreDict.Keys.ToList();
+            // var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(itemIds);
+            //
+            // // Map results to ULTRA CONCISE format for AI (remove verbose description)
+            // var result = items
+            //     .Select(item =>
+            //     {
+            //         var itemModel = _mapper.Map<ItemModel>(item);
+            //         
+            //         // Simplified color extraction (just first 2 colors)
+            //         var colors = "none";
+            //         if (!string.IsNullOrEmpty(itemModel.Color))
+            //         {
+            //             var colorList = System.Text.Json.JsonSerializer.Deserialize<List<ColorModel>>(itemModel.Color);
+            //             if (colorList?.Any() == true)
+            //             {
+            //                 colors = string.Join(",", colorList.Take(2).Select(c => c.Name));
+            //             }
+            //         }
+            //         
+            //         // Just first 2 of each attribute
+            //         var styles = itemModel.Styles?.Any() == true 
+            //             ? string.Join(",", itemModel.Styles.Take(2).Select(s => s.Name)) 
+            //             : "none";
+            //         var occasions = itemModel.Occasions?.Any() == true 
+            //             ? string.Join(",", itemModel.Occasions.Take(2).Select(o => o.Name)) 
+            //             : "none";
+            //         var seasons = itemModel.Seasons?.Any() == true 
+            //             ? string.Join(",", itemModel.Seasons.Take(2).Select(s => s.Name)) 
+            //             : "none";
+            //         
+            //         var category = itemModel.CategoryName ?? "none";
+            //         
+            //         // Ultra compact format: ID|Cat|Color|Style|Occ|Season
+            //         return $"{item.Id}|{category}|{colors}|{styles}|{occasions}|{seasons}";
+            //     })
+            //     .ToList();
+            //
+            // sw.Stop();
+            // Console.WriteLine($"SearchItemIdsByUserId {sw.ElapsedMilliseconds}ms - Found {result.Count} unique items");
 
-            // Process embedding and search in pipeline
-            var searchTasks = descriptionItems.Select(async descriptionItem =>
-            {
-                var embedding = await _geminiService.EmbeddingText(descriptionItem);
-                var searchResult = await _client.SearchAsync(
-                    collectionName: _qdrantSettings.Collection,
-                    vector: embedding.ToArray(),
-                    filter: new Filter
-                    {
-                        Must =
-                        {
-                            new Condition
-                            {
-                                Field = new FieldCondition
-                                {
-                                    Key = "UserId",
-                                    Match = new Match
-                                    {
-                                        Integer = userId
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    limit: 2 // Tăng từ 2 lên 3 để có nhiều lựa chọn hơn
-                );
-                return searchResult;
-            }).ToList();
-
-            var allSearchResults = await Task.WhenAll(searchTasks);
-
-            // Flatten results and remove duplicates (keep highest score)
-            var itemScoreDict = new Dictionary<long, float>();
-
-            foreach (var searchResult in allSearchResults)
-            {
-                if (searchResult != null && searchResult.Any())
-                {
-                    foreach (var searchItem in searchResult)
-                    {
-                        var itemId = long.Parse(searchItem.Id.Num.ToString());
-
-                        if (!itemScoreDict.ContainsKey(itemId) || itemScoreDict[itemId] < searchItem.Score)
-                        {
-                            itemScoreDict[itemId] = searchItem.Score;
-                        }
-                    }
-                }
-            }
-
-            // Fetch all items in ONE query
-            var itemIds = itemScoreDict.Keys.ToList();
-            var items = await _unitOfWork.ItemRepository.GetItemsByIdsAsync(itemIds);
-
-            // Map results to ULTRA CONCISE format for AI (remove verbose description)
-            var result = items
-                .Select(item =>
-                {
-                    var itemModel = _mapper.Map<ItemModel>(item);
-                    
-                    // Simplified color extraction (just first 2 colors)
-                    var colors = "none";
-                    if (!string.IsNullOrEmpty(itemModel.Color))
-                    {
-                        var colorList = System.Text.Json.JsonSerializer.Deserialize<List<ColorModel>>(itemModel.Color);
-                        if (colorList?.Any() == true)
-                        {
-                            colors = string.Join(",", colorList.Take(2).Select(c => c.Name));
-                        }
-                    }
-                    
-                    // Just first 2 of each attribute
-                    var styles = itemModel.Styles?.Any() == true 
-                        ? string.Join(",", itemModel.Styles.Take(2).Select(s => s.Name)) 
-                        : "none";
-                    var occasions = itemModel.Occasions?.Any() == true 
-                        ? string.Join(",", itemModel.Occasions.Take(2).Select(o => o.Name)) 
-                        : "none";
-                    var seasons = itemModel.Seasons?.Any() == true 
-                        ? string.Join(",", itemModel.Seasons.Take(2).Select(s => s.Name)) 
-                        : "none";
-                    
-                    var category = itemModel.CategoryName ?? "none";
-                    
-                    // Ultra compact format: ID|Cat|Color|Style|Occ|Season
-                    return $"{item.Id}|{category}|{colors}|{styles}|{occasions}|{seasons}";
-                })
-                .ToList();
-
-            sw.Stop();
-            Console.WriteLine($"SearchItemIdsByUserId {sw.ElapsedMilliseconds}ms - Found {result.Count} unique items");
-
-            return result;
+            // return result;
+            
+            throw new NotImplementedException();
         }
+        
     }
 }

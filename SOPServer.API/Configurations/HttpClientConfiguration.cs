@@ -29,7 +29,7 @@ namespace SOPServer.API.Configurations
             {
                 client.BaseAddress = new Uri("https://split-item.wizlab.io.vn/");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
-                client.Timeout = TimeSpan.FromSeconds(120);
+                client.Timeout = TimeSpan.FromSeconds(200);
             });
 
             services.AddHttpClient("OpenWeatherMap", client =>

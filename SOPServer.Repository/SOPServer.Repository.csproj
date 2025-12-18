@@ -9,11 +9,11 @@
 	<ItemGroup>
 		<PackageReference Include="AutoMapper" Version="13.0.1" />
 		<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
-		<PackageReference Include="Google.Apis.Auth" Version="1.69.0" />
 		<PackageReference Include="Google_GenerativeAI" Version="3.4.1" />
+		<PackageReference Include="Google_GenerativeAI.Auth" Version="3.4.1" />
 		<PackageReference Include="Google_GenerativeAI.Tools" Version="3.4.1" />
 		<PackageReference Include="MailKit" Version="4.10.0" />
-		<PackageReference Include="FirebaseAdmin" Version="3.1.0" />
+		<PackageReference Include="FirebaseAdmin" Version="3.4.0" />
 		<PackageReference Include="FirebaseStorage.net" Version="1.0.3" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.8" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.0" />
@@ -32,7 +32,7 @@
 		<PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.8" />
 		<PackageReference Include="MimeKit" Version="4.10.0" />
 		<PackageReference Include="Minio" Version="6.0.5" />
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 		<PackageReference Include="payOS" Version="2.0.1" />
 		<PackageReference Include="Qdrant.Client" Version="1.15.1" />
 	</ItemGroup>

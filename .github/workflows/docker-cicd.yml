@@ -48,30 +48,50 @@ jobs:
         with:
           clean: false
 
-      # Setup .NET SDK if not exists
-      - name: Check and Install .NET SDK
+      # Setup .NET SDK in user directory to avoid permission issues
+      - name: Setup .NET SDK
         run: |
-          export PATH="$PATH:$HOME/.dotnet:$HOME/.dotnet/tools"
-          export DOTNET_ROOT=$HOME/.dotnet
+          export DOTNET_INSTALL_DIR="$HOME/.dotnet"
+          export PATH="$PATH:$DOTNET_INSTALL_DIR:$DOTNET_INSTALL_DIR/tools"
+          export DOTNET_ROOT="$DOTNET_INSTALL_DIR"
           
-          if ! command -v dotnet &> /dev/null; then
-            echo ".NET SDK not found, installing..."
-            wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
-            chmod +x dotnet-install.sh
-            ./dotnet-install.sh --channel 8.0 --install-dir $HOME/.dotnet
-            echo "export PATH=\$PATH:\$HOME/.dotnet:\$HOME/.dotnet/tools" >> $HOME/.bashrc
-            echo "export DOTNET_ROOT=\$HOME/.dotnet" >> $HOME/.bashrc
+          if [ ! -d "$DOTNET_INSTALL_DIR" ] || [ ! -f "$DOTNET_INSTALL_DIR/dotnet" ]; then
+            echo "Installing .NET SDK 8.0..."
+            curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 8.0 --install-dir $DOTNET_INSTALL_DIR
           fi
           
-          dotnet --version
+          echo "DOTNET_INSTALL_DIR=$DOTNET_INSTALL_DIR" >> $GITHUB_ENV
+          echo "DOTNET_ROOT=$DOTNET_INSTALL_DIR" >> $GITHUB_ENV
+          echo "$DOTNET_INSTALL_DIR" >> $GITHUB_PATH
+          echo "$DOTNET_INSTALL_DIR/tools" >> $GITHUB_PATH
+          
+          $DOTNET_INSTALL_DIR/dotnet --version
 
       # Run EF Core migrations on VPS before deploying new container
       - name: Run Database Migrations
         run: |
-          export PATH="$PATH:$HOME/.dotnet:$HOME/.dotnet/tools"
-          export DOTNET_ROOT=$HOME/.dotnet
-          dotnet tool install --global dotnet-ef || dotnet tool update --global dotnet-ef
-          dotnet ef database update --project SOPServer.Repository/SOPServer.Repository.csproj --startup-project SOPServer.API/SOPServer.API.csproj --connection "${{ secrets.CONNECTION_STRING }}"
+          # Clear NuGet cache and reinstall dotnet-ef tool
+          dotnet nuget locals all --clear
+          dotnet tool uninstall --global dotnet-ef 2>/dev/null || true
+          dotnet tool install --global dotnet-ef --version 8.0.* 
+          
+          # Create temporary appsettings for migrations
+          cat > SOPServer.API/appsettings.json << EOF
+          {
+            "ConnectionStrings": {
+              "SOPServerLocal": "${{ secrets.CONNECTION_STRING }}"
+            }
+          }
+          EOF
+          
+          # Create firebase-adminsdk.json from secret
+          echo '${{ secrets.FIREBASE_ADMINSDK_JSON }}' > SOPServer.API/firebase-adminsdk.json
+          
+          # Run migrations
+          dotnet ef database update --project SOPServer.Repository/SOPServer.Repository.csproj --startup-project SOPServer.API/SOPServer.API.csproj
+          
+          # Clean up temporary files
+          rm -f SOPServer.API/appsettings.json SOPServer.API/firebase-adminsdk.json
         continue-on-error: false
 
       - name: Clean up old Docker resources

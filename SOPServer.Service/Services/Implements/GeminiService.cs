@@ -1,9 +1,13 @@
 ﻿using AutoMapper;
 using GenerativeAI;
+using GenerativeAI.Authenticators;
 using GenerativeAI.Tools;
 using GenerativeAI.Types;
+using Google.Apis.Auth.OAuth2;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
 using SOPServer.Repository.Enums;
 using SOPServer.Repository.UnitOfWork;
 using SOPServer.Service.BusinessModels.GeminiModels;
@@ -34,30 +38,60 @@ namespace SOPServer.Service.Services.Implements
             "image/jpeg", "image/png", "image/webp", "image/gif"
         };
         private readonly GenerativeModel _suggestionModel;
+        private readonly VertexAI _vertexAIClient;
 
-        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IOptions<QDrantClientSettings> qdrantClientSettings, ILogger<GeminiService> logger, Lazy<IQdrantService> qdrantService)
+        public GeminiService(IOptions<GeminiSettings> geminiSettings, IUnitOfWork unitOfWork, IOptions<QDrantClientSettings> qdrantClientSettings, ILogger<GeminiService> logger, Lazy<IQdrantService> qdrantService, IWebHostEnvironment environment)
         {
             _unitOfWork = unitOfWork;
             _qdrantClientSettings = qdrantClientSettings.Value;
             _logger = logger;
             _qdrantService = qdrantService;
 
+            // Get service account key path from settings or environment variable
+            string serviceAccountKeyPath = string.Empty;
+
+            
+            if (environment.EnvironmentName != "Development")
+            {
+                serviceAccountKeyPath = System.Environment.GetEnvironmentVariable("VERTEX_AI");
+
+                if (string.IsNullOrEmpty(serviceAccountKeyPath))
+                {
+                    throw new InvalidOperationException(
+                        "Environment variable VERTEX_AI is not set for non-development environment.");
+                }
+            }
+            else
+            {
+                serviceAccountKeyPath = geminiSettings.Value.ServiceAccountKeyPath;
+
+                if (string.IsNullOrEmpty(serviceAccountKeyPath))
+                {
+                    throw new InvalidOperationException(
+                        "ServiceAccountKeyPath is not configured in GeminiSettings for development environment.");
+                }
+            }
+
+            // Get VertexAI project ID and location from database
+            var projectId = GetAiSettingValue(AISettingType.VERTEX_PROJECT_ID);
+            var location = GetAiSettingValue(AISettingType.VERTEX_LOCATION);
+
+            GoogleServiceAccountAuthenticator authenticator = new GoogleServiceAccountAuthenticator(serviceAccountKeyPath);
+
+            // Initialize VertexAI client with service account credentials from JSON file
+            _vertexAIClient = new VertexAI(projectId: projectId, region: location, authenticator: authenticator);
+
             // AI model for item analyzing
-            var apiKeyAnalyzing = GetAiSettingValue(AISettingType.API_ITEM_ANALYZING);
             var modelIdAnalyzing = GetAiSettingValue(AISettingType.MODEL_ANALYZING);
-            var generativeAiClient = new GoogleAi(apiKeyAnalyzing);
-            _generativeModel = generativeAiClient.CreateGenerativeModel(modelIdAnalyzing);
+            _generativeModel = _vertexAIClient.CreateGenerativeModel(modelIdAnalyzing);
 
             // Embedding model
-            var apiKeyEmbedding = GetAiSettingValue(AISettingType.API_EMBEDDING);
             var modelIdEmbedding = GetAiSettingValue(AISettingType.MODEL_EMBEDDING);
-            var embeddingAiClient = new GoogleAi(apiKeyEmbedding);
-            _embeddingModel = embeddingAiClient.CreateEmbeddingModel(modelIdEmbedding);
+            _embeddingModel = _vertexAIClient.CreateEmbeddingModel(modelIdEmbedding);
 
-            var apiKeySuggestion = GetAiSettingValue(AISettingType.API_SUGGESTION);
-            var modelIdSuggestiong = GetAiSettingValue(AISettingType.MODEL_SUGGESTION);
-            var generativeAiClientSuggestion = new GoogleAi(apiKeySuggestion);
-            _suggestionModel = generativeAiClientSuggestion.CreateGenerativeModel(modelIdSuggestiong);
+            // Suggestion model
+            var modelIdSuggestion = GetAiSettingValue(AISettingType.MODEL_SUGGESTION);
+            _suggestionModel = _vertexAIClient.CreateGenerativeModel(modelIdSuggestion);
         }
 
         private string GetAiSettingValue(AISettingType type)
@@ -214,10 +248,8 @@ namespace SOPServer.Service.Services.Implements
             var modelSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.MODEL_FULLBODY_VALIDATION);
             var validatePromptSetting = await _unitOfWork.AISettingRepository.GetByTypeAsync(AISettingType.VALIDATE_FULLBODY_PROMPT);
 
-            // Create model for full body validation (uses same API key as suggestion)
-            var apiKey = GetAiSettingValue(AISettingType.API_SUGGESTION);
-            var fullBodyValidationClient = new GoogleAi(apiKey);
-            var fullBodyModel = fullBodyValidationClient.CreateGenerativeModel(modelSetting.Value);
+            // Create model for full body validation using VertexAI
+            var fullBodyModel = _vertexAIClient.CreateGenerativeModel(modelSetting.Value);
 
             var generateRequest = new GenerateContentRequest();
             generateRequest.AddText(validatePromptSetting.Value);
@@ -575,11 +607,9 @@ Parse this compact format to make outfit decisions." }
 
         public GenerativeModel CreateSuggestionModel(QuickTools? tools = null)
         {
-            var apiKeySuggest = GetAiSettingValue(AISettingType.API_SUGGESTION);
             var modelSuggestion = GetAiSettingValue(AISettingType.MODEL_SUGGESTION);
-            var suggestionAiClient = new GoogleAi(apiKeySuggest);
-
-            var suggestClient = suggestionAiClient.CreateGenerativeModel(modelSuggestion);
+            var suggestClient = _vertexAIClient.CreateGenerativeModel(modelSuggestion);
+            
             if (tools != null)
             {
                 suggestClient.AddFunctionTool(tools);

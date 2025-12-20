@@ -4,6 +4,7 @@ using SOPServer.Repository.Enums;
 using SOPServer.Repository.Repositories.Interfaces;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Services.Interfaces;
+using System.Security.Claims;
 
 namespace SOPServer.API.Attributes
 {
@@ -27,7 +28,7 @@ namespace SOPServer.API.Attributes
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
-            var roleClaim = context.HttpContext.User.FindFirst("role")?.Value;
+            var roleClaim = context.HttpContext.User.FindFirst(ClaimTypes.Role)?.Value;
             if (roleClaim == "ADMIN")
             {
                 await next();

@@ -1807,7 +1807,7 @@ namespace SOPServer.Service.Services.Implements
             var outfitGenerationStopwatch = Stopwatch.StartNew();
 
             var uniqueOutfits = new List<OutfitSelectionModel>();
-            var seenItemCombinations = new HashSet<string>();
+            var allOutfitItemSets = new List<HashSet<long>>(); // Store item sets for comparison
             var maxAttempts = totalOutfits * 3; // Allow up to 3x attempts to get unique outfits
             var attemptCount = 0;
 
@@ -1835,22 +1835,36 @@ namespace SOPServer.Service.Services.Implements
                 {
                     if (outfit.ItemIds != null && outfit.ItemIds.Any())
                     {
-                        // Create a sorted, comma-separated string of item IDs as the combination key
-                        var combinationKey = string.Join(",", outfit.ItemIds.OrderBy(id => id));
+                        var currentItemSet = new HashSet<long>(outfit.ItemIds);
+                        bool isDuplicate = false;
 
-                        // Only add if this combination hasn't been seen before
-                        if (seenItemCombinations.Add(combinationKey))
+                        // Check against all existing outfits
+                        foreach (var existingItemSet in allOutfitItemSets)
+                        {
+                            // Count overlapping items
+                            var overlapCount = currentItemSet.Intersect(existingItemSet).Count();
+                            
+                            // Reject if 2 or more items overlap
+                            if (overlapCount >= 2)
+                            {
+                                isDuplicate = true;
+                                var combinationKey = string.Join(",", outfit.ItemIds.OrderBy(id => id));
+                                var existingKey = string.Join(",", existingItemSet.OrderBy(id => id));
+                                Console.WriteLine($"[DEBUG] Duplicate outfit detected: {combinationKey} overlaps with {existingKey} ({overlapCount} items)");
+                                break;
+                            }
+                        }
+
+                        // Only add if no significant overlap with existing outfits
+                        if (!isDuplicate)
                         {
                             uniqueOutfits.Add(outfit);
+                            allOutfitItemSets.Add(currentItemSet);
 
                             if (uniqueOutfits.Count >= totalOutfits)
                             {
                                 break;
                             }
-                        }
-                        else
-                        {
-                            Console.WriteLine($"[DEBUG] Duplicate outfit detected: {combinationKey}");
                         }
                     }
                 }

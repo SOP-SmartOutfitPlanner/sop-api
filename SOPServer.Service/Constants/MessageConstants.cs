@@ -335,6 +335,9 @@ namespace SOPServer.Service.Constants
         public const string GET_POST_STATISTICS_SUCCESS = "Post statistics retrieved successfully";
         public const string DASHBOARD_INVALID_MONTH = "Month must be between 1 and 12";
         public const string DASHBOARD_INVALID_TOP_COUNT = "Top collections count must be at least 1";
+        public const string GET_USER_GROWTH_SUCCESS = "User growth statistics retrieved successfully";
+        public const string GET_ITEMS_BY_CATEGORY_SUCCESS = "Items by category statistics retrieved successfully";
+        public const string GET_WEEKLY_ACTIVITY_SUCCESS = "Weekly activity statistics retrieved successfully";
 
         // ReportCommunity related messages
         public const string REPORT_COMMUNITY_CREATE_SUCCESS = "Report submitted successfully";
@@ -435,5 +438,6 @@ namespace SOPServer.Service.Constants
 
         // Admin Dashboard related messages
         public const string GET_REVENUE_STATISTICS_SUCCESS = "Revenue statistics retrieved successfully";
+        public const string GET_DASHBOARD_OVERVIEW_SUCCESS = "Dashboard overview retrieved successfully";
     }
 }

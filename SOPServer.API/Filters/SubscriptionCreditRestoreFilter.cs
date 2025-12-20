@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using SOPServer.Repository.Enums;
 using SOPServer.Service.BusinessModels.ResultModels;
 using SOPServer.Service.Services.Interfaces;
+using System.Security.Claims;
 
 namespace SOPServer.API.Attributes
 {
@@ -28,7 +29,7 @@ namespace SOPServer.API.Attributes
 
             if (AutoIncrement && executedContext.Exception == null)
             {
-                var roleClaim = context.HttpContext.User.FindFirst("role")?.Value;
+                var roleClaim = context.HttpContext.User.FindFirst(ClaimTypes.Role)?.Value;
                 if (roleClaim == "ADMIN")
                 {
                     return;

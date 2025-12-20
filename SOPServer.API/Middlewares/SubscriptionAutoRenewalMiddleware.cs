@@ -1,4 +1,5 @@
 using SOPServer.Service.Services.Interfaces;
+using System.Security.Claims;
 
 namespace SOPServer.API.Middlewares
 {
@@ -30,7 +31,7 @@ namespace SOPServer.API.Middlewares
 
             if (context.User?.Identity?.IsAuthenticated == true)
             {
-                var roleClaim = context.User.FindFirst("role")?.Value;
+                var roleClaim = context.User.FindFirst(ClaimTypes.Role)?.Value;
                 if (roleClaim == "ADMIN")
                 {
                     await _next(context);

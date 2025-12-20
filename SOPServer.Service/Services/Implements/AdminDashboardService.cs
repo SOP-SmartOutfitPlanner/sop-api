@@ -24,6 +24,7 @@ namespace SOPServer.Service.Services.Implements
 
         public async Task<BaseResponseModel> GetRevenueStatisticsAsync(RevenueFilterModel filter)
         {
+            // ========== MAIN TRANSACTIONS QUERY (with all filters for totals) ==========
             var transactionsQuery = _unitOfWork.UserSubscriptionTransactionRepository.GetQueryable()
                 .Include(t => t.UserSubscription)
                     .ThenInclude(us => us.User)
@@ -65,18 +66,33 @@ namespace SOPServer.Service.Services.Implements
 
             var totalRevenue = completedTransactions.Sum(t => t.Price);
 
-            var activeSubscriptionsQuery = _unitOfWork.UserSubscriptionRepository.GetQueryable()
-                .Include(us => us.SubscriptionPlan)
-                .Where(us => !us.IsDeleted && us.IsActive && us.DateExp > DateTime.UtcNow && us.SubscriptionPlan.Price > 0);
+            // ========== MONTHLY REVENUE QUERY (without Year/Month filters) ==========
+            var monthlyTransactionsQuery = _unitOfWork.UserSubscriptionTransactionRepository.GetQueryable()
+                .Include(t => t.UserSubscription)
+                    .ThenInclude(us => us.SubscriptionPlan)
+                .Where(t => !t.IsDeleted 
+                    && t.Status == TransactionStatus.COMPLETED 
+                    && t.UserSubscription.SubscriptionPlan.Price > 0);
+
+            // Only apply StartDate/EndDate and SubscriptionPlanId filters for monthly breakdown
+            if (filter.StartDate.HasValue)
+            {
+                monthlyTransactionsQuery = monthlyTransactionsQuery.Where(t => t.CreatedDate >= filter.StartDate.Value);
+            }
+
+            if (filter.EndDate.HasValue)
+            {
+                monthlyTransactionsQuery = monthlyTransactionsQuery.Where(t => t.CreatedDate <= filter.EndDate.Value);
+            }
 
             if (filter.SubscriptionPlanId.HasValue)
             {
-                activeSubscriptionsQuery = activeSubscriptionsQuery.Where(us => us.SubscriptionPlanId == filter.SubscriptionPlanId.Value);
+                monthlyTransactionsQuery = monthlyTransactionsQuery.Where(t => t.UserSubscription.SubscriptionPlanId == filter.SubscriptionPlanId.Value);
             }
 
-            var totalActiveSubscriptions = await activeSubscriptionsQuery.CountAsync();
+            var monthlyTransactions = await monthlyTransactionsQuery.ToListAsync();
 
-            var monthlyRevenue = completedTransactions
+            var monthlyRevenue = monthlyTransactions
                 .GroupBy(t => new { t.CreatedDate.Year, t.CreatedDate.Month })
                 .Select(g => new MonthlyRevenueModel
                 {
@@ -91,30 +107,52 @@ namespace SOPServer.Service.Services.Implements
                 .ThenBy(m => m.Month)
                 .ToList();
 
-            // Load all subscription plans with their subscriptions first
-            var allSubscriptionPlansQuery = _unitOfWork.SubscriptionPlanRepository.GetQueryable()
+            // ========== ACTIVE SUBSCRIPTIONS COUNT ==========
+            var activeSubscriptionsQuery = _unitOfWork.UserSubscriptionRepository.GetQueryable()
+                .Include(us => us.SubscriptionPlan)
+                .Where(us => !us.IsDeleted && us.IsActive && us.DateExp > DateTime.UtcNow && us.SubscriptionPlan.Price > 0);
+
+            if (filter.SubscriptionPlanId.HasValue)
+            {
+                activeSubscriptionsQuery = activeSubscriptionsQuery.Where(us => us.SubscriptionPlanId == filter.SubscriptionPlanId.Value);
+            }
+
+            var totalActiveSubscriptions = await activeSubscriptionsQuery.CountAsync();
+
+            // ========== REVENUE BY PLAN ==========
+            var revenueByPlanQuery = _unitOfWork.SubscriptionPlanRepository.GetQueryable()
                 .Include(sp => sp.UserSubscriptions.Where(us => !us.IsDeleted))
                 .Where(sp => !sp.IsDeleted && sp.Price > 0);
 
-            var allSubscriptionPlans = await allSubscriptionPlansQuery.ToListAsync();
+            if (filter.SubscriptionPlanId.HasValue)
+            {
+                revenueByPlanQuery = revenueByPlanQuery.Where(sp => sp.Id == filter.SubscriptionPlanId.Value);
+            }
 
-            // Now calculate revenue by plan in memory
-            var revenueByPlan = allSubscriptionPlans
-                .Select(sp => new SubscriptionPlanRevenueModel
+            var subscriptionPlans = await revenueByPlanQuery.ToListAsync();
+
+            var revenueByPlan = subscriptionPlans
+                .Select(sp =>
                 {
-                    SubscriptionPlanId = sp.Id,
-                    PlanName = sp.Name,
-                    PlanPrice = sp.Price,
-                    TotalRevenue = completedTransactions
+                    var planCompletedTransactions = completedTransactions
                         .Where(t => t.UserSubscription.SubscriptionPlanId == sp.Id)
-                        .Sum(t => t.Price),
-                    TotalSubscriptions = sp.UserSubscriptions.Count,
-                    ActiveSubscriptions = sp.UserSubscriptions.Count(us => us.IsActive && us.DateExp > DateTime.UtcNow)
+                        .ToList();
+
+                    return new SubscriptionPlanRevenueModel
+                    {
+                        SubscriptionPlanId = sp.Id,
+                        PlanName = sp.Name,
+                        PlanPrice = sp.Price,
+                        TotalRevenue = planCompletedTransactions.Sum(t => t.Price),
+                        TotalSubscriptions = sp.UserSubscriptions.Count,
+                        ActiveSubscriptions = sp.UserSubscriptions.Count(us => us.IsActive && us.DateExp > DateTime.UtcNow)
+                    };
                 })
                 .Where(r => r.TotalRevenue > 0 || r.TotalSubscriptions > 0)
                 .OrderByDescending(r => r.TotalRevenue)
                 .ToList();
 
+            // ========== RECENT TRANSACTIONS ==========
             var recentTransactions = transactions
                 .OrderByDescending(t => t.CreatedDate)
                 .Take(filter.RecentTransactionLimit)
@@ -133,6 +171,7 @@ namespace SOPServer.Service.Services.Implements
                 })
                 .ToList();
 
+            // ========== BUILD RESPONSE ==========
             var statistics = new RevenueStatisticsModel
             {
                 TotalRevenue = totalRevenue,
